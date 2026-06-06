@@ -1,6 +1,6 @@
 import Fuse from "fuse.js";
 
-import type { WeaponDoc } from "./types";
+import type { PerkRef, WeaponDoc } from "./types";
 
 export interface WeaponFilters {
   /** OR within each facet; AND across facets. */
@@ -118,4 +118,17 @@ export function collectPerks(weapons: WeaponDoc[]): PerkOption[] {
     }
   }
   return [...byName.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/** Map every perk plug hash to its PerkRef (for resolving instanced/owned rolls). */
+export function buildPerkMap(weapons: WeaponDoc[]): Map<number, PerkRef> {
+  const map = new Map<number, PerkRef>();
+  for (const weapon of weapons) {
+    for (const column of weapon.columns) {
+      for (const perk of column.perks) {
+        if (!map.has(perk.hash)) map.set(perk.hash, perk);
+      }
+    }
+  }
+  return map;
 }

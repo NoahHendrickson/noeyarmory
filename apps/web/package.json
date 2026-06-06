@@ -13,6 +13,7 @@
   "dependencies": {
     "@repo/destiny": "workspace:*",
     "@repo/ui": "workspace:*",
+    "iron-session": "^8.0.4",
     "next": "^16.2.7",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"

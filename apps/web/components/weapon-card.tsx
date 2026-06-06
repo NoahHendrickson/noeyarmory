@@ -5,7 +5,13 @@ import type { WeaponDoc } from "@repo/destiny";
 
 import { bungieIcon, ELEMENT_COLOR, RARITY_RING } from "../lib/bungie";
 
-export function WeaponCard({ weapon }: { weapon: WeaponDoc }) {
+/** The subset of a weapon a card needs — works for both the full index and owned (vault) weapons. */
+export type WeaponCardData = Pick<
+  WeaponDoc,
+  "hash" | "name" | "icon" | "watermark" | "type" | "element" | "ammo" | "rarity" | "frame"
+>;
+
+export function WeaponCard({ weapon }: { weapon: WeaponCardData }) {
   const icon = bungieIcon(weapon.icon);
   const watermark = bungieIcon(weapon.watermark);
 

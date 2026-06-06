@@ -12,6 +12,7 @@ export {
   fuzzySearchWeapons,
   collectFacets,
   collectPerks,
+  buildPerkMap,
   type WeaponFilters,
   type FacetOption,
   type PerkOption,
