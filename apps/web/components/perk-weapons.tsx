@@ -1,33 +1,34 @@
 "use client";
 
 import Link from "next/link";
-import { weaponsWithPerk } from "@repo/destiny";
+import type { WeaponDoc } from "@repo/destiny";
 
-import { useWeapons } from "../lib/use-weapons";
+import { useWeapons } from "../lib/weapons-context";
 import { WeaponCard } from "./weapon-card";
 
-export function PerkWeapons({ hash }: { hash: number }) {
-  const { weapons, loading } = useWeapons();
+export function PerkWeapons({
+  hash,
+  initialPerkName,
+  initialMatches,
+}: {
+  hash: number;
+  initialPerkName?: string;
+  initialMatches?: WeaponDoc[];
+}) {
+  const { perkMap, weaponsByPerkName, weapons, loading } = useWeapons();
 
-  if (loading) {
+  const hasSeed = initialMatches !== undefined;
+  if (!hasSeed && loading) {
     return <div className="text-muted-foreground p-6">Loading…</div>;
   }
 
-  let perkName: string | undefined;
-  for (const weapon of weapons) {
-    for (const column of weapon.columns) {
-      const found = column.perks.find((p) => p.hash === hash);
-      if (found) {
-        perkName = found.name;
-        break;
-      }
-    }
-    if (perkName) break;
-  }
-
-  // Match by perk NAME (the same perk can have different plug hashes across
-  // weapon archetypes), so "Surrounded" finds every weapon that can roll it.
-  const matches = weaponsWithPerk(weapons, perkName ?? hash);
+  const perk = perkMap.get(hash);
+  const perkName = initialPerkName ?? perk?.name;
+  const matches =
+    initialMatches ??
+    (perkName
+      ? (weaponsByPerkName.get(perkName.toLowerCase()) ?? [])
+      : weapons.filter((w) => w.perkHashes.includes(hash)));
 
   return (
     <div className="mx-auto max-w-7xl space-y-6 p-4 md:p-6">

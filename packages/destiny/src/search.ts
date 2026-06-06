@@ -95,6 +95,20 @@ export function filterWeapons(weapons: WeaponDoc[], filters: WeaponFilters): Wea
   });
 }
 
+/** Lowercase perk name → weapons that can roll it (built once per index load). */
+export function buildWeaponsByPerkName(weapons: WeaponDoc[]): Map<string, WeaponDoc[]> {
+  const map = new Map<string, WeaponDoc[]>();
+  for (const weapon of weapons) {
+    for (const name of weapon.perks) {
+      const key = lower(name);
+      const list = map.get(key);
+      if (list) list.push(weapon);
+      else map.set(key, [weapon]);
+    }
+  }
+  return map;
+}
+
 /** Every weapon that can roll a given perk (by name or hash). */
 export function weaponsWithPerk(weapons: WeaponDoc[], perk: string | number): WeaponDoc[] {
   if (typeof perk === "number") return weapons.filter((w) => w.perkHashes.includes(perk));
@@ -132,25 +146,37 @@ export interface FacetOption {
   count: number;
 }
 
+function sortFacetCounts(counts: Map<string, number>): FacetOption[] {
+  return [...counts.entries()]
+    .map(([value, count]) => ({ value, count }))
+    .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value));
+}
+
 /** Distinct facet values (with counts) for building filter UIs. */
 export function collectFacets(weapons: WeaponDoc[]): Record<string, FacetOption[]> {
-  const facet = (select: (w: WeaponDoc) => string | undefined): FacetOption[] => {
-    const counts = new Map<string, number>();
-    for (const w of weapons) {
-      const value = select(w);
-      if (value) counts.set(value, (counts.get(value) ?? 0) + 1);
-    }
-    return [...counts.entries()]
-      .map(([value, count]) => ({ value, count }))
-      .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value));
-  };
+  const element = new Map<string, number>();
+  const type = new Map<string, number>();
+  const ammo = new Map<string, number>();
+  const rarity = new Map<string, number>();
+  const slot = new Map<string, number>();
+  const frame = new Map<string, number>();
+
+  for (const w of weapons) {
+    if (w.element) element.set(w.element, (element.get(w.element) ?? 0) + 1);
+    if (w.type) type.set(w.type, (type.get(w.type) ?? 0) + 1);
+    if (w.ammo) ammo.set(w.ammo, (ammo.get(w.ammo) ?? 0) + 1);
+    if (w.rarity) rarity.set(w.rarity, (rarity.get(w.rarity) ?? 0) + 1);
+    if (w.slot) slot.set(w.slot, (slot.get(w.slot) ?? 0) + 1);
+    if (w.frame) frame.set(w.frame, (frame.get(w.frame) ?? 0) + 1);
+  }
+
   return {
-    element: facet((w) => w.element),
-    type: facet((w) => w.type),
-    ammo: facet((w) => w.ammo),
-    rarity: facet((w) => w.rarity),
-    slot: facet((w) => w.slot),
-    frame: facet((w) => w.frame),
+    element: sortFacetCounts(element),
+    type: sortFacetCounts(type),
+    ammo: sortFacetCounts(ammo),
+    rarity: sortFacetCounts(rarity),
+    slot: sortFacetCounts(slot),
+    frame: sortFacetCounts(frame),
   };
 }
 

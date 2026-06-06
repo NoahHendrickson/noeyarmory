@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Badge, cn } from "@repo/ui";
 import type { WeaponDoc } from "@repo/destiny";
 
-import { useWeapons } from "../lib/use-weapons";
+import { useWeapons } from "../lib/weapons-context";
 import { bungieIcon, ELEMENT_COLOR, RARITY_RING } from "../lib/bungie";
 import { CraftableBadge } from "./craftable-badge";
 import { PerkColumnView } from "./perk-column";
@@ -104,15 +104,21 @@ export function WeaponDetailView({
   );
 }
 
-/** Standalone `/weapon/[hash]` route view: loads the index and frames the detail. */
-export function WeaponDetail({ hash }: { hash: number }) {
-  const { weapons, loading } = useWeapons();
+/** Standalone `/weapon/[hash]` route view: uses SSR seed when available, else shared index. */
+export function WeaponDetail({
+  hash,
+  initialWeapon,
+}: {
+  hash: number;
+  initialWeapon?: WeaponDoc;
+}) {
+  const { byHash, loading } = useWeapons();
+  const weapon = initialWeapon ?? byHash.get(hash);
 
-  if (loading) {
+  if (!weapon && loading) {
     return <div className="text-muted-foreground p-6">Loading…</div>;
   }
 
-  const weapon = weapons.find((w) => w.hash === hash);
   if (!weapon) {
     return (
       <div className="space-y-2 p-6">

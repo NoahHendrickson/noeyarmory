@@ -15,11 +15,22 @@ export {
 
 const ClarityContext = createContext<ClarityDescriptionMap | null>(null);
 
+function scheduleIdle(callback: () => void): () => void {
+  if (typeof requestIdleCallback !== "undefined") {
+    const id = requestIdleCallback(callback);
+    return () => cancelIdleCallback(id);
+  }
+  const id = window.setTimeout(callback, 1);
+  return () => window.clearTimeout(id);
+}
+
 export function ClarityProvider({ children }: { children: ReactNode }) {
   const [descriptions, setDescriptions] = useState<ClarityDescriptionMap | null>(null);
 
   useEffect(() => {
-    void loadClarityDescriptions().then(setDescriptions);
+    return scheduleIdle(() => {
+      void loadClarityDescriptions().then(setDescriptions);
+    });
   }, []);
 
   return <ClarityContext.Provider value={descriptions}>{children}</ClarityContext.Provider>;

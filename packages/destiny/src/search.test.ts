@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import { sampleWeapons } from "./fixtures/sample-weapons";
 import {
   buildPerkMap,
+  buildWeaponsByPerkName,
   collectColumnPerks,
   collectFacets,
   collectPerks,
@@ -56,6 +57,13 @@ describe("weaponsWithPerk", () => {
 
   test("reverse search by perk hash", () => {
     expect(names(weaponsWithPerk(sampleWeapons, 110))).toEqual(["Fatebringer"]);
+  });
+});
+
+describe("buildWeaponsByPerkName", () => {
+  test("maps lowercase perk names to weapons", () => {
+    const map = buildWeaponsByPerkName(sampleWeapons);
+    expect(names(map.get("surrounded") ?? [])).toEqual(["Fatebringer", "Sunlit Fusion"]);
   });
 });
 

@@ -43,12 +43,14 @@ export {
   collectPerks,
   collectColumnPerks,
   buildPerkMap,
+  buildWeaponsByPerkName,
   type WeaponSort,
   type WeaponFilters,
   type FacetOption,
   type PerkOption,
   type ColumnPerkOptions,
 } from "./search";
+export { buildWeaponIndexLookups, type WeaponIndexLookups } from "./weapon-index-lookups";
 export {
   filterArmor,
   sortArmor,

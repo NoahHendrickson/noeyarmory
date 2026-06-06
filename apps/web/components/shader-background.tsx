@@ -1,12 +1,20 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Aurora, ChromaFlow, Dither, Shader } from "shaders/react";
 
 /** Flip to `true` to re-enable the animated background shader. */
 const SHADER_BACKGROUND_ENABLED = true;
 
 export function ShaderBackground() {
-  if (!SHADER_BACKGROUND_ENABLED) return null;
+  const [enabled, setEnabled] = useState(false);
+
+  useEffect(() => {
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    setEnabled(SHADER_BACKGROUND_ENABLED && !reducedMotion);
+  }, []);
+
+  if (!enabled) return null;
 
   return (
     <div

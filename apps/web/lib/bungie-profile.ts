@@ -5,7 +5,6 @@ import type { IronSession } from "iron-session";
 import {
   buildArchetypeMap,
   buildModMap,
-  buildPerkMap,
   resolveArchetypeFromPlugMap,
   resolveTertiaryStat,
   resolveTunableStatForInstance,
@@ -15,11 +14,11 @@ import {
   type PerkRef,
   type ReusablePlug,
   type WeaponDoc,
-  type WeaponIndex,
 } from "@repo/destiny";
 
 import { refreshAccessToken, requireEnv } from "./bungie-auth";
 import type { SessionData } from "./session";
+import { getWeaponIndex } from "./weapon-index-server";
 
 const PLATFORM = "https://www.bungie.net/Platform";
 
@@ -135,19 +134,6 @@ export interface OwnedArmor {
   tunableStat?: string;
 }
 
-let weaponIndexCache: { byHash: Map<number, WeaponDoc>; perkMap: Map<number, PerkRef> } | null =
-  null;
-function loadWeaponIndex(): { byHash: Map<number, WeaponDoc>; perkMap: Map<number, PerkRef> } {
-  if (weaponIndexCache) return weaponIndexCache;
-  const file = join(process.cwd(), "public", "data", "weapons.json");
-  const index = JSON.parse(readFileSync(file, "utf8")) as WeaponIndex;
-  weaponIndexCache = {
-    byHash: new Map(index.weapons.map((w) => [w.hash, w])),
-    perkMap: buildPerkMap(index.weapons),
-  };
-  return weaponIndexCache;
-}
-
 let armorIndexCache: {
   byHash: Map<number, ArmorDoc>;
   modMap: Map<number, PerkRef>;
@@ -241,7 +227,7 @@ function profileReusablePlugsToRecord(
 /** Fetch the user's profile and return every owned weapon with its rolled perks. */
 export async function getOwnedWeapons(session: IronSession<SessionData>): Promise<OwnedWeapon[]> {
   const { items, components } = await fetchProfile(session);
-  const { byHash, perkMap } = loadWeaponIndex();
+  const { byHash, perkMap } = getWeaponIndex();
 
   const owned: OwnedWeapon[] = [];
   const seen = new Set<string>();
