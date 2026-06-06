@@ -1,0 +1,19 @@
+@import "tailwindcss";
+@import "../../../packages/ui/src/styles/theme.css";
+
+/* Enable `dark:` variants driven by a `.dark` class on an ancestor. */
+@custom-variant dark (&:is(.dark *));
+
+/* Tell Tailwind which files to scan for class names: this app + the
+ * @repo/ui components it renders (consumed as source). */
+@source "../app";
+@source "../../../packages/ui/src/components";
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}

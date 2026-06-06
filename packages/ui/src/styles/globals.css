@@ -1,0 +1,17 @@
+@import "tailwindcss";
+@import "./theme.css";
+
+/* Enable `dark:` variants driven by a `.dark` class on an ancestor. */
+@custom-variant dark (&:is(.dark *));
+
+/* Scan this package's components for class names (Storybook + library build). */
+@source "../components";
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
