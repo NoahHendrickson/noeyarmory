@@ -16,3 +16,4 @@ export {
   type FacetOption,
   type PerkOption,
 } from "./search";
+export { sampleWeapons } from "./fixtures/sample-weapons";

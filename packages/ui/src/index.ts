@@ -8,4 +8,5 @@ export {
   CardFooter,
 } from "./components/card";
 export { Input } from "./components/input";
+export { Badge, badgeVariants, type BadgeProps } from "./components/badge";
 export { cn } from "./lib/utils";

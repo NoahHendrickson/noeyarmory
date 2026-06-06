@@ -11,6 +11,7 @@ export default defineConfig({
     "components/button": "src/components/button.tsx",
     "components/card": "src/components/card.tsx",
     "components/input": "src/components/input.tsx",
+    "components/badge": "src/components/badge.tsx",
     "lib/utils": "src/lib/utils.ts",
   },
   format: ["esm"],
