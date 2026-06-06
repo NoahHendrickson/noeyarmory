@@ -28,6 +28,60 @@ function isCosmeticOrEmptyPlug(def: DestinyInventoryItemDefinition): boolean {
   return false;
 }
 
+/** Bungie ships base (tier 2) and enhanced (tier 3) plugs per perk — we only display the base. */
+function isEnhancedPlug(def: DestinyInventoryItemDefinition): boolean {
+  return def.inventory?.tierType === 3;
+}
+
+/** One visible perk per name; enhanced-tier hashes are kept as `alternateHashes` for vault resolution. */
+function buildColumnPerks(
+  candidates: { hash: number; canRoll: boolean }[],
+  items: Record<number, DestinyInventoryItemDefinition>,
+): { perks: PerkRef[]; identifier: string } {
+  const byName = new Map<
+    string,
+    { hash: number; name: string; icon?: string; canRoll: boolean; enhancedHash?: number }
+  >();
+  let identifier = "";
+
+  for (const { hash, canRoll } of candidates) {
+    const pd = items[hash];
+    if (!pd || isCosmeticOrEmptyPlug(pd)) continue;
+    if (!identifier) identifier = pd.plug?.plugCategoryIdentifier ?? "";
+    const name = pd.displayProperties?.name ?? "";
+    if (!name) continue;
+
+    if (isEnhancedPlug(pd)) {
+      const row = byName.get(name) ?? { hash: 0, name, canRoll: false };
+      row.enhancedHash = hash;
+      byName.set(name, row);
+      continue;
+    }
+
+    const row = byName.get(name);
+    byName.set(name, {
+      hash,
+      name,
+      icon: pd.displayProperties?.icon || undefined,
+      canRoll: row?.canRoll || canRoll,
+      enhancedHash: row?.enhancedHash,
+    });
+  }
+
+  const perks: PerkRef[] = [];
+  for (const row of byName.values()) {
+    if (!row.hash) continue;
+    perks.push({
+      hash: row.hash,
+      name: row.name,
+      icon: row.icon,
+      currentlyCanRoll: row.canRoll,
+      alternateHashes: row.enhancedHash ? [row.enhancedHash] : undefined,
+    });
+  }
+  return { perks, identifier };
+}
+
 /** Best-effort column label from a plug's category identifier. */
 function columnKind(isIntrinsic: boolean, identifier: string): string {
   if (isIntrinsic) return "Intrinsic";
@@ -53,6 +107,7 @@ export function buildWeaponIndex(defs: ManifestDefs, version: string): WeaponInd
   const plugSets = defs.DestinyPlugSetDefinition;
   const stats = defs.DestinyStatDefinition;
   const damageTypes = defs.DestinyDamageTypeDefinition;
+  const seasons = defs.DestinySeasonDefinition;
 
   const weapons: WeaponDoc[] = [];
 
@@ -90,22 +145,13 @@ export function buildWeaponIndex(defs: ManifestDefs, version: string): WeaponInd
       }
       if (!candidates.length) continue;
 
-      const perks: PerkRef[] = [];
       const seen = new Set<number>();
-      let identifier = "";
-      for (const { hash, canRoll } of candidates) {
-        if (seen.has(hash)) continue;
+      const unique = candidates.filter(({ hash }) => {
+        if (seen.has(hash)) return false;
         seen.add(hash);
-        const pd = items[hash];
-        if (!pd || isCosmeticOrEmptyPlug(pd)) continue;
-        if (!identifier) identifier = pd.plug?.plugCategoryIdentifier ?? "";
-        perks.push({
-          hash,
-          name: pd.displayProperties?.name ?? "",
-          icon: pd.displayProperties?.icon || undefined,
-          currentlyCanRoll: canRoll,
-        });
-      }
+        return true;
+      });
+      const { perks, identifier } = buildColumnPerks(unique, items);
       if (!perks.length) continue;
       columns.push({ kind: columnKind(isIntrinsic, identifier), perks });
     }
@@ -127,6 +173,7 @@ export function buildWeaponIndex(defs: ManifestDefs, version: string): WeaponInd
       for (const p of col.perks) {
         if (p.name) perkNames.push(p.name);
         perkHashes.push(p.hash);
+        for (const alt of p.alternateHashes ?? []) perkHashes.push(alt);
       }
     }
 
@@ -143,8 +190,11 @@ export function buildWeaponIndex(defs: ManifestDefs, version: string): WeaponInd
       rarity: item.inventory?.tierTypeName ?? "Legendary",
       slot: BUCKET_SLOT[item.inventory?.bucketTypeHash ?? 0] ?? "",
       frame: columns.find((c) => c.kind === "Intrinsic")?.perks[0]?.name,
-      craftable: false,
+      craftable: item.inventory?.recipeItemHash != null,
       adept: /\((Adept|Timelost|Harrowed)\)/.test(name),
+      seasonNumber:
+        item.seasonHash != null ? seasons[item.seasonHash]?.seasonNumber : undefined,
+      releaseIndex: item.index,
       stats: weaponStats,
       columns,
       perks: [...new Set(perkNames)],

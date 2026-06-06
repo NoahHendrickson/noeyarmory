@@ -14,7 +14,7 @@ const meta = {
       control: "select",
       options: ["default", "secondary", "outline", "destructive", "ghost", "link"],
     },
-    size: { control: "select", options: ["default", "sm", "lg", "icon"] },
+    size: { control: "select", options: ["default", "sm", "lg", "icon", "iconRound"] },
   },
 } satisfies Meta<typeof Button>;
 

@@ -22,6 +22,8 @@ const buttonVariants = cva(
         sm: "h-8 rounded-md px-3 text-xs",
         lg: "h-10 rounded-md px-6",
         icon: "size-9",
+        // Small round affordance — the command-bar submit button (Figma 24px).
+        iconRound: "size-6 rounded-full",
       },
     },
     defaultVariants: { variant: "default", size: "default" },

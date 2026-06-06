@@ -73,6 +73,7 @@ export default async function VaultPage({
       ammo: o.weapon.ammo,
       rarity: o.weapon.rarity,
       frame: o.weapon.frame,
+      craftable: o.weapon.craftable,
       rolledPerks: o.rolledPerks.map((p) => ({ hash: p.hash, name: p.name, icon: p.icon })),
     }));
   } catch (e) {

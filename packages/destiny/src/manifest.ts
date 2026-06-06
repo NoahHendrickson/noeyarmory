@@ -11,6 +11,7 @@ export const MANIFEST_SLICES = [
   "DestinyPlugSetDefinition",
   "DestinyStatDefinition",
   "DestinyDamageTypeDefinition",
+  "DestinySeasonDefinition",
 ] as const;
 
 export type ManifestDefs = DestinyManifestSlice<typeof MANIFEST_SLICES>;

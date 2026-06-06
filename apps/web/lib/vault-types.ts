@@ -17,6 +17,7 @@ export interface VaultWeapon {
   ammo: string;
   rarity: string;
   frame?: string;
+  craftable: boolean;
   /** The perks actually rolled on this copy. */
   rolledPerks: VaultPerk[];
 }

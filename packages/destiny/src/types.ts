@@ -6,7 +6,8 @@ export interface PerkRef {
   icon?: string;
   /** Whether this perk can currently drop (vs. sunset/retired). */
   currentlyCanRoll: boolean;
-  enhanced?: boolean;
+  /** Other plug hashes for the same perk (e.g. enhanced tier) — not shown separately in the UI. */
+  alternateHashes?: number[];
 }
 
 /** One perk column on a weapon (barrel, magazine, a trait slot, origin, …). */
@@ -44,6 +45,10 @@ export interface WeaponDoc {
   frame?: string;
   craftable: boolean;
   adept: boolean;
+  /** Destiny season number when introduced (from manifest seasonHash). */
+  seasonNumber?: number;
+  /** Manifest investment-table index — proxy for add order when season is unknown. */
+  releaseIndex: number;
   stats: WeaponStat[];
   columns: PerkColumn[];
   /** Every perk name across all columns (deduped) — powers reverse perk search. */

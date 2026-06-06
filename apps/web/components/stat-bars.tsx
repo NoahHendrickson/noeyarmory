@@ -28,7 +28,7 @@ export function StatBars({ stats }: { stats: WeaponStat[] }) {
             <div className="bg-muted h-2 flex-1 overflow-hidden rounded">
               {showBar && (
                 <div
-                  className="bg-foreground/70 h-full rounded"
+                  className="bg-primary h-full rounded"
                   style={{ width: `${Math.max(0, Math.min(100, stat.value))}%` }}
                 />
               )}

@@ -11,9 +11,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@fontsource-variable/geist": "^5.2.9",
     "@repo/destiny": "workspace:*",
     "@repo/ui": "workspace:*",
     "iron-session": "^8.0.4",
+    "lucide-react": "^0.477.0",
     "next": "^16.2.7",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"

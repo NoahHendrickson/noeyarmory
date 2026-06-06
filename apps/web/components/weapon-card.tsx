@@ -3,12 +3,22 @@ import Link from "next/link";
 import { Badge, cn } from "@repo/ui";
 import type { WeaponDoc } from "@repo/destiny";
 
+import { CraftableBadge } from "./craftable-badge";
 import { bungieIcon, ELEMENT_COLOR, RARITY_RING } from "../lib/bungie";
 
 /** The subset of a weapon a card needs — works for both the full index and owned (vault) weapons. */
 export type WeaponCardData = Pick<
   WeaponDoc,
-  "hash" | "name" | "icon" | "watermark" | "type" | "element" | "ammo" | "rarity" | "frame"
+  | "hash"
+  | "name"
+  | "icon"
+  | "watermark"
+  | "type"
+  | "element"
+  | "ammo"
+  | "rarity"
+  | "frame"
+  | "craftable"
 >;
 
 export function WeaponCard({ weapon }: { weapon: WeaponCardData }) {
@@ -50,6 +60,7 @@ export function WeaponCard({ weapon }: { weapon: WeaponCardData }) {
           <div className="mt-1.5 flex flex-wrap gap-1">
             <Badge variant="outline">{weapon.ammo}</Badge>
             {weapon.frame && <Badge variant="secondary">{weapon.frame}</Badge>}
+            {weapon.craftable && <CraftableBadge />}
           </div>
         </div>
       </div>

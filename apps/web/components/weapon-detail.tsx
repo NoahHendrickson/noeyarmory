@@ -3,12 +3,108 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Badge, cn } from "@repo/ui";
+import type { WeaponDoc } from "@repo/destiny";
 
 import { useWeapons } from "../lib/use-weapons";
 import { bungieIcon, ELEMENT_COLOR, RARITY_RING } from "../lib/bungie";
+import { CraftableBadge } from "./craftable-badge";
 import { PerkColumnView } from "./perk-column";
 import { StatBars } from "./stat-bars";
 
+/** Pure weapon detail — header + light.gg-style perk columns + stats. Shared by
+ * the `/weapon/[hash]` route and the in-app modal. */
+export function WeaponDetailView({
+  weapon,
+  linkPerks = true,
+}: {
+  weapon: WeaponDoc;
+  linkPerks?: boolean;
+}) {
+  const icon = bungieIcon(weapon.icon);
+  const watermark = bungieIcon(weapon.watermark);
+
+  return (
+    <div className="space-y-6">
+      <header className="flex flex-col gap-4 sm:flex-row">
+        <div
+          className={cn(
+            "relative size-16 shrink-0 overflow-hidden rounded ring-1",
+            RARITY_RING[weapon.rarity] ?? "ring-border",
+          )}
+        >
+          {icon && (
+            <Image src={icon} alt="" width={64} height={64} className="size-16" unoptimized />
+          )}
+          {watermark && (
+            <Image
+              src={watermark}
+              alt=""
+              width={64}
+              height={64}
+              className="absolute inset-0 size-16"
+              unoptimized
+            />
+          )}
+        </div>
+        <div className="min-w-0">
+          <h2 className="text-xl font-bold tracking-tight">{weapon.name}</h2>
+          <div className="text-muted-foreground mt-0.5 text-sm">
+            <span className={ELEMENT_COLOR[weapon.element] ?? ""}>{weapon.element}</span>
+            {" · "}
+            {weapon.type}
+            {" · "}
+            {weapon.rarity}
+          </div>
+          <div className="mt-2 flex flex-wrap gap-1">
+            <Badge variant="outline">{weapon.ammo}</Badge>
+            {weapon.frame && <Badge variant="secondary">{weapon.frame}</Badge>}
+            {weapon.craftable && <CraftableBadge />}
+            {weapon.adept && <Badge>Adept</Badge>}
+          </div>
+          {weapon.flavor && (
+            <p className="text-muted-foreground mt-3 max-w-prose text-sm italic">{weapon.flavor}</p>
+          )}
+        </div>
+      </header>
+
+      <section>
+        <h3 className="text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">
+          Perks
+        </h3>
+        {weapon.columns.length > 0 ? (
+          <div className="flex items-start gap-3 overflow-x-auto pb-2">
+            {weapon.columns
+              .filter((c) => c.kind === "Intrinsic")
+              .map((column, i) => (
+                <PerkColumnView
+                  key={`intrinsic-${i}`}
+                  column={column}
+                  linkPerks={linkPerks}
+                  compactIntrinsic
+                />
+              ))}
+            {weapon.columns
+              .filter((c) => c.kind !== "Intrinsic")
+              .map((column, i) => (
+                <PerkColumnView key={`${column.kind}-${i}`} column={column} linkPerks={linkPerks} />
+              ))}
+          </div>
+        ) : (
+          <p className="text-muted-foreground text-sm">No perk data.</p>
+        )}
+      </section>
+
+      <section>
+        <h3 className="text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">
+          Stats
+        </h3>
+        <StatBars stats={weapon.stats} />
+      </section>
+    </div>
+  );
+}
+
+/** Standalone `/weapon/[hash]` route view: loads the index and frames the detail. */
 export function WeaponDetail({ hash }: { hash: number }) {
   const { weapons, loading } = useWeapons();
 
@@ -28,77 +124,12 @@ export function WeaponDetail({ hash }: { hash: number }) {
     );
   }
 
-  const icon = bungieIcon(weapon.icon);
-  const watermark = bungieIcon(weapon.watermark);
-
   return (
-    <div className="mx-auto max-w-5xl space-y-8 p-4 md:p-6">
+    <div className="mx-auto max-w-5xl space-y-6 p-4 md:p-6">
       <Link href="/" className="text-muted-foreground hover:text-foreground text-sm">
         ← Back to search
       </Link>
-
-      <header className="flex flex-col gap-4 sm:flex-row">
-        <div
-          className={cn(
-            "relative size-20 shrink-0 overflow-hidden rounded ring-1",
-            RARITY_RING[weapon.rarity] ?? "ring-border",
-          )}
-        >
-          {icon && (
-            <Image src={icon} alt="" width={80} height={80} className="size-20" unoptimized />
-          )}
-          {watermark && (
-            <Image
-              src={watermark}
-              alt=""
-              width={80}
-              height={80}
-              className="absolute inset-0 size-20"
-              unoptimized
-            />
-          )}
-        </div>
-        <div className="min-w-0">
-          <h1 className="text-2xl font-bold tracking-tight">{weapon.name}</h1>
-          <div className="text-muted-foreground mt-0.5">
-            <span className={ELEMENT_COLOR[weapon.element] ?? ""}>{weapon.element}</span>
-            {" · "}
-            {weapon.type}
-            {" · "}
-            {weapon.rarity}
-          </div>
-          <div className="mt-2 flex flex-wrap gap-1">
-            <Badge variant="outline">{weapon.ammo}</Badge>
-            {weapon.frame && <Badge variant="secondary">{weapon.frame}</Badge>}
-            {weapon.adept && <Badge>Adept</Badge>}
-          </div>
-          {weapon.flavor && (
-            <p className="text-muted-foreground mt-3 max-w-prose text-sm italic">{weapon.flavor}</p>
-          )}
-        </div>
-      </header>
-
-      <section>
-        <h2 className="text-muted-foreground mb-3 text-sm font-semibold tracking-wide uppercase">
-          Perks
-        </h2>
-        {weapon.columns.length > 0 ? (
-          <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
-            {weapon.columns.map((column, i) => (
-              <PerkColumnView key={`${column.kind}-${i}`} column={column} />
-            ))}
-          </div>
-        ) : (
-          <p className="text-muted-foreground text-sm">No perk data.</p>
-        )}
-      </section>
-
-      <section>
-        <h2 className="text-muted-foreground mb-3 text-sm font-semibold tracking-wide uppercase">
-          Stats
-        </h2>
-        <StatBars stats={weapon.stats} />
-      </section>
+      <WeaponDetailView weapon={weapon} linkPerks />
     </div>
   );
 }

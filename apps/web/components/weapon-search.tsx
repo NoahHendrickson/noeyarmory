@@ -1,157 +1,216 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Badge, Input } from "@repo/ui";
 import {
+  Badge,
+  CommandPalette,
+  SegmentedToggle,
+  type PaletteCategory,
+  type PaletteChip,
+  type PaletteValueOption,
+  type SegmentedToggleOption,
+} from "@repo/ui";
+import {
+  collectColumnPerks,
   collectFacets,
-  collectPerks,
   createWeaponFuse,
   filterWeapons,
+  sortWeapons,
+  type FacetOption,
+  type PerkOption,
+  type WeaponDoc,
   type WeaponFilters,
+  type WeaponSort,
 } from "@repo/destiny";
 
 import { useWeapons } from "../lib/use-weapons";
-import { FacetFilter } from "./facet-filter";
-import { WeaponCard } from "./weapon-card";
+import { WeaponResultRow } from "./weapon-result-row";
+import { WeaponDetailModal } from "./weapon-detail-modal";
 
-type FacetKey = "element" | "type" | "ammo" | "rarity" | "frame";
+type Mode = "weapon" | "armor";
 
-const FACETS: { key: FacetKey; label: string }[] = [
-  { key: "element", label: "Element" },
-  { key: "type", label: "Weapon Type" },
-  { key: "ammo", label: "Ammo" },
-  { key: "rarity", label: "Rarity" },
-  { key: "frame", label: "Frame" },
+const MODES: SegmentedToggleOption<Mode>[] = [
+  { value: "weapon", label: "Weapon search" },
+  { value: "armor", label: "My Armor" },
 ];
 
-export function WeaponSearch() {
-  const { weapons, loading, isSample } = useWeapons();
+const MAX_RESULTS = 50;
+
+const SORT_OPTIONS: SegmentedToggleOption<WeaponSort>[] = [
+  { value: "name", label: "A–Z" },
+  { value: "season-desc", label: "Newest" },
+  { value: "season-asc", label: "Oldest" },
+];
+
+export function WeaponSearch({ signedIn = false }: { signedIn?: boolean }) {
+  const { weapons, isSample } = useWeapons();
+  const [mode, setMode] = useState<Mode>("weapon");
   const [query, setQuery] = useState("");
-  const [perkInput, setPerkInput] = useState("");
-  const [filters, setFilters] = useState<WeaponFilters>({});
+  const [chips, setChips] = useState<PaletteChip[]>([]);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [sort, setSort] = useState<WeaponSort>("name");
+  const [selected, setSelected] = useState<WeaponDoc | null>(null);
 
-  const facets = useMemo(() => collectFacets(weapons), [weapons]);
-  const perks = useMemo(() => collectPerks(weapons), [weapons]);
+  const categories = useMemo<PaletteCategory[]>(() => {
+    const facets = collectFacets(weapons);
+    const cols = collectColumnPerks(weapons);
+
+    const facetCategory = (id: string, label: string, options: FacetOption[]): PaletteCategory => ({
+      id,
+      label,
+      examples: options
+        .slice(0, 3)
+        .map((o) => `"${o.value}"`)
+        .join("  "),
+      getValues: (q) => {
+        const ql = q.trim().toLowerCase();
+        return options
+          .filter((o) => !ql || o.value.toLowerCase().includes(ql))
+          .map((o) => ({ id: o.value.toLowerCase(), label: o.value, hint: String(o.count) }));
+      },
+    });
+
+    const perkCategory = (id: string, label: string, options: PerkOption[]): PaletteCategory => ({
+      id,
+      label,
+      single: true,
+      examples: options
+        .slice(0, 2)
+        .map((o) => `"${o.name}"`)
+        .join("  "),
+      getValues: (q) => {
+        const ql = q.trim().toLowerCase();
+        return options
+          .filter((o) => !ql || o.name.toLowerCase().includes(ql))
+          .map((o) => ({
+            id: o.name.toLowerCase(),
+            label: o.name,
+            hint: String(o.count),
+            dimmed: o.currentlyCanRoll === false,
+          }));
+      },
+    });
+
+    return [
+      perkCategory("trait1", "Trait 1", cols.trait1),
+      perkCategory("trait2", "Trait 2", cols.trait2),
+      facetCategory("type", "Weapon type", facets.type ?? []),
+      facetCategory("element", "Element", facets.element ?? []),
+      facetCategory("slot", "Slot", facets.slot ?? []),
+      facetCategory("ammo", "Ammo type", facets.ammo ?? []),
+      facetCategory("frame", "Frame", facets.frame ?? []),
+      facetCategory("rarity", "Rarity", facets.rarity ?? []),
+      perkCategory("originTrait", "Origin Trait", cols.originTrait),
+    ];
+  }, [weapons]);
+
+  // Chip category ids map 1:1 onto WeaponFilters keys.
+  const filters = useMemo<WeaponFilters>(() => {
+    const f: Record<string, string[]> = {};
+    for (const chip of chips) {
+      (f[chip.categoryId] ??= []).push(chip.value);
+    }
+    return f;
+  }, [chips]);
+
   const fuse = useMemo(() => createWeaponFuse(weapons), [weapons]);
+  const base = query.trim() ? fuse.search(query).map((r) => r.item) : weapons;
+  const results = sortWeapons(filterWeapons(base, filters), sort);
 
-  const results = useMemo(() => {
-    const base = query.trim() ? fuse.search(query).map((r) => r.item) : weapons;
-    return filterWeapons(base, filters);
-  }, [weapons, fuse, query, filters]);
-
-  const selectedPerks = filters.perks ?? [];
-  const activeCount =
-    FACETS.reduce((n, { key }) => n + (filters[key]?.length ?? 0), 0) + selectedPerks.length;
-
-  function toggleFacet(key: FacetKey, value: string) {
-    setFilters((f) => {
-      const current = f[key] ?? [];
-      const next = current.includes(value)
-        ? current.filter((v) => v !== value)
-        : [...current, value];
-      return { ...f, [key]: next.length ? next : undefined };
-    });
+  function addChip(categoryId: string, option: PaletteValueOption) {
+    const category = categories.find((c) => c.id === categoryId);
+    if (!category) return;
+    const id = `${categoryId}:${option.id}`;
+    setChips((prev) =>
+      prev.some((c) => c.id === id)
+        ? prev
+        : [
+            ...prev,
+            { id, categoryId, categoryLabel: category.label, value: option.label, valueId: option.id },
+          ],
+    );
   }
 
-  function addPerk(name: string) {
-    const match = perks.find((p) => p.name.toLowerCase() === name.trim().toLowerCase());
-    if (!match) return;
-    setFilters((f) => {
-      const current = f.perks ?? [];
-      if (current.some((p) => p.toLowerCase() === match.name.toLowerCase())) return f;
-      return { ...f, perks: [...current, match.name] };
-    });
-    setPerkInput("");
-  }
+  const armorOverlay = signedIn ? (
+    <span className="text-muted-foreground text-sm">Armor search is coming soon.</span>
+  ) : (
+    <a href="/api/auth/login" className="inline-flex">
+      <Badge variant="warning">Reconnect your bungie account ↗</Badge>
+    </a>
+  );
 
-  function removePerk(name: string) {
-    setFilters((f) => ({ ...f, perks: (f.perks ?? []).filter((p) => p !== name) }));
-  }
+  const hasFilters = chips.length > 0;
+  const isFiltering = query.trim().length > 0;
+  const showResults = hasFilters && !isFiltering;
+  const shown = results.slice(0, MAX_RESULTS);
 
   return (
-    <div className="mx-auto grid max-w-7xl gap-6 p-4 md:grid-cols-[18rem_1fr] md:p-6">
-      <aside className="space-y-5 md:sticky md:top-4 md:h-fit">
-        <Input
-          placeholder="Search weapons or perks…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
+    <div className="flex min-h-screen flex-col">
+      <header className="py-4 text-center">
+        <span className="text-sm font-semibold tracking-tight">noeyarmory</span>
+      </header>
+
+      <main className="mx-auto flex w-full max-w-xl flex-1 flex-col px-4 pt-[16vh]">
+        <div data-palette-ignore-close className="mb-3 self-center">
+          <SegmentedToggle
+            aria-label="Search mode"
+            options={MODES}
+            value={mode}
+            onValueChange={setMode}
+          />
+        </div>
+
+        <CommandPalette
+          placeholder="Search for a weapon or trait"
+          categories={categories}
+          chips={chips}
+          open={paletteOpen}
+          onOpenChange={setPaletteOpen}
+          onAddChip={addChip}
+          onRemoveChip={(id) => setChips((prev) => prev.filter((c) => c.id !== id))}
+          onClearChips={() => setChips([])}
+          query={query}
+          onQueryChange={setQuery}
+          showResults={showResults}
+          results={shown.map((weapon) => ({
+            id: String(weapon.hash),
+            content: <WeaponResultRow weapon={weapon} />,
+          }))}
+          onSelectResult={(id) => {
+            const weapon = weapons.find((w) => String(w.hash) === id);
+            if (weapon) setSelected(weapon);
+          }}
+          resultsEmpty="No weapons match."
+          resultsHeader={
+            showResults ? (
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-muted-foreground text-xs">Sort by</span>
+                <SegmentedToggle
+                  aria-label="Sort weapons"
+                  options={SORT_OPTIONS}
+                  value={sort}
+                  onValueChange={setSort}
+                />
+              </div>
+            ) : undefined
+          }
+          resultsFooter={
+            results.length > shown.length
+              ? `Showing ${shown.length} of ${results.length}`
+              : undefined
+          }
+          disabled={mode === "armor"}
+          renderBarOverlay={mode === "armor" ? armorOverlay : undefined}
         />
 
-        <div className="space-y-1.5">
-          <div className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-            Has perk
-          </div>
-          <Input
-            list="perk-options"
-            placeholder="e.g. Surrounded"
-            value={perkInput}
-            onChange={(e) => setPerkInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                addPerk(perkInput);
-              }
-            }}
-          />
-          <datalist id="perk-options">
-            {perks.map((p) => (
-              <option key={p.hash} value={p.name} />
-            ))}
-          </datalist>
-          {selectedPerks.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 pt-1">
-              {selectedPerks.map((p) => (
-                <button key={p} type="button" onClick={() => removePerk(p)} aria-label={`Remove ${p}`}>
-                  <Badge variant="secondary">{p} ✕</Badge>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {FACETS.map(({ key, label }) => (
-          <FacetFilter
-            key={key}
-            label={label}
-            options={facets[key] ?? []}
-            selected={filters[key] ?? []}
-            onToggle={(value) => toggleFacet(key, value)}
-          />
-        ))}
-
-        {activeCount > 0 && (
-          <button
-            type="button"
-            className="text-muted-foreground hover:text-foreground text-xs underline"
-            onClick={() => setFilters({})}
-          >
-            Clear {activeCount} filter{activeCount === 1 ? "" : "s"}
-          </button>
-        )}
-      </aside>
-
-      <main className="space-y-4">
-        <div className="text-muted-foreground flex items-center justify-between text-sm">
-          <span>
-            {loading
-              ? "Loading…"
-              : `${results.length} weapon${results.length === 1 ? "" : "s"}`}
-          </span>
-          {isSample && !loading && <Badge variant="outline">sample data — run pnpm generate</Badge>}
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {results.map((weapon) => (
-            <WeaponCard key={weapon.hash} weapon={weapon} />
-          ))}
-        </div>
-
-        {!loading && results.length === 0 && (
-          <p className="text-muted-foreground py-16 text-center text-sm">
-            No weapons match your filters.
+        {mode === "weapon" && !hasFilters && !isFiltering && isSample && (
+          <p className="text-muted-foreground mt-3 text-center text-xs">
+            Sample data — run <code>pnpm --filter @repo/destiny generate</code> for the full index.
           </p>
         )}
       </main>
+
+      <WeaponDetailModal weapon={selected} onClose={() => setSelected(null)} />
     </div>
   );
 }

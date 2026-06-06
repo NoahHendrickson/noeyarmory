@@ -1,6 +1,7 @@
 import type { Preview } from "@storybook/react-vite";
 import { withThemeByClassName } from "@storybook/addon-themes";
 
+import "@fontsource-variable/geist";
 import "../src/styles/globals.css";
 
 const preview: Preview = {

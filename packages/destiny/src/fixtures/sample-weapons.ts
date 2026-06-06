@@ -22,6 +22,8 @@ export const sampleWeapons: WeaponDoc[] = [
     frame: "Adaptive Frame",
     craftable: true,
     adept: false,
+    seasonNumber: 14,
+    releaseIndex: 100,
     stats: [
       { hash: 1, name: "Impact", value: 84 },
       { hash: 2, name: "Range", value: 46 },
@@ -63,6 +65,7 @@ export const sampleWeapons: WeaponDoc[] = [
     frame: "Adaptive Frame",
     craftable: false,
     adept: false,
+    releaseIndex: 50,
     stats: [{ hash: 3, name: "Charge Time", value: 660 }],
     columns: [
       { kind: "Intrinsic", perks: [p(200, "Adaptive Frame", false)] },
@@ -83,6 +86,8 @@ export const sampleWeapons: WeaponDoc[] = [
     frame: "Rapid-Fire Frame",
     craftable: true,
     adept: false,
+    seasonNumber: 23,
+    releaseIndex: 200,
     stats: [{ hash: 3, name: "Charge Time", value: 500 }],
     columns: [
       { kind: "Intrinsic", perks: [p(300, "Rapid-Fire Frame", false)] },
@@ -102,6 +107,7 @@ export const sampleWeapons: WeaponDoc[] = [
     frame: "Lightweight Frame",
     craftable: false,
     adept: false,
+    releaseIndex: 80,
     stats: [{ hash: 1, name: "Impact", value: 62 }],
     columns: [
       { kind: "Intrinsic", perks: [p(400, "Lightweight Frame", false)] },
