@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import { sampleWeapons } from "./fixtures/sample-weapons";
 import {
+  buildPerkMap,
   collectFacets,
   collectPerks,
   filterWeapons,
@@ -77,5 +78,15 @@ describe("facets + perks", () => {
   test("collectPerks counts weapons per perk", () => {
     const firefly = collectPerks(sampleWeapons).find((p) => p.name === "Firefly");
     expect(firefly?.count).toBe(2); // Fatebringer + Sunshot Scout
+  });
+});
+
+describe("buildPerkMap", () => {
+  test("maps each plug hash to its perk (used to resolve owned/instanced rolls)", () => {
+    const map = buildPerkMap(sampleWeapons);
+    expect(map.get(110)?.name).toBe("Surrounded");
+    expect(map.get(106)?.name).toBe("Firefly");
+    expect(map.get(100)?.name).toBe("Adaptive Frame");
+    expect(map.size).toBeGreaterThan(10);
   });
 });

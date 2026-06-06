@@ -77,6 +77,7 @@ export default async function VaultPage({
     }));
   } catch (e) {
     loadError = e instanceof Error ? e.message : "Failed to load your profile.";
+    console.error("[vault] failed to load profile:", e);
   }
 
   return (

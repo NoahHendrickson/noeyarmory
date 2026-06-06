@@ -24,6 +24,9 @@ coverage/
 apps/web/public/data/
 packages/destiny/generated/
 
+# dev https certificates (mkcert)
+**/certificates/
+
 # editor / os
 .DS_Store
 *.log
