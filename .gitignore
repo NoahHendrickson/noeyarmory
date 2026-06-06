@@ -27,6 +27,9 @@ packages/destiny/generated/
 # dev https certificates (mkcert)
 **/certificates/
 
+# vercel
+.vercel/
+
 # editor / os
 .DS_Store
 *.log
