@@ -1,10 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { sampleWeapons, type WeaponDoc, type WeaponIndex } from "@repo/destiny";
+import {
+  sampleDamageTypes,
+  sampleWeapons,
+  type DamageTypeRef,
+  type WeaponDoc,
+  type WeaponIndex,
+} from "@repo/destiny";
 
 export interface WeaponsState {
   weapons: WeaponDoc[];
+  damageTypes: DamageTypeRef[];
   loading: boolean;
   /** True when falling back to the bundled sample (no generated index found). */
   isSample: boolean;
@@ -18,6 +25,7 @@ export interface WeaponsState {
 export function useWeapons(): WeaponsState {
   const [state, setState] = useState<WeaponsState>({
     weapons: [],
+    damageTypes: sampleDamageTypes,
     loading: true,
     isSample: false,
   });
@@ -33,13 +41,20 @@ export function useWeapons(): WeaponsState {
         if (active)
           setState({
             weapons: index.weapons,
+            damageTypes: index.damageTypes ?? sampleDamageTypes,
             loading: false,
             isSample: false,
             version: index.version,
           });
       })
       .catch(() => {
-        if (active) setState({ weapons: sampleWeapons, loading: false, isSample: true });
+        if (active)
+          setState({
+            weapons: sampleWeapons,
+            damageTypes: sampleDamageTypes,
+            loading: false,
+            isSample: true,
+          });
       });
     return () => {
       active = false;

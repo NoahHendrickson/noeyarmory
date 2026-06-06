@@ -14,8 +14,9 @@ export {
   type SegmentedToggleProps,
   type SegmentedToggleOption,
 } from "./components/segmented-toggle";
+export { PillSelect, type PillSelectProps, type PillSelectOption } from "./components/pill-select";
 export { Kbd } from "./components/kbd";
-export { FilterChip, type FilterChipProps } from "./components/filter-chip";
+export { FilterChip, filterChipVariants, type FilterChipProps, type FilterChipTone, type FilterChipElement } from "./components/filter-chip";
 export { ResultRow, type ResultRowProps } from "./components/result-row";
 export {
   CommandPalette,
@@ -35,4 +36,12 @@ export {
   DialogBackdrop,
   DialogPopup,
 } from "./components/dialog";
+export {
+  TooltipProvider,
+  Tooltip,
+  TooltipTrigger,
+  TooltipPortal,
+  TooltipPositioner,
+  TooltipPopup,
+} from "./components/tooltip";
 export { cn } from "./lib/utils";

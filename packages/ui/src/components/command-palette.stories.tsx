@@ -8,6 +8,7 @@ import {
   type PaletteChip,
   type PaletteValueOption,
 } from "./command-palette";
+import { type FilterChipElement, type FilterChipTone } from "./filter-chip";
 import { Badge } from "./badge";
 import { ResultRow } from "./result-row";
 
@@ -46,7 +47,7 @@ const meta = {
   parameters: { layout: "padded" },
   tags: ["autodocs"],
   args: {
-    placeholder: "Search for a weapon or trait",
+    placeholder: "Press F to search",
     categories: CATEGORIES,
     chips: [],
     query: "",
@@ -64,7 +65,7 @@ function Demo() {
   const [chips, setChips] = useState<PaletteChip[]>([]);
   return (
     <CommandPalette
-      placeholder="Search for a weapon or trait"
+      placeholder="Press F to search"
       categories={CATEGORIES}
       chips={chips}
       query={query}
@@ -88,6 +89,85 @@ function Demo() {
 }
 
 export const Default: Story = { render: () => <Demo /> };
+
+function ElementPlaceholder({ label }: { label: string }) {
+  return (
+    <svg viewBox="0 0 16 16" className="size-3.5" aria-hidden>
+      <title>{label}</title>
+      <circle cx="8" cy="8" r="5" fill="currentColor" />
+    </svg>
+  );
+}
+
+function storyChipAppearance(categoryId: string, value: string) {
+  if (categoryId === "trait1" || categoryId === "trait2") {
+    return { tone: "trait" as FilterChipTone };
+  }
+  if (categoryId === "ammo") {
+    if (value === "Special") return { tone: "ammo-special" as FilterChipTone };
+    if (value === "Heavy") return { tone: "ammo-heavy" as FilterChipTone };
+  }
+  if (categoryId === "element") {
+    return {
+      tone: "element" as FilterChipTone,
+      element: value as FilterChipElement,
+      hideLabel: true,
+      valueIcon: <ElementPlaceholder label={value} />,
+    };
+  }
+  return { tone: "default" as FilterChipTone };
+}
+
+export const ColoredChips: Story = {
+  render: () => (
+    <CommandPalette
+      placeholder="Press F to search"
+      categories={CATEGORIES}
+      chips={[
+        {
+          id: "trait1:bas",
+          categoryId: "trait1",
+          categoryLabel: "Trait 1",
+          value: "Bait and Switch",
+          valueId: "bas",
+        },
+        {
+          id: "ammo:special",
+          categoryId: "ammo",
+          categoryLabel: "Ammo type",
+          value: "Special",
+          valueId: "special",
+        },
+        {
+          id: "ammo:heavy",
+          categoryId: "ammo",
+          categoryLabel: "Ammo type",
+          value: "Heavy",
+          valueId: "heavy",
+        },
+        {
+          id: "element:arc",
+          categoryId: "element",
+          categoryLabel: "Element",
+          value: "Arc",
+          valueId: "arc",
+        },
+        {
+          id: "type:fusion",
+          categoryId: "type",
+          categoryLabel: "Weapon type",
+          value: "Fusion rifle",
+          valueId: "fusion",
+        },
+      ]}
+      query=""
+      onQueryChange={() => {}}
+      onAddChip={() => {}}
+      onRemoveChip={() => {}}
+      getChipAppearance={(chip) => storyChipAppearance(chip.categoryId, chip.value)}
+    />
+  ),
+};
 
 export const DisabledWithOverlay: Story = {
   render: () => (
@@ -184,7 +264,7 @@ export const HidesFullSingleSelectCategory: Story = {
     ]);
     return (
       <CommandPalette
-        placeholder="Search for a weapon or trait"
+        placeholder="Press F to search"
         categories={CATEGORIES}
         chips={chips}
         query={query}
@@ -304,7 +384,7 @@ function ResultsDemo() {
   ]);
   return (
     <CommandPalette
-      placeholder="Search for a weapon or trait"
+      placeholder="Press F to search"
       categories={CATEGORIES}
       chips={chips}
       query={query}

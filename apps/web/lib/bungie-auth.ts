@@ -6,7 +6,11 @@ const TOKEN_URL = `${BUNGIE}/Platform/App/OAuth/token/`;
 
 export function requireEnv(name: string): string {
   const value = process.env[name];
-  if (!value) throw new Error(`Missing required env var ${name}`);
+  if (!value) {
+    throw new Error(
+      `Missing ${name}. Copy .env.example to repo-root .env, add your dev Bungie app credentials, then run pnpm setup:bungie. See docs/bungie-setup.md.`,
+    );
+  }
   return value;
 }
 

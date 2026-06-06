@@ -15,7 +15,8 @@
     "test": "pnpm -r --if-present test",
     "typecheck": "pnpm -r --if-present typecheck",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "setup:bungie": "node scripts/setup-bungie.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",

@@ -52,7 +52,7 @@ generate.ts → manifest.ts (download Bungie manifest slices)
 
 ## My Vault — Bungie OAuth (server-only)
 
-All auth code imports `"server-only"`; secrets never reach the client. Runtime OAuth env vars live in **`apps/web/.env.local`** (`BUNGIE_CLIENT_ID/SECRET`, `SESSION_SECRET`), separate from the generate-time root `.env`.
+All auth code imports `"server-only"`; secrets never reach the client. Runtime OAuth env vars live in the **repo-root `.env`** (loaded by Next.js via `next.config.ts`); run `pnpm setup:bungie` to validate and generate indexes.
 
 Flow:
 - `lib/session.ts` — iron-session encrypted cookie (`SessionData`); `isSignedIn` gate.

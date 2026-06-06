@@ -4,7 +4,7 @@ import { ArrowRight, CornerDownLeft, Search, X } from "lucide-react";
 
 import { cn } from "../lib/utils";
 import { Button } from "./button";
-import { FilterChip } from "./filter-chip";
+import { FilterChip, type FilterChipProps } from "./filter-chip";
 import { Kbd } from "./kbd";
 
 export interface PaletteValueOption {
@@ -67,6 +67,8 @@ export interface CommandPaletteProps {
   resultsEmpty?: ReactNode;
   /** Leading adornment; defaults to a search icon. */
   leftAdornment?: ReactNode;
+  /** Trailing adornment in the search bar (e.g. a mode switcher). */
+  rightAdornment?: ReactNode;
   /** Disable interaction (e.g. signed-out armor mode). */
   disabled?: boolean;
   /** Render this in place of the chips + input (e.g. a "reconnect" pill). */
@@ -74,6 +76,10 @@ export interface CommandPaletteProps {
   /** Controlled panel open state — persists across disable/overlay toggles in the parent. */
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  /** Optional per-chip styling (tone, icons) based on category/value. */
+  getChipAppearance?: (
+    chip: PaletteChip,
+  ) => Pick<FilterChipProps, "tone" | "element" | "valueIcon" | "hideLabel">;
   className?: string;
 }
 
@@ -139,6 +145,14 @@ function availableCategories(categories: PaletteCategory[], chips: PaletteChip[]
   return categories.filter((c) => !categoryIsFull(c, chips));
 }
 
+function shouldIgnoreSearchShortcut(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  if (target.isContentEditable) return true;
+  const tag = target.tagName;
+  if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
+  return document.querySelector('[role="dialog"]') != null;
+}
+
 /** Narrow visible filter categories while the user types in the main query. */
 function filterCategories(categories: PaletteCategory[], query: string): PaletteCategory[] {
   const q = query.trim().toLowerCase();
@@ -196,10 +210,12 @@ export function CommandPalette({
   resultsFooter,
   resultsEmpty,
   leftAdornment,
+  rightAdornment,
   disabled = false,
   renderBarOverlay,
   open: openProp,
   onOpenChange,
+  getChipAppearance,
   className,
 }: CommandPaletteProps) {
   const isControlled = openProp !== undefined;
@@ -279,6 +295,21 @@ export function CommandPalette({
     else if (!openProp && state.panel !== "closed") dispatch({ type: "close" });
   }, [isControlled, openProp, state.panel]);
 
+  // Global F shortcut — focus the palette unless the user is typing elsewhere.
+  useEffect(() => {
+    if (disabled || renderBarOverlay) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key !== "f" && e.key !== "F") return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (shouldIgnoreSearchShortcut(e.target)) return;
+      e.preventDefault();
+      openPanel();
+      inputRef.current?.focus();
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [disabled, renderBarOverlay]);
+
   // Close the panel on outside clicks.
   useEffect(() => {
     if (!open) return;
@@ -286,8 +317,15 @@ export function CommandPalette({
       const target = e.target;
       if (!(target instanceof Node)) return;
       if (rootRef.current?.contains(target)) return;
-      // Let parents mark UI (e.g. mode toggles) that should not dismiss the panel.
-      if (target instanceof Element && target.closest("[data-palette-ignore-close]")) return;
+      // Let parents mark UI (e.g. mode toggles, portaled menus) that should not dismiss the panel.
+      if (
+        target instanceof Element &&
+        target.closest(
+          '[data-palette-ignore-close], [data-pill-select-menu], [role="menuitem"], [role="menuitemradio"]',
+        )
+      ) {
+        return;
+      }
       closePanel();
     }
     document.addEventListener("pointerdown", onPointerDown);
@@ -391,8 +429,8 @@ export function CommandPalette({
     <div
       ref={rootRef}
       className={cn(
-        "mx-auto w-full transition-[max-width] duration-200",
-        open ? "max-w-[600px]" : "max-w-[420px]",
+        "mx-auto w-max max-w-[calc(100vw-2rem)] transition-[min-width] duration-200",
+        open ? "min-w-[600px]" : "min-w-[420px]",
         className,
       )}
     >
@@ -411,7 +449,7 @@ export function CommandPalette({
           )}
           onClick={() => !disabled && !renderBarOverlay && inputRef.current?.focus()}
         >
-          <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-2.5 overflow-x-auto">
+          <div className="flex flex-nowrap items-center gap-2.5">
             <span className="text-muted-foreground flex size-4 shrink-0 items-center justify-center">
               {leftAdornment ?? <Search className="size-4" />}
             </span>
@@ -424,6 +462,7 @@ export function CommandPalette({
                     label={chip.categoryLabel}
                     value={chip.value}
                     onRemove={() => onRemoveChip(chip.id)}
+                    {...getChipAppearance?.(chip)}
                   />
                 ))}
                 {drilling && (
@@ -445,7 +484,8 @@ export function CommandPalette({
                   <input
                     ref={inputRef}
                     type="text"
-                    className="placeholder:text-muted-foreground min-w-[8ch] flex-1 bg-transparent text-xs outline-none disabled:cursor-not-allowed"
+                    size={Math.max(12, inputValue.length + 1, effectivePlaceholder.length)}
+                    className="placeholder:text-muted-foreground min-w-[8ch] shrink-0 bg-transparent text-sm outline-none disabled:cursor-not-allowed"
                     placeholder={effectivePlaceholder}
                     value={inputValue}
                     disabled={disabled}
@@ -458,6 +498,17 @@ export function CommandPalette({
               </>
             )}
           </div>
+
+          {rightAdornment != null && (
+            <div
+              data-palette-ignore-close
+              className="flex shrink-0 cursor-pointer items-center"
+              onClick={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              {rightAdornment}
+            </div>
+          )}
 
           {chips.length > 0 && onClearChips != null && !renderBarOverlay && (
             <div className="flex shrink-0 items-center gap-2">

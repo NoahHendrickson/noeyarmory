@@ -1,7 +1,7 @@
 import type { DestinyInventoryItemDefinition } from "bungie-api-ts/destiny2";
 
 import type { ManifestDefs } from "./manifest";
-import type { PerkColumn, PerkRef, WeaponDoc, WeaponIndex, WeaponStat } from "./types";
+import type { DamageTypeRef, PerkColumn, PerkRef, WeaponDoc, WeaponIndex, WeaponStat } from "./types";
 
 const WEAPON_ITEM_TYPE = 3; // DestinyItemType.Weapon
 
@@ -30,17 +30,31 @@ function isCosmeticOrEmptyPlug(def: DestinyInventoryItemDefinition): boolean {
 
 /** Bungie ships base (tier 2) and enhanced (tier 3) plugs per perk — we only display the base. */
 function isEnhancedPlug(def: DestinyInventoryItemDefinition): boolean {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison -- tier 3 is the enhanced plug tier
   return def.inventory?.tierType === 3;
 }
 
+function plugDescription(def: DestinyInventoryItemDefinition): string | undefined {
+  const description = def.displayProperties?.description?.trim();
+  return description || undefined;
+}
+
 /** One visible perk per name; enhanced-tier hashes are kept as `alternateHashes` for vault resolution. */
-function buildColumnPerks(
+export function buildColumnPerks(
   candidates: { hash: number; canRoll: boolean }[],
   items: Record<number, DestinyInventoryItemDefinition>,
 ): { perks: PerkRef[]; identifier: string } {
   const byName = new Map<
     string,
-    { hash: number; name: string; icon?: string; canRoll: boolean; enhancedHash?: number }
+    {
+      hash: number;
+      name: string;
+      icon?: string;
+      canRoll: boolean;
+      description?: string;
+      enhancedHash?: number;
+      enhancedDescription?: string;
+    }
   >();
   let identifier = "";
 
@@ -54,6 +68,7 @@ function buildColumnPerks(
     if (isEnhancedPlug(pd)) {
       const row = byName.get(name) ?? { hash: 0, name, canRoll: false };
       row.enhancedHash = hash;
+      row.enhancedDescription = plugDescription(pd);
       byName.set(name, row);
       continue;
     }
@@ -64,7 +79,9 @@ function buildColumnPerks(
       name,
       icon: pd.displayProperties?.icon || undefined,
       canRoll: row?.canRoll || canRoll,
+      description: plugDescription(pd),
       enhancedHash: row?.enhancedHash,
+      enhancedDescription: row?.enhancedDescription,
     });
   }
 
@@ -76,6 +93,8 @@ function buildColumnPerks(
       name: row.name,
       icon: row.icon,
       currentlyCanRoll: row.canRoll,
+      description: row.description,
+      enhancedDescription: row.enhancedDescription,
       alternateHashes: row.enhancedHash ? [row.enhancedHash] : undefined,
     });
   }
@@ -99,6 +118,22 @@ function columnKind(isIntrinsic: boolean, identifier: string): string {
   if (id.includes("tube") || id.includes("launcher_barrel")) return "Barrel";
   if (id.includes("grip") || id.includes("stock")) return "Stock";
   return "Trait";
+}
+
+/** Build the damage-type catalog (Solar, Arc, Void, …) for element icons. */
+export function buildDamageTypeCatalog(defs: ManifestDefs): DamageTypeRef[] {
+  const damageTypes: DamageTypeRef[] = [];
+  for (const dt of Object.values(defs.DestinyDamageTypeDefinition)) {
+    const name = dt.displayProperties?.name;
+    if (!name || dt.redacted) continue;
+    damageTypes.push({
+      hash: dt.hash,
+      name,
+      icon: dt.displayProperties?.icon || undefined,
+    });
+  }
+  damageTypes.sort((a, b) => a.name.localeCompare(b.name));
+  return damageTypes;
 }
 
 /** Flatten the manifest definitions into a searchable weapon index. */
@@ -203,5 +238,10 @@ export function buildWeaponIndex(defs: ManifestDefs, version: string): WeaponInd
   }
 
   weapons.sort((a, b) => a.name.localeCompare(b.name));
-  return { version, generatedAt: new Date().toISOString(), weapons };
+  return {
+    version,
+    generatedAt: new Date().toISOString(),
+    weapons,
+    damageTypes: buildDamageTypeCatalog(defs),
+  };
 }

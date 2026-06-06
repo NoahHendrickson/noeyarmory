@@ -46,6 +46,23 @@
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
+
+  /* Filter chip tones (Figma node 131:3244) */
+  --filter-chip-trait: rgba(57, 148, 229, 0.7);
+  --filter-chip-trait-foreground: #ffffff;
+  --filter-chip-ammo-special: rgba(88, 194, 108, 0.7);
+  --filter-chip-ammo-special-foreground: #ffffff;
+  --filter-chip-ammo-heavy: #7d58c2;
+  --filter-chip-ammo-heavy-foreground: #ffffff;
+
+  /* Element chip backgrounds — in-game damage type hues */
+  --filter-chip-element-solar: rgba(255, 120, 40, 0.85);
+  --filter-chip-element-arc: rgba(40, 180, 220, 0.85);
+  --filter-chip-element-void: rgba(125, 88, 194, 0.85);
+  --filter-chip-element-stasis: rgba(60, 140, 220, 0.85);
+  --filter-chip-element-strand: rgba(60, 200, 120, 0.85);
+  --filter-chip-element-kinetic: rgba(180, 180, 180, 0.75);
+  --filter-chip-element-foreground: #ffffff;
 }
 
 @theme inline {
@@ -74,6 +91,19 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+  --color-filter-chip-trait: var(--filter-chip-trait);
+  --color-filter-chip-trait-foreground: var(--filter-chip-trait-foreground);
+  --color-filter-chip-ammo-special: var(--filter-chip-ammo-special);
+  --color-filter-chip-ammo-special-foreground: var(--filter-chip-ammo-special-foreground);
+  --color-filter-chip-ammo-heavy: var(--filter-chip-ammo-heavy);
+  --color-filter-chip-ammo-heavy-foreground: var(--filter-chip-ammo-heavy-foreground);
+  --color-filter-chip-element-solar: var(--filter-chip-element-solar);
+  --color-filter-chip-element-arc: var(--filter-chip-element-arc);
+  --color-filter-chip-element-void: var(--filter-chip-element-void);
+  --color-filter-chip-element-stasis: var(--filter-chip-element-stasis);
+  --color-filter-chip-element-strand: var(--filter-chip-element-strand);
+  --color-filter-chip-element-kinetic: var(--filter-chip-element-kinetic);
+  --color-filter-chip-element-foreground: var(--filter-chip-element-foreground);
 
   /* Geist — provided by next/font as --font-geist-sans when present, else the
    * @fontsource "Geist Variable" family (loaded in the app layout + Storybook). */

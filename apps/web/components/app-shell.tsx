@@ -2,6 +2,9 @@
 
 import dynamic from "next/dynamic";
 import type { ReactNode } from "react";
+import { TooltipProvider } from "@repo/ui";
+
+import { ClarityProvider } from "../lib/clarity-provider";
 
 const ShaderBackground = dynamic(
   () => import("./shader-background").then((m) => m.ShaderBackground),
@@ -10,9 +13,11 @@ const ShaderBackground = dynamic(
 
 export function AppShell({ children }: { children: ReactNode }) {
   return (
-    <>
-      <ShaderBackground />
-      <div className="relative z-10">{children}</div>
-    </>
+    <TooltipProvider delay={300}>
+      <ClarityProvider>
+        <ShaderBackground />
+        <div className="relative z-10">{children}</div>
+      </ClarityProvider>
+    </TooltipProvider>
   );
 }

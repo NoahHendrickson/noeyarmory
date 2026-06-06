@@ -6,6 +6,10 @@ export interface PerkRef {
   icon?: string;
   /** Whether this perk can currently drop (vs. sunset/retired). */
   currentlyCanRoll: boolean;
+  /** Bungie tooltip text for the base-tier plug. */
+  description?: string;
+  /** Bungie tooltip text for the enhanced-tier plug (if one exists). */
+  enhancedDescription?: string;
   /** Other plug hashes for the same perk (e.g. enhanced tier) — not shown separately in the UI. */
   alternateHashes?: number[];
 }
@@ -57,9 +61,69 @@ export interface WeaponDoc {
   perkHashes: number[];
 }
 
+export interface DamageTypeRef {
+  hash: number;
+  name: string;
+  /** Bungie icon path; prefix with https://www.bungie.net to render. */
+  icon?: string;
+}
+
 export interface WeaponIndex {
   /** Bungie manifest version this index was built from. */
   version: string;
   generatedAt: string;
   weapons: WeaponDoc[];
+  /** Damage type catalog from DestinyDamageTypeDefinition (element filter icons). */
+  damageTypes: DamageTypeRef[];
+}
+
+export type ArmorStat = WeaponStat;
+
+/** A flattened, searchable armor record. */
+export interface ArmorDoc {
+  hash: number;
+  name: string;
+  icon?: string;
+  watermark?: string;
+  /** Helmet | Gauntlets | Chest | Legs | Class */
+  slot: string;
+  /** Titan | Hunter | Warlock | Any */
+  classType: string;
+  /** itemTypeDisplayName, e.g. "Helmet" */
+  type: string;
+  rarity: string;
+  seasonNumber?: number;
+  releaseIndex: number;
+  stats: ArmorStat[];
+  columns: PerkColumn[];
+  /** Every mod/perk name across all columns (deduped). */
+  mods: string[];
+  modHashes: number[];
+  /** Armor 3.0 equipable set hash, if any. */
+  setHash?: number;
+  /** Armor 3.0 equipable set display name, if any. */
+  setName?: string;
+  /** Edge of Fate armor with tier/masterwork system. */
+  isArmor30?: boolean;
+}
+
+export interface ArmorArchetypeRef {
+  hash: number;
+  name: string;
+}
+
+export interface Armor30SetRef {
+  hash: number;
+  name: string;
+  perkNames: string[];
+}
+
+export interface ArmorIndex {
+  version: string;
+  generatedAt: string;
+  armor: ArmorDoc[];
+  /** Global stat archetype plug catalog (Armor 3.0). */
+  archetypes: ArmorArchetypeRef[];
+  /** Armor 3.0 sets that have set bonus perks. */
+  armor30Sets: Armor30SetRef[];
 }

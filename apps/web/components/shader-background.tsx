@@ -2,7 +2,12 @@
 
 import { Aurora, ChromaFlow, Dither, Shader } from "shaders/react";
 
+/** Flip to `true` to re-enable the animated background shader. */
+const SHADER_BACKGROUND_ENABLED = true;
+
 export function ShaderBackground() {
+  if (!SHADER_BACKGROUND_ENABLED) return null;
+
   return (
     <div
       className="pointer-events-none fixed inset-0 z-0 overflow-hidden opacity-[0.22]"

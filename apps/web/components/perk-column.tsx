@@ -1,9 +1,26 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
-import { cn } from "@repo/ui";
+import {
+  cn,
+  Tooltip,
+  TooltipPortal,
+  TooltipPopup,
+  TooltipPositioner,
+  TooltipTrigger,
+} from "@repo/ui";
 import type { PerkRef, PerkColumn } from "@repo/destiny";
 
+import { ClarityAttribution, ClarityDescription } from "./clarity-description";
 import { bungieIcon } from "../lib/bungie";
+import type { ClarityDescriptionMap } from "../lib/clarity-types";
+import {
+  getClarityDisplayLines,
+  getClarityPerkTiers,
+  hasClarityOrBungieTooltip,
+  useClarityDescriptions,
+} from "../lib/clarity-provider";
 
 /** Safety net for stale indexes that still list base + enhanced separately. */
 function dedupePerksByName(perks: PerkRef[]): PerkRef[] {
@@ -14,16 +31,64 @@ function dedupePerksByName(perks: PerkRef[]): PerkRef[] {
   return [...byName.values()];
 }
 
+function PerkTooltipContent({
+  perk,
+  clarityLines,
+}: {
+  perk: PerkRef;
+  clarityLines?: ReturnType<typeof getClarityDisplayLines>;
+}) {
+  return (
+    <div className="max-w-sm space-y-2">
+      <div className="font-semibold">{perk.name}</div>
+
+      {clarityLines && clarityLines.length > 0 ? (
+        <>
+          <div className="text-muted-foreground space-y-0.5 text-xs">
+            <div className="text-muted-foreground/80 mb-1 text-[10px] font-semibold tracking-wide uppercase">
+              Community research
+            </div>
+            <ClarityDescription lines={clarityLines} />
+          </div>
+          <ClarityAttribution />
+        </>
+      ) : (
+        <>
+          {perk.description && (
+            <p className="text-muted-foreground text-xs leading-relaxed whitespace-pre-line">
+              {perk.description}
+            </p>
+          )}
+          {perk.enhancedDescription && (
+            <div className="space-y-1 border-t border-white/10 pt-2">
+              <div className="text-[#eade8b] text-[10px] font-semibold tracking-wide uppercase">
+                Enhanced
+              </div>
+              <p className="text-muted-foreground text-xs leading-relaxed whitespace-pre-line">
+                {perk.enhancedDescription}
+              </p>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 /** One perk icon tile (light.gg-style): blue tile when rollable, grey when retired. */
 function PerkTile({
   perk,
   linkPerks,
   size = "md",
+  clarityDescriptions,
 }: {
   perk: PerkRef;
   linkPerks: boolean;
   size?: "md" | "lg";
+  clarityDescriptions: ClarityDescriptionMap | null;
 }) {
+  const tiers = getClarityPerkTiers(clarityDescriptions, perk);
+  const clarityLines = getClarityDisplayLines(tiers);
   const icon = bungieIcon(perk.icon);
   const canRoll = perk.currentlyCanRoll;
   const dim = size === "lg" ? "size-10" : "size-8";
@@ -31,7 +96,6 @@ function PerkTile({
 
   const tile = (
     <span
-      title={perk.name}
       className={cn(
         "relative flex shrink-0 items-center justify-center rounded-md",
         dim,
@@ -53,18 +117,49 @@ function PerkTile({
     </span>
   );
 
-  if (linkPerks) {
-    return (
+  if (!hasClarityOrBungieTooltip(perk, tiers)) {
+    const wrapped = linkPerks ? (
       <Link
         href={`/perk/${perk.hash}`}
-        title={`See every weapon that can roll ${perk.name}`}
-        className="rounded-md transition-opacity hover:opacity-80"
+        className="inline-flex rounded-md transition-opacity hover:opacity-80"
       >
         {tile}
       </Link>
+    ) : (
+      tile
+    );
+    return (
+      <span title={perk.name} className="inline-flex">
+        {wrapped}
+      </span>
     );
   }
-  return tile;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          linkPerks ? (
+            <Link
+              href={`/perk/${perk.hash}`}
+              className="inline-flex rounded-md transition-opacity hover:opacity-80"
+            />
+          ) : (
+            <span className="inline-flex" />
+          )
+        }
+      >
+        {tile}
+      </TooltipTrigger>
+      <TooltipPortal>
+        <TooltipPositioner side="right" align="start">
+          <TooltipPopup className="max-w-sm">
+            <PerkTooltipContent perk={perk} clarityLines={clarityLines} />
+          </TooltipPopup>
+        </TooltipPositioner>
+      </TooltipPortal>
+    </Tooltip>
+  );
 }
 
 /**
@@ -77,13 +172,25 @@ export function PerkColumnView({
   linkPerks = true,
   /** Intrinsic columns use a larger lone icon with no header. */
   compactIntrinsic = false,
+  clarityDescriptions,
 }: {
   column: PerkColumn;
   linkPerks?: boolean;
   compactIntrinsic?: boolean;
+  clarityDescriptions?: ClarityDescriptionMap | null;
 }) {
+  const contextDescriptions = useClarityDescriptions();
+  const descriptions = clarityDescriptions ?? contextDescriptions;
+
   if (compactIntrinsic && column.kind === "Intrinsic" && column.perks[0]) {
-    return <PerkTile perk={column.perks[0]} linkPerks={linkPerks} size="lg" />;
+    return (
+      <PerkTile
+        perk={column.perks[0]}
+        linkPerks={linkPerks}
+        size="lg"
+        clarityDescriptions={descriptions}
+      />
+    );
   }
 
   return (
@@ -93,7 +200,12 @@ export function PerkColumnView({
       </div>
       <div className="flex flex-col gap-1">
         {dedupePerksByName(column.perks).map((perk) => (
-          <PerkTile key={perk.hash} perk={perk} linkPerks={linkPerks} />
+          <PerkTile
+            key={perk.hash}
+            perk={perk}
+            linkPerks={linkPerks}
+            clarityDescriptions={descriptions}
+          />
         ))}
       </div>
     </div>

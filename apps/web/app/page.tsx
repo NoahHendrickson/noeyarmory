@@ -1,7 +1,14 @@
 import { WeaponSearch } from "../components/weapon-search";
 import { getSession, isSignedIn } from "../lib/session";
 
-export default async function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ mode?: string }>;
+}) {
   const session = await getSession();
-  return <WeaponSearch signedIn={isSignedIn(session)} />;
+  const { mode } = await searchParams;
+  const initialMode = mode === "armor" ? "armor" : "weapon";
+
+  return <WeaponSearch signedIn={isSignedIn(session)} initialMode={initialMode} />;
 }

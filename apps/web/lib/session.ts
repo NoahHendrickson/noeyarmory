@@ -14,6 +14,8 @@ export interface SessionData {
   bungieName?: string;
   /** transient CSRF state during the OAuth handshake */
   oauthState?: string;
+  /** post-login redirect path (must start with /) */
+  oauthReturnTo?: string;
 }
 
 export const sessionOptions: SessionOptions = {

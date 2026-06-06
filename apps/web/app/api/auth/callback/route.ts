@@ -26,9 +26,12 @@ export async function GET(req: NextRequest) {
     session.membershipId = membership.membershipId;
     session.membershipType = membership.membershipType;
     session.bungieName = membership.bungieName;
+
+    const returnTo = session.oauthReturnTo ?? "/vault";
+    session.oauthReturnTo = undefined;
     await session.save();
 
-    return NextResponse.redirect(new URL("/vault", req.url));
+    return NextResponse.redirect(new URL(returnTo, req.url));
   } catch {
     return NextResponse.redirect(new URL("/vault?error=token", req.url));
   }

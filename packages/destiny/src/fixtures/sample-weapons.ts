@@ -1,9 +1,15 @@
 import type { PerkRef, WeaponDoc } from "../types";
 
-const p = (hash: number, name: string, currentlyCanRoll = true): PerkRef => ({
+const p = (
+  hash: number,
+  name: string,
+  currentlyCanRoll = true,
+  extra?: Pick<PerkRef, "description" | "enhancedDescription" | "alternateHashes">,
+): PerkRef => ({
   hash,
   name,
   currentlyCanRoll,
+  ...extra,
 });
 
 /**
@@ -34,7 +40,20 @@ export const sampleWeapons: WeaponDoc[] = [
       { kind: "Magazine", perks: [p(103, "Accurized Rounds"), p(104, "Tactical Mag")] },
       {
         kind: "Trait",
-        perks: [p(105, "Explosive Payload"), p(106, "Firefly"), p(110, "Surrounded")],
+        perks: [
+          p(105, "Explosive Payload"),
+          p(106, "Firefly", true, {
+            description: "Precision kills cause target to explode.",
+            enhancedDescription: "Precision kills cause target to explode. Explosion radius is increased.",
+            alternateHashes: [1061],
+          }),
+          p(110, "Surrounded", true, {
+            description: "This weapon gains bonus damage when surrounded by foes.",
+            enhancedDescription:
+              "This weapon gains bonus damage when surrounded by foes. Bonus damage is increased.",
+            alternateHashes: [1101],
+          }),
+        ],
       },
       { kind: "Trait", perks: [p(107, "Frenzy"), p(108, "Eye of the Storm")] },
       { kind: "Origin Trait", perks: [p(109, "Vault of Glass")] },
