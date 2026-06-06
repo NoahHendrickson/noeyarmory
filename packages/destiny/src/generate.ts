@@ -13,6 +13,7 @@ const repoRoot = resolve(here, "../../..");
 loadEnv({ path: resolve(repoRoot, ".env") });
 
 const weaponsFile = resolve(repoRoot, "apps/web/public/data/weapons.json");
+const weaponsDetailFile = resolve(repoRoot, "apps/web/public/data/weapons-detail.json");
 const armorFile = resolve(repoRoot, "apps/web/public/data/armor.json");
 
 async function main(): Promise<void> {
@@ -22,16 +23,18 @@ async function main(): Promise<void> {
       "Missing BUNGIE_API_KEY — writing bundled sample indexes. " +
         "Set BUNGIE_API_KEY (Vercel: scope to Build) for the full weapon + armor catalog.",
     );
-    writeSampleIndexes(weaponsFile, armorFile);
+    writeSampleIndexes(weaponsFile, weaponsDetailFile, armorFile);
     return;
   }
   console.log("Downloading Destiny manifest (this can take a moment)…");
   const { version, defs } = await downloadManifest(apiKey);
   console.log(`Manifest ${version}. Flattening weapons…`);
-  const weaponIndex = buildWeaponIndex(defs, version);
+  const { index, detailIndex } = buildWeaponIndex(defs, version);
   mkdirSync(dirname(weaponsFile), { recursive: true });
-  writeFileSync(weaponsFile, JSON.stringify(weaponIndex));
-  console.log(`✓ Wrote ${weaponIndex.weapons.length} weapons → ${weaponsFile}`);
+  writeFileSync(weaponsFile, JSON.stringify(index));
+  writeFileSync(weaponsDetailFile, JSON.stringify(detailIndex));
+  console.log(`✓ Wrote ${index.weapons.length} weapons → ${weaponsFile}`);
+  console.log(`✓ Wrote ${Object.keys(detailIndex.details).length} weapon details → ${weaponsDetailFile}`);
 
   console.log("Flattening armor…");
   const armorIndex = buildArmorIndex(defs, version);

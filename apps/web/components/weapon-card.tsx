@@ -1,14 +1,14 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Badge, cn } from "@repo/ui";
-import type { WeaponDoc } from "@repo/destiny";
+import type { WeaponSummary } from "@repo/destiny";
 
 import { CraftableBadge } from "./craftable-badge";
 import { bungieIcon, ELEMENT_COLOR, RARITY_RING } from "../lib/bungie";
 
-/** The subset of a weapon a card needs — works for both the full index and owned (vault) weapons. */
+/** The subset of a weapon a card needs — works for browse summaries and owned vault weapons. */
 export type WeaponCardData = Pick<
-  WeaponDoc,
+  WeaponSummary,
   | "hash"
   | "name"
   | "icon"

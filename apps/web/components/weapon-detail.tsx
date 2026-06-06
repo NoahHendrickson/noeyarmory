@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Badge, cn } from "@repo/ui";
 import type { WeaponDoc } from "@repo/destiny";
 
-import { useWeapons } from "../lib/weapons-context";
+import { useWeaponDetail } from "../lib/weapons-context";
 import { bungieIcon, ELEMENT_COLOR, RARITY_RING } from "../lib/bungie";
 import { CraftableBadge } from "./craftable-badge";
 import { PerkColumnView } from "./perk-column";
@@ -112,8 +112,7 @@ export function WeaponDetail({
   hash: number;
   initialWeapon?: WeaponDoc;
 }) {
-  const { byHash, loading } = useWeapons();
-  const weapon = initialWeapon ?? byHash.get(hash);
+  const { weapon, loading } = useWeaponDetail(hash, initialWeapon);
 
   if (!weapon && loading) {
     return <div className="text-muted-foreground p-6">Loading…</div>;

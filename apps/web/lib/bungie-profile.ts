@@ -13,7 +13,7 @@ import {
   type ItemStat,
   type PerkRef,
   type ReusablePlug,
-  type WeaponDoc,
+  type WeaponSummary,
 } from "@repo/destiny";
 
 import { refreshAccessToken, requireEnv } from "./bungie-auth";
@@ -118,7 +118,7 @@ interface ProfileResponse {
 }
 
 export interface OwnedWeapon {
-  weapon: WeaponDoc;
+  weapon: WeaponSummary;
   instanceId: string;
   rolledPerks: PerkRef[];
 }

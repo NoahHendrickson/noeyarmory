@@ -5,6 +5,7 @@ import { Badge, Input } from "@repo/ui";
 
 import type { VaultWeapon } from "../lib/vault-types";
 import { FacetFilter } from "./facet-filter";
+import { VirtualizedVaultGrid } from "./virtualized-vault-grid";
 import { WeaponCard } from "./weapon-card";
 
 type FacetKey = "element" | "type" | "ammo" | "rarity" | "frame";
@@ -156,8 +157,9 @@ export function VaultView({ weapons }: { weapons: VaultWeapon[] }) {
         <div className="text-muted-foreground text-sm">
           {results.length} of {weapons.length} owned weapon{weapons.length === 1 ? "" : "s"}
         </div>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {results.map((w) => (
+        <VirtualizedVaultGrid
+          items={results}
+          renderItem={(w) => (
             <div key={w.instanceId} className="space-y-1.5">
               <WeaponCard weapon={w} />
               {w.rolledPerks.length > 0 && (
@@ -170,8 +172,8 @@ export function VaultView({ weapons }: { weapons: VaultWeapon[] }) {
                 </div>
               )}
             </div>
-          ))}
-        </div>
+          )}
+        />
         {results.length === 0 && (
           <p className="text-muted-foreground py-16 text-center text-sm">
             No owned weapons match your filters.

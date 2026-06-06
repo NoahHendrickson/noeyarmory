@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import type { WeaponDoc } from "@repo/destiny";
+import type { WeaponSummary } from "@repo/destiny";
 
 import { useWeapons } from "../lib/weapons-context";
+import { VirtualizedWeaponGrid } from "./virtualized-weapon-grid";
 import { WeaponCard } from "./weapon-card";
 
 export function PerkWeapons({
@@ -13,7 +14,7 @@ export function PerkWeapons({
 }: {
   hash: number;
   initialPerkName?: string;
-  initialMatches?: WeaponDoc[];
+  initialMatches?: WeaponSummary[];
 }) {
   const { perkMap, weaponsByPerkName, weapons, loading } = useWeapons();
 
@@ -47,11 +48,10 @@ export function PerkWeapons({
       </div>
 
       {matches.length > 0 ? (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {matches.map((weapon) => (
-            <WeaponCard key={weapon.hash} weapon={weapon} />
-          ))}
-        </div>
+        <VirtualizedWeaponGrid
+          weapons={matches}
+          renderItem={(weapon) => <WeaponCard key={weapon.hash} weapon={weapon} />}
+        />
       ) : (
         <p className="text-muted-foreground">No weapons found for this perk.</p>
       )}

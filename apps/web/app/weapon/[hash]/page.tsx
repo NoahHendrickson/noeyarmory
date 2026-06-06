@@ -1,13 +1,13 @@
 import { WeaponDetail } from "../../../components/weapon-detail";
-import { getWeaponByHash } from "../../../lib/weapon-index-server";
+import { getWeaponDoc } from "../../../lib/weapon-index-server";
 
 export default async function WeaponPage({ params }: { params: Promise<{ hash: string }> }) {
   const { hash } = await params;
   const numHash = Number(hash);
 
-  let initialWeapon: Awaited<ReturnType<typeof getWeaponByHash>>;
+  let initialWeapon: Awaited<ReturnType<typeof getWeaponDoc>>;
   try {
-    initialWeapon = getWeaponByHash(numHash);
+    initialWeapon = getWeaponDoc(numHash);
   } catch {
     initialWeapon = undefined;
   }
