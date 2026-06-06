@@ -24,8 +24,8 @@ import {
 } from "@repo/destiny";
 
 import { useWeapons } from "../lib/use-weapons";
-import { WeaponResultRow } from "./weapon-result-row";
 import { WeaponDetailModal } from "./weapon-detail-modal";
+import { WeaponResultRow } from "./weapon-result-row";
 
 type Mode = "weapon" | "armor";
 
@@ -150,7 +150,7 @@ export function WeaponSearch({ signedIn = false }: { signedIn?: boolean }) {
         <span className="text-sm font-semibold tracking-tight">noeyarmory</span>
       </header>
 
-      <main className="mx-auto flex w-full max-w-xl flex-1 flex-col px-4 pt-[16vh]">
+      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-4 pt-[16vh]">
         <div data-palette-ignore-close className="mb-3 self-center">
           <SegmentedToggle
             aria-label="Search mode"

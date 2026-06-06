@@ -12,33 +12,33 @@
 :root {
   --radius: 0.75rem;
 
-  /* Warm-dark surfaces (Figma) */
-  --background: #252423;
+  /* Warm-dark surfaces — base canvas + elevated panels */
+  --background: #1d1c1b;
   --foreground: #ffffff;
-  --card: #2e2c2d;
+  --card: #242322;
   --card-foreground: #ffffff;
-  --popover: #2e2c2d;
+  --popover: #242322;
   --popover-foreground: #ffffff;
 
   /* Green accent (Figma #58c26c) — dark foreground for contrast on the light green */
   --primary: #58c26c;
   --primary-foreground: #14130f;
 
-  --secondary: #2e2c2d;
+  --secondary: #242322;
   --secondary-foreground: #ffffff;
-  --muted: rgba(255, 255, 255, 0.08);
+  --muted: rgba(255, 255, 255, 0.07);
   --muted-foreground: rgba(255, 255, 255, 0.4);
-  --accent: rgba(255, 255, 255, 0.06);
+  --accent: rgba(255, 255, 255, 0.05);
   --accent-foreground: #ffffff;
 
   /* "Reconnect your bungie account" pill (My Armor, signed out) */
   --warning: #e4e08c;
-  --warning-foreground: #2a2818;
+  --warning-foreground: #221f14;
 
   --destructive: oklch(0.704 0.191 22.216);
 
-  --border: rgba(255, 255, 255, 0.08);
-  --input: rgba(255, 255, 255, 0.1);
+  --border: rgba(255, 255, 255, 0.09);
+  --input: rgba(255, 255, 255, 0.09);
   --ring: rgba(255, 255, 255, 0.32);
 
   --chart-1: oklch(0.488 0.243 264.376);
@@ -85,4 +85,21 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
   --radius-pill: 1000px;
+}
+
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  [role="radio"],
+  a[href],
+  label[for],
+  summary,
+  select:not(:disabled) {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  select:disabled {
+    cursor: not-allowed;
+  }
 }

@@ -65,7 +65,7 @@ function SegmentedToggle<T extends string>({
               }
             }}
             className={cn(
-              "h-7 rounded-[10px] border px-3 text-xs font-medium transition-colors outline-none",
+              "h-7 cursor-pointer rounded-[10px] border px-3 text-xs font-medium transition-colors outline-none",
               "focus-visible:ring-ring focus-visible:ring-2",
               active
                 ? "border-white/30 bg-white/[0.16] text-foreground"

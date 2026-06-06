@@ -392,13 +392,13 @@ export function CommandPalette({
       ref={rootRef}
       className={cn(
         "mx-auto w-full transition-[max-width] duration-200",
-        open ? "max-w-[567px]" : "max-w-[420px]",
+        open ? "max-w-[600px]" : "max-w-[420px]",
         className,
       )}
     >
       <div
         className={cn(
-          "bg-card overflow-hidden border",
+          "overflow-hidden border border-border bg-card/35 shadow-lg shadow-black/25 backdrop-blur-xl",
           open ? "rounded-2xl" : "rounded-full",
         )}
       >
@@ -406,12 +406,12 @@ export function CommandPalette({
         {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events */}
         <div
           className={cn(
-            "flex items-center justify-between gap-3 px-[18px] py-4",
+            "flex h-14 items-center justify-between gap-3 px-[18px]",
             open && "border-b",
           )}
           onClick={() => !disabled && !renderBarOverlay && inputRef.current?.focus()}
         >
-          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2.5">
+          <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-2.5 overflow-x-auto">
             <span className="text-muted-foreground flex size-4 shrink-0 items-center justify-center">
               {leftAdornment ?? <Search className="size-4" />}
             </span>
@@ -463,8 +463,9 @@ export function CommandPalette({
             <div className="flex shrink-0 items-center gap-2">
               <Button
                 type="button"
-                variant="ghost"
+                variant="destructive"
                 size="iconRound"
+                className="text-card hover:text-card"
                 aria-label="Clear all filters"
                 disabled={disabled}
                 onClick={onClearChips}

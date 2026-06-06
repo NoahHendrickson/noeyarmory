@@ -49,7 +49,7 @@ function FilterChip({
         "inline-flex h-6 shrink-0 items-center gap-1 text-xs font-medium whitespace-nowrap",
         isDraft
           ? "rounded-full bg-white/[0.08] py-1 pl-2.5 pr-2 text-white/70"
-          : "rounded-full bg-white/70 py-1 pr-0.5 pl-2 text-[#2e2c2d]",
+          : "text-card rounded-full bg-white/70 py-1 pr-0.5 pl-2",
         hasInlineInput && "pr-2.5",
         className,
       )}
@@ -83,7 +83,7 @@ function FilterChip({
           type="button"
           aria-label={`Remove ${label}: ${value}`}
           onClick={onRemove}
-          className="flex size-6 shrink-0 items-center justify-center rounded-full text-[#2e2c2d]/60 transition-colors hover:bg-black/10 hover:text-[#2e2c2d]"
+          className="text-card/60 hover:text-card flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-full transition-colors hover:bg-black/10"
         >
           <X className="size-3" />
         </button>
