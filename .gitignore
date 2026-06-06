@@ -20,6 +20,10 @@ coverage/
 .env.*
 !.env.example
 
+# generated weapon index (run `pnpm --filter @repo/destiny generate`)
+apps/web/public/data/
+packages/destiny/generated/
+
 # editor / os
 .DS_Store
 *.log

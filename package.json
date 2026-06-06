@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "concurrently -n web,storybook -c blue,magenta \"pnpm --filter web dev\" \"pnpm --filter @repo/ui storybook\"",
-    "build": "pnpm --filter @repo/ui build && pnpm --filter web build",
+    "build": "pnpm --filter @repo/ui build && pnpm --filter @repo/destiny build && pnpm --filter web build",
     "storybook": "pnpm --filter @repo/ui storybook",
     "test": "pnpm -r --if-present test",
     "typecheck": "pnpm -r --if-present typecheck",
