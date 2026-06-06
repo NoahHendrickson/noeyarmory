@@ -68,6 +68,20 @@ openssl rand -hex 32
 
 Do **not** reuse your local `SESSION_SECRET` in production.
 
+### Vercel project settings (monorepo)
+
+Use **one** Vercel project for this app. In **Settings → Build and Deployment**:
+
+| Setting | Value |
+|---------|-------|
+| Root Directory | `apps/web` **or** leave empty (repo root — uses root `vercel.json`) |
+| Install Command | leave empty (use repo `vercel.json`) |
+| Build Command | leave empty (use repo `vercel.json`) |
+
+If Root Directory is `apps/web`, enable **Include source files outside of the Root Directory in the Build Step** so workspace packages (`@repo/ui`, `@repo/destiny`) are available.
+
+Do **not** set Install Command to `cd ../.. && pnpm install` when Root Directory is the repo root — that escapes the project and breaks Next.js detection.
+
 ## Verify
 
 1. **Local:** sign in at `https://localhost:4111` → `/vault` shows weapons, **My Armor** shows owned armor
@@ -81,5 +95,6 @@ Do **not** reuse your local `SESSION_SECRET` in production.
 | `Missing BUNGIE_*` on auth | Fill repo-root `.env` with **dev** app credentials, restart `pnpm dev` |
 | Empty vault/armor after sign-in | Run `pnpm setup:bungie` to generate `weapons.json` and `armor.json` |
 | Prod OAuth fails | Confirm Vercel uses **prod** app credentials, not dev |
+| `No Next.js version detected` on deploy | Root Directory must be `apps/web` (with outside files enabled) **or** repo root with root `vercel.json`; clear custom Install/Build overrides in Vercel settings |
 
 Official reference: [Bungie OAuth docs](https://github.com/Bungie-net/api/wiki/OAuth-Documentation)
