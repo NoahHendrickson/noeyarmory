@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import dynamic from "next/dynamic";
+import { useDeferredValue, useMemo, useState } from "react";
 import {
   Badge,
   cn,
@@ -22,13 +23,12 @@ import {
   type FacetOption,
   type ModOption,
   type PerkOption,
-  type WeaponDoc,
   type WeaponFilters,
   type WeaponSort,
 } from "@repo/destiny";
 
 import { useOwnedArmor } from "../lib/use-owned-armor";
-import { useWeapons } from "../lib/use-weapons";
+import { useWeaponDetail, useWeapons } from "../lib/weapons-context";
 import { getFilterChipAppearance } from "../lib/filter-chip-appearance";
 import {
   collectOwnedArmorFacets,
@@ -38,8 +38,12 @@ import {
   type OwnedArmorFilters,
 } from "../lib/owned-armor-search";
 import { ArmorResultRow } from "./armor-result-row";
-import { WeaponDetailModal } from "./weapon-detail-modal";
 import { WeaponResultRow } from "./weapon-result-row";
+
+const WeaponDetailModal = dynamic(
+  () => import("./weapon-detail-modal").then((m) => m.WeaponDetailModal),
+  { ssr: false },
+);
 
 type Mode = "weapon" | "armor";
 
@@ -49,6 +53,8 @@ const MODES: PillSelectOption<Mode>[] = [
 ];
 
 const MAX_RESULTS = 50;
+/** Cap fuzzy matches before filter/sort — filters may narrow further. */
+const FUSE_PRE_LIMIT = 300;
 
 const WEAPON_SORT_OPTIONS: SegmentedToggleOption<WeaponSort>[] = [
   { value: "name", label: "A–Z" },
@@ -105,7 +111,7 @@ export function WeaponSearch({
   signedIn?: boolean;
   initialMode?: Mode;
 }) {
-  const { weapons, damageTypes, isSample } = useWeapons();
+  const { weapons, perks, damageTypes, isSample, byHash } = useWeapons();
   const [mode, setMode] = useState<Mode>(initialMode);
   const { armor: owned, loading: armorLoading, error: armorLoadError } = useOwnedArmor(
     signedIn && mode === "armor",
@@ -115,7 +121,8 @@ export function WeaponSearch({
   const [chips, setChips] = useState<PaletteChip[]>([]);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [sort, setSort] = useState<WeaponSort>("name");
-  const [selected, setSelected] = useState<WeaponDoc | null>(null);
+  const [selectedHash, setSelectedHash] = useState<number | null>(null);
+  const { weapon: selected } = useWeaponDetail(selectedHash);
 
   const elementIconMap = useMemo(
     () => new Map(damageTypes.map((d) => [d.name, d.icon] as const)),
@@ -124,7 +131,7 @@ export function WeaponSearch({
 
   const weaponCategories = useMemo<PaletteCategory[]>(() => {
     const facets = collectFacets(weapons);
-    const cols = collectColumnPerks(weapons);
+    const cols = collectColumnPerks(weapons, perks);
     return [
       perkCategory("trait1", "Trait 1", cols.trait1),
       perkCategory("trait2", "Trait 2", cols.trait2),
@@ -136,7 +143,7 @@ export function WeaponSearch({
       facetCategory("rarity", "Rarity", facets.rarity ?? []),
       perkCategory("originTrait", "Origin Trait", cols.originTrait),
     ];
-  }, [weapons]);
+  }, [weapons, perks]);
 
   const armorCategories = useMemo<PaletteCategory[]>(() => {
     const facets = collectOwnedArmorFacets(owned);
@@ -168,8 +175,15 @@ export function WeaponSearch({
   }, [chips]);
 
   const weaponFuse = useMemo(() => createWeaponFuse(weapons), [weapons]);
-  const weaponBase = query.trim() ? weaponFuse.search(query).map((r) => r.item) : weapons;
-  const weaponResults = sortWeapons(filterWeapons(weaponBase, weaponFilters), sort);
+  const deferredQuery = useDeferredValue(query);
+
+  const weaponResults = useMemo(() => {
+    const q = deferredQuery.trim();
+    const base = q
+      ? weaponFuse.search(q, { limit: FUSE_PRE_LIMIT }).map((r) => r.item)
+      : weapons;
+    return sortWeapons(filterWeapons(base, weaponFilters, perks), sort);
+  }, [weaponFuse, weapons, perks, deferredQuery, weaponFilters, sort]);
 
   const armorBase = query.trim() ? searchOwnedArmor(owned, query) : owned;
   const armorResults = sortOwnedArmor(filterOwnedArmor(armorBase, armorFilters));
@@ -276,8 +290,8 @@ export function WeaponSearch({
           }
           onSelectResult={(id) => {
             if (mode === "weapon") {
-              const weapon = weapons.find((w) => String(w.hash) === id);
-              if (weapon) setSelected(weapon);
+              const weapon = byHash.get(Number(id));
+              if (weapon) setSelectedHash(weapon.hash);
             }
           }}
           resultsEmpty={mode === "weapon" ? "No weapons match." : "No armor matches."}
@@ -319,7 +333,9 @@ export function WeaponSearch({
         )}
       </main>
 
-      <WeaponDetailModal weapon={selected} onClose={() => setSelected(null)} />
+      {selected && (
+        <WeaponDetailModal weapon={selected} onClose={() => setSelectedHash(null)} />
+      )}
     </div>
   );
 }

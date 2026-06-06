@@ -21,20 +21,24 @@ export interface PerkColumn {
   perks: PerkRef[];
 }
 
+/** Interned column — perk indices reference WeaponIndex.perks. */
+export interface InternedPerkColumn {
+  kind: string;
+  perkIndices: number[];
+}
+
 export interface WeaponStat {
   hash: number;
   name: string;
   value: number;
 }
 
-/** A flattened, searchable weapon record. */
-export interface WeaponDoc {
+/** Lightweight weapon record for browse/search (no screenshot, flavor, stats, or inline perk text). */
+export interface WeaponSummary {
   hash: number;
   name: string;
   icon?: string;
   watermark?: string;
-  screenshot?: string;
-  flavor?: string;
   /** itemTypeDisplayName, e.g. "Hand Cannon", "Fusion Rifle". */
   type: string;
   /** Default damage type / element, e.g. "Solar", "Arc", "Kinetic". */
@@ -53,12 +57,29 @@ export interface WeaponDoc {
   seasonNumber?: number;
   /** Manifest investment-table index — proxy for add order when season is unknown. */
   releaseIndex: number;
-  stats: WeaponStat[];
-  columns: PerkColumn[];
+  columns: InternedPerkColumn[];
   /** Every perk name across all columns (deduped) — powers reverse perk search. */
   perks: string[];
+  /** Lowercase perk names (precomputed at build). */
+  perksLower: string[];
   /** Every perk hash across all columns (deduped). */
   perkHashes: number[];
+}
+
+/** Detail fields stored separately and loaded on demand. */
+export interface WeaponDetailFields {
+  hash: number;
+  screenshot?: string;
+  flavor?: string;
+  stats: WeaponStat[];
+}
+
+/** Full weapon with resolved columns — merged from summary + detail at runtime. */
+export interface WeaponDoc extends Omit<WeaponSummary, "columns" | "perksLower"> {
+  screenshot?: string;
+  flavor?: string;
+  stats: WeaponStat[];
+  columns: PerkColumn[];
 }
 
 export interface DamageTypeRef {
@@ -72,9 +93,19 @@ export interface WeaponIndex {
   /** Bungie manifest version this index was built from. */
   version: string;
   generatedAt: string;
-  weapons: WeaponDoc[];
+  /** Global interned perk catalog. */
+  perks: PerkRef[];
+  weapons: WeaponSummary[];
+  /** Lowercase perk name → weapon hashes (precomputed at build). */
+  weaponsByPerkName: Record<string, number[]>;
   /** Damage type catalog from DestinyDamageTypeDefinition (element filter icons). */
   damageTypes: DamageTypeRef[];
+}
+
+export interface WeaponDetailIndex {
+  version: string;
+  /** Weapon hash (string key) → detail fields. */
+  details: Record<string, WeaponDetailFields>;
 }
 
 export type ArmorStat = WeaponStat;

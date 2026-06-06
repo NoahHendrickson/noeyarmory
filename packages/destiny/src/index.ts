@@ -1,10 +1,14 @@
 export type {
   PerkRef,
   PerkColumn,
+  InternedPerkColumn,
   WeaponStat,
   ArmorStat,
   WeaponDoc,
+  WeaponSummary,
+  WeaponDetailFields,
   WeaponIndex,
+  WeaponDetailIndex,
   DamageTypeRef,
   ArmorDoc,
   ArmorIndex,
@@ -34,6 +38,16 @@ export {
   type ReusablePlug,
 } from "./armor-instance";
 export {
+  expandWeapon,
+  buildPerkMapFromCatalog,
+  internWeaponCatalog,
+  normalizeWeaponIndex,
+  buildDetailIndexFromDocs,
+  summariesForPerkName,
+  resolveInternedColumns,
+  isLegacyWeaponDoc,
+} from "./intern-weapons";
+export {
   filterWeapons,
   sortWeapons,
   weaponsWithPerk,
@@ -43,12 +57,17 @@ export {
   collectPerks,
   collectColumnPerks,
   buildPerkMap,
+  buildWeaponsByPerkName,
   type WeaponSort,
   type WeaponFilters,
   type FacetOption,
   type PerkOption,
   type ColumnPerkOptions,
 } from "./search";
+export {
+  buildWeaponIndexLookups,
+  type WeaponIndexLookups,
+} from "./weapon-index-lookups";
 export {
   filterArmor,
   sortArmor,

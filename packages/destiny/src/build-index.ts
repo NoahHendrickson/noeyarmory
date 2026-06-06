@@ -1,7 +1,9 @@
 import type { DestinyInventoryItemDefinition } from "bungie-api-ts/destiny2";
 
 import type { ManifestDefs } from "./manifest";
+import { internWeaponCatalog } from "./intern-weapons";
 import type { DamageTypeRef, PerkColumn, PerkRef, WeaponDoc, WeaponIndex, WeaponStat } from "./types";
+import type { WeaponDetailIndex } from "./types";
 
 const WEAPON_ITEM_TYPE = 3; // DestinyItemType.Weapon
 
@@ -137,7 +139,10 @@ export function buildDamageTypeCatalog(defs: ManifestDefs): DamageTypeRef[] {
 }
 
 /** Flatten the manifest definitions into a searchable weapon index. */
-export function buildWeaponIndex(defs: ManifestDefs, version: string): WeaponIndex {
+export function buildWeaponIndex(
+  defs: ManifestDefs,
+  version: string,
+): { index: WeaponIndex; detailIndex: WeaponDetailIndex } {
   const items = defs.DestinyInventoryItemDefinition;
   const plugSets = defs.DestinyPlugSetDefinition;
   const stats = defs.DestinyStatDefinition;
@@ -238,10 +243,9 @@ export function buildWeaponIndex(defs: ManifestDefs, version: string): WeaponInd
   }
 
   weapons.sort((a, b) => a.name.localeCompare(b.name));
+  const { index, detailIndex } = internWeaponCatalog(weapons, version);
   return {
-    version,
-    generatedAt: new Date().toISOString(),
-    weapons,
-    damageTypes: buildDamageTypeCatalog(defs),
+    index: { ...index, damageTypes: buildDamageTypeCatalog(defs) },
+    detailIndex,
   };
 }
