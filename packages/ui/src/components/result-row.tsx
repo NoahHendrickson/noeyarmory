@@ -25,7 +25,7 @@ function ResultRow({ render, icon, title, subtitle, trailing, className, ...prop
     props: mergeProps<"button">(
       {
         className: cn(
-          "hover:bg-accent focus-visible:bg-accent flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-left tracking-body outline-none disabled:cursor-not-allowed",
+          "hover:bg-accent focus-visible:bg-accent flex w-full cursor-pointer flex-col items-stretch gap-2 rounded-lg px-3 py-2 text-left tracking-body outline-none disabled:cursor-not-allowed sm:flex-row sm:items-center sm:gap-3",
           className,
         ),
         children: (

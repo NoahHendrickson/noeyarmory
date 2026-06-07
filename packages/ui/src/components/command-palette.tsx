@@ -624,7 +624,10 @@ export function CommandPalette({
   return (
     <div
       ref={rootRef}
-      className={cn("mx-auto w-max min-w-[600px] max-w-[calc(100vw-2rem)]", className)}
+      className={cn(
+        "mx-auto w-full min-w-0 max-w-[calc(100vw-2rem)] sm:w-max sm:min-w-[600px]",
+        className,
+      )}
     >
       <div
         className={cn(
@@ -643,7 +646,7 @@ export function CommandPalette({
         {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events */}
         <div
           className={cn(
-            "flex h-14 items-center justify-between gap-3 border-b pl-[18px] transition-[border-color] duration-200 ease-out motion-reduce:transition-none",
+            "flex min-h-12 items-center justify-between gap-2 border-b pl-3 transition-[border-color] duration-200 ease-out motion-reduce:transition-none sm:h-14 sm:gap-3 sm:pl-[18px]",
             chips.length > 0 && onClearChips != null && !renderBarOverlay ? "pr-6" : "pr-[18px]",
             open ? "border-border" : "border-transparent",
           )}
@@ -702,7 +705,7 @@ export function CommandPalette({
                     <input
                       ref={inputRef}
                       type="text"
-                      size={Math.max(12, inputValue.length + 1, effectivePlaceholder.length)}
+                      size={Math.max(12, Math.min(24, inputValue.length + 1))}
                       className="placeholder:text-muted-foreground min-w-[8ch] shrink-0 bg-transparent text-base tracking-body outline-none disabled:cursor-not-allowed"
                       placeholder={effectivePlaceholder}
                       value={inputValue}
@@ -762,7 +765,7 @@ export function CommandPalette({
             <div
               ref={scrollRef}
               className={cn(
-                "max-h-[560px] min-h-0 touch-pan-y overscroll-contain overflow-y-auto px-1.5 tracking-body [overflow-anchor:none]",
+                "max-h-[min(560px,calc(100dvh-10rem))] min-h-0 touch-pan-y overscroll-contain overflow-y-auto px-1.5 tracking-body [overflow-anchor:none] sm:max-h-[560px]",
                 renderMode === "results" && resultsHeader != null ? "pb-1.5" : "py-1.5",
                 panelFooter != null && "pb-0",
               )}
@@ -865,18 +868,18 @@ export function CommandPalette({
                             <span className="flex min-w-0 items-baseline gap-2 text-xs font-medium">
                               <span className="text-white">{item.category.label}:</span>
                               {item.category.examples && (
-                                <span className="text-muted-foreground truncate">
+                                <span className="text-muted-foreground hidden truncate sm:inline">
                                   {item.category.examples}
                                 </span>
                               )}
                             </span>
                             {showEnterHint ? (
-                              <Kbd>
+                              <Kbd className="hidden sm:inline-flex">
                                 Enter
                                 <CornerDownLeft className="size-3" />
                               </Kbd>
                             ) : (
-                              <Kbd>
+                              <Kbd className="hidden sm:inline-flex">
                                 Tab
                                 <ArrowRight className="size-3" />
                               </Kbd>
@@ -906,12 +909,12 @@ export function CommandPalette({
                             {!item.action.disabled &&
                               !item.action.hideKeyboardHint &&
                               (showEnterHint ? (
-                                <Kbd>
+                                <Kbd className="hidden sm:inline-flex">
                                   Enter
                                   <CornerDownLeft className="size-3" />
                                 </Kbd>
                               ) : (
-                                <Kbd>
+                                <Kbd className="hidden sm:inline-flex">
                                   Tab
                                   <ArrowRight className="size-3" />
                                 </Kbd>
@@ -935,12 +938,12 @@ export function CommandPalette({
                                 <span className="text-muted-foreground text-xs">{item.option.hint}</span>
                               )}
                               {showEnterHint ? (
-                                <Kbd>
+                                <Kbd className="hidden sm:inline-flex">
                                   Enter
                                   <CornerDownLeft className="size-3" />
                                 </Kbd>
                               ) : (
-                                <Kbd>
+                                <Kbd className="hidden sm:inline-flex">
                                   Tab
                                   <ArrowRight className="size-3" />
                                 </Kbd>
@@ -964,12 +967,12 @@ export function CommandPalette({
                                 </span>
                               )}
                               {showEnterHint ? (
-                                <Kbd>
+                                <Kbd className="hidden sm:inline-flex">
                                   Enter
                                   <CornerDownLeft className="size-3" />
                                 </Kbd>
                               ) : (
-                                <Kbd>
+                                <Kbd className="hidden sm:inline-flex">
                                   Tab
                                   <ArrowRight className="size-3" />
                                 </Kbd>
