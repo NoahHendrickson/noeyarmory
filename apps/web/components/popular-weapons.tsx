@@ -93,13 +93,23 @@ export function PopularWeapons({ onSelectWeapon }: { onSelectWeapon: (hash: numb
     let cancelled = false;
 
     void fetch("/api/popular-weapons")
-      .then((response) => response.json() as Promise<PopularWeaponResponse>)
+      .then((response) => {
+        if (!response.ok) throw new Error("popular-weapons unavailable");
+        return response.json() as Promise<PopularWeaponResponse>;
+      })
       .then((data) => {
         if (cancelled) return;
+        if (data.weapons.length === 0) {
+          setWeapons([]);
+          return;
+        }
+
         const resolved = data.weapons
           .map((entry) => byHash.get(entry.hash))
           .filter((weapon): weapon is WeaponSummary => weapon != null);
-        setWeapons(resolved);
+
+        // Only show when every Redis entry resolves in the local weapon index.
+        setWeapons(resolved.length === data.weapons.length ? resolved : []);
       })
       .catch(() => {
         if (!cancelled) setWeapons([]);

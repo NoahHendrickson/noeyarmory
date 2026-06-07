@@ -12,27 +12,26 @@ const mockedIsPopularWeaponsMockEnabled = vi.mocked(isPopularWeaponsMockEnabled)
 describe("isPopularityPublishingEnabled", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
+    delete process.env.UPSTASH_REDIS_REST_URL;
+    delete process.env.UPSTASH_REDIS_REST_TOKEN;
     mockedIsPopularWeaponsMockEnabled.mockReset();
     mockedIsPopularWeaponsMockEnabled.mockReturnValue(false);
   });
 
-  test("is true in development when mock mode is off", () => {
-    vi.stubEnv("NODE_ENV", "development");
+  test("is false when Upstash env vars are missing", () => {
+    expect(isPopularityPublishingEnabled()).toBe(false);
+  });
+
+  test("is true when Upstash env vars are set", () => {
+    vi.stubEnv("UPSTASH_REDIS_REST_URL", "https://example.upstash.io");
+    vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "token");
     expect(isPopularityPublishingEnabled()).toBe(true);
   });
 
-  test("is false in development when mock mode is on", () => {
+  test("is false when mock mode is on", () => {
+    vi.stubEnv("UPSTASH_REDIS_REST_URL", "https://example.upstash.io");
+    vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "token");
     mockedIsPopularWeaponsMockEnabled.mockReturnValue(true);
-    vi.stubEnv("NODE_ENV", "development");
     expect(isPopularityPublishingEnabled()).toBe(false);
-  });
-
-  test("is false in production unless POPULAR_WEAPONS_ENABLED=true", () => {
-    vi.stubEnv("NODE_ENV", "production");
-    vi.stubEnv("POPULAR_WEAPONS_ENABLED", undefined);
-    expect(isPopularityPublishingEnabled()).toBe(false);
-
-    vi.stubEnv("POPULAR_WEAPONS_ENABLED", "true");
-    expect(isPopularityPublishingEnabled()).toBe(true);
   });
 });
