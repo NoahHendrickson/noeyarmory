@@ -72,6 +72,17 @@ interface GitHubIssueResponse {
   html_url: string;
 }
 
+/** Pre-filled GitHub "new issue" URL when server-side API submission is unavailable. */
+export function buildGitHubNewIssueUrl(input: CreateFeedbackIssueInput): string {
+  const { owner, name } = parseFeedbackRepo(getFeedbackRepo());
+  const params = new URLSearchParams({
+    title: input.title.trim(),
+    body: buildIssueBody(input.body, input.metadata),
+    labels: labelForType(input.type),
+  });
+  return `https://github.com/${owner}/${name}/issues/new?${params.toString()}`;
+}
+
 export async function createFeedbackIssue(
   input: CreateFeedbackIssueInput,
 ): Promise<CreateFeedbackIssueResult> {
