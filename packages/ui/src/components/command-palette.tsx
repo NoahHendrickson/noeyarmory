@@ -834,13 +834,13 @@ export function CommandPalette({
                         aria-disabled={item.kind === "action" && item.action.disabled ? true : undefined}
                         className={cn(
                           "flex cursor-pointer items-center justify-between gap-3 rounded-lg px-3 py-1.5",
-                          selected && "bg-white/[0.08]",
+                          selected && "bg-white/[0.05]",
                           item.kind === "action" &&
                             "mt-1 justify-center py-2",
                           item.kind === "action" &&
                             (item.action.variant === "primary"
                               ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                              : "bg-white/[0.04] hover:bg-white/[0.08]"),
+                              : "bg-white/[0.04] hover:bg-white/[0.05]"),
                           item.kind === "action" &&
                             selected &&
                             item.action.variant === "primary" &&
