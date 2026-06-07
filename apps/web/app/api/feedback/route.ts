@@ -14,6 +14,7 @@ const TITLE_MAX = 100;
 const BODY_MAX = 4000;
 const FEEDBACK_LIMIT = 5;
 const FEEDBACK_WINDOW_MS = 60 * 60 * 1000;
+// In-memory limiter is per serverless instance; treat as a soft cap, not a global quota.
 const feedbackLimiter = createRateLimiter({
   limit: FEEDBACK_LIMIT,
   windowMs: FEEDBACK_WINDOW_MS,
@@ -128,7 +129,10 @@ export async function POST(request: Request) {
     });
     return NextResponse.json({ ok: true, issueUrl: issue.issueUrl });
   } catch (e) {
-    const message = e instanceof Error ? e.message : "Failed to submit feedback.";
-    return NextResponse.json({ ok: false, error: message }, { status: 500 });
+    console.error("[feedback] submission failed:", e);
+    return NextResponse.json(
+      { ok: false, error: "Failed to submit feedback. Please try again later." },
+      { status: 500 },
+    );
   }
 }

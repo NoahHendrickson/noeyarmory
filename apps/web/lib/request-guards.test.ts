@@ -29,4 +29,12 @@ describe("isSameOriginRequest", () => {
 
     expect(isSameOriginRequest(request)).toBe(false);
   });
+
+  test("allows same-origin requests without an Origin header", () => {
+    const request = new Request("https://example.com/api/armor/equip", {
+      method: "POST",
+    });
+
+    expect(isSameOriginRequest(request)).toBe(true);
+  });
 });
