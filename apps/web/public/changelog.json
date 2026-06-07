@@ -1,6 +1,39 @@
 {
-  "version": "0.1.0",
+  "version": "0.2.0",
   "releases": [
+    {
+      "version": "0.2.0",
+      "date": "2026-06-07",
+      "sections": [
+        {
+          "title": "Features",
+          "items": [
+            "Add in-app changelog, release-please, and automatic commit prefixes.",
+            "add My Armor vault search, Clarity perks, and Bungie setup tooling",
+            "**destiny:** manifest → weapon index pipeline + search functions",
+            "**vault:** Bungie OAuth sign-in + My Vault search of owned rolls",
+            "**web:** add shader background overlay and glass command palette",
+            "**web:** command-palette search UI, weapon detail modal, and craftable perks",
+            "**web:** weapon browse, facet filters, and fuzzy search",
+            "**web:** weapon detail page + reverse perk view"
+          ]
+        },
+        {
+          "title": "Bug Fixes",
+          "items": [
+            "Vercel monorepo deploy config and build resilience"
+          ]
+        },
+        {
+          "title": "Performance",
+          "items": [
+            "intern perks, split browse/detail index, virtualize grids",
+            "shared weapon index cache, memoized search, and SSR seeds",
+            "shared weapon index cache, memoized search, and SSR seeds"
+          ]
+        }
+      ]
+    },
     {
       "version": "0.1.0",
       "date": "2026-06-06",
