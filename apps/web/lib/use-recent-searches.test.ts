@@ -1,9 +1,11 @@
 import { describe, expect, test } from "vitest";
 
 import {
+  clearRecentSearchesForMode,
   createRecentSearchEntries,
   formatRecentSearchLabel,
   prependRecentSearches,
+  removeRecentSearch,
   type RecentSearch,
   type RecentSearchChip,
 } from "./use-recent-searches";
@@ -73,5 +75,54 @@ describe("prependRecentSearches", () => {
     expect(updated).toHaveLength(2);
     expect(updated[0]?.chips).toEqual([trait2Surrounded]);
     expect(updated[1]?.chips).toEqual([weaponTypeFusion]);
+  });
+});
+
+describe("removeRecentSearch", () => {
+  test("removes only the targeted entry", () => {
+    const searches: RecentSearch[] = [
+      {
+        id: "a",
+        mode: "weapon",
+        query: "fate",
+        chips: [],
+        updatedAt: "t1",
+      },
+      {
+        id: "b",
+        mode: "weapon",
+        query: "",
+        chips: [trait2Surrounded],
+        updatedAt: "t2",
+      },
+    ];
+
+    expect(removeRecentSearch(searches, "a")).toEqual([searches[1]]);
+  });
+});
+
+describe("clearRecentSearchesForMode", () => {
+  test("removes only entries for the given mode", () => {
+    const weaponSearch: RecentSearch = {
+      id: "weapon",
+      mode: "weapon",
+      query: "fate",
+      chips: [],
+      updatedAt: "t1",
+    };
+    const armorSearch: RecentSearch = {
+      id: "armor",
+      mode: "armor",
+      query: "helmet",
+      chips: [],
+      updatedAt: "t2",
+    };
+
+    expect(clearRecentSearchesForMode([weaponSearch, armorSearch], "weapon")).toEqual([
+      armorSearch,
+    ]);
+    expect(clearRecentSearchesForMode([weaponSearch, armorSearch], "armor")).toEqual([
+      weaponSearch,
+    ]);
   });
 });

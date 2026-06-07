@@ -78,6 +78,8 @@ export function CommandPalette({
   getChipAppearance,
   recentItems = [],
   onSelectRecent,
+  onRemoveRecent,
+  onClearRecent,
   recentSectionLabel = "Recent searches",
   filtersSectionLabel = "Filters",
   previewResults = [],
@@ -561,6 +563,8 @@ export function CommandPalette({
             onClearHover={() => setHoverIndex(-1)}
             onSetActive={(index) => dispatch({ type: "setActive", index })}
             onSelectItem={selectItem}
+            onRemoveRecent={onRemoveRecent}
+            onClearRecent={onClearRecent}
             renderResult={renderResult}
           />
         </div>

@@ -119,6 +119,10 @@ export interface CommandPaletteProps {
   /** Recent searches shown at the top of the filter category list. */
   recentItems?: PaletteRecentItem[];
   onSelectRecent?: (id: string) => void;
+  /** Remove a single recent search by id. */
+  onRemoveRecent?: (id: string) => void;
+  /** Clear all recent searches for the current list. */
+  onClearRecent?: () => void;
   /** Section label above recent search rows. */
   recentSectionLabel?: string;
   /** Section label above filter category rows. */

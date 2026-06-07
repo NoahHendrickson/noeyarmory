@@ -569,6 +569,61 @@ function RecentWithSuggestionsDemo() {
   );
 }
 
+function RecentDeleteDemo() {
+  const [query, setQuery] = useState("");
+  const [chips, setChips] = useState<PaletteChip[]>([]);
+  const [recentItems, setRecentItems] = useState(RECENT_ITEMS);
+  return (
+    <CommandPalette
+      placeholder="Press F to search"
+      categories={CATEGORIES}
+      chips={chips}
+      query={query}
+      onQueryChange={setQuery}
+      recentItems={recentItems}
+      onSelectRecent={fn()}
+      onRemoveRecent={(id) => setRecentItems((prev) => prev.filter((item) => item.id !== id))}
+      onClearRecent={() => setRecentItems([])}
+      onAddChip={(categoryId, option) => {
+        const category = CATEGORIES.find((c) => c.id === categoryId)!;
+        setChips((prev) => [
+          ...prev,
+          {
+            id: `${categoryId}:${option.id}`,
+            categoryId,
+            categoryLabel: category.label,
+            value: option.label,
+            valueId: option.id,
+          },
+        ]);
+      }}
+      onRemoveChip={(id) => setChips((prev) => prev.filter((c) => c.id !== id))}
+    />
+  );
+}
+
+export const RecentSearchesDeleteControls: Story = {
+  render: () => <RecentDeleteDemo />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const input = canvas.getByRole("combobox");
+    await userEvent.click(input);
+    await waitFor(() => expect(canvas.getByText("Recent searches")).toBeInTheDocument());
+    expect(canvas.getByText("Trait 2: Surrounded")).toBeInTheDocument();
+    expect(canvas.getByText("Element: Arc")).toBeInTheDocument();
+
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Remove recent search: Trait 2: Surrounded" }),
+    );
+    await waitFor(() => expect(canvas.queryByText("Trait 2: Surrounded")).toBeNull());
+    expect(canvas.getByText("Element: Arc")).toBeInTheDocument();
+
+    await userEvent.click(canvas.getByRole("button", { name: "Clear all recent searches" }));
+    await waitFor(() => expect(canvas.queryByText("Recent searches")).toBeNull());
+    expect(canvas.queryByText("Element: Arc")).toBeNull();
+  },
+};
+
 export const RecentSearchesSeparatedFromSuggestions: Story = {
   render: () => <RecentWithSuggestionsDemo />,
   play: async ({ canvasElement }) => {
