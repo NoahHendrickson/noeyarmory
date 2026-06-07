@@ -76,13 +76,15 @@ export function WeaponResultRow({
       }
       title={weapon.name}
       subtitle={
-        <span className="inline-flex items-center gap-2">
-          <ElementIcon element={weapon.element} iconPath={elementIconPath} colored />
-          {weapon.craftable ? <CraftableBadge className="mx-0.5" /> : null}
-          {weaponTypeLabel(weapon.type, weapon.frame)}
+        <span className="flex flex-col gap-0.5">
+          <span className="inline-flex items-center gap-2">
+            <ElementIcon element={weapon.element} iconPath={elementIconPath} colored />
+            {weapon.craftable ? <CraftableBadge className="mx-0.5" /> : null}
+            {weaponTypeLabel(weapon.type, weapon.frame)}
+          </span>
+          {dps != null ? <WeaponDpsLabel entry={dps} /> : null}
         </span>
       }
-      trailing={dps != null ? <WeaponDpsLabel entry={dps} /> : undefined}
     />
   );
 }
