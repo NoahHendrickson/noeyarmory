@@ -37,6 +37,10 @@ See root `package.json` / `README.md` for standard commands (`pnpm dev`, `pnpm b
 
 For full catalog + vault/armor flows, configure repo-root `.env` (see `.env.example`, `docs/bungie-setup.md`) and run `pnpm setup:bungie` (requires `BUNGIE_API_KEY` and OAuth credentials).
 
+### Code → Figma
+
+When pushing UI from this repo into Figma, follow the project skill at `.cursor/skills/code-to-figma/SKILL.md`: capture live UI with `generate_figma_design` (Storybook or `/design/*` routes), never hand-draw frames. Design routes live outside `app/(app)/` so `AppShell` chrome is excluded.
+
 ### Search UX
 
 The command palette is keyboard-driven: press **F** to focus search, then type a weapon or perk name. Sample-data weapons include **Fatebringer** (hash `1`) and **Stormchase**; direct URL `/weapon/1` works if the palette search misbehaves before data finishes loading.

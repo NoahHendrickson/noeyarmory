@@ -5,10 +5,28 @@ import {
   findTuningSocketIndex,
   isArmor30ItemDef,
   resolveArchetypeFromSockets,
+  resolveArmor30Stats,
   resolveTertiaryStat,
   resolveTunableStat,
   resolveTunableStatForInstance,
 } from "./armor-instance";
+
+describe("resolveArmor30Stats", () => {
+  test("orders nonzero stats by value, then zero stats", () => {
+    const stats = resolveArmor30Stats([
+      { statHash: ARMOR3_STAT_HASHES.Weapons, value: 50 },
+      { statHash: ARMOR3_STAT_HASHES.Health, value: 40 },
+      { statHash: ARMOR3_STAT_HASHES.Melee, value: 30 },
+      { statHash: ARMOR3_STAT_HASHES.Grenade, value: 0 },
+      { statHash: ARMOR3_STAT_HASHES.Super, value: 0 },
+      { statHash: ARMOR3_STAT_HASHES.Class, value: 0 },
+    ]);
+
+    expect(stats.slice(0, 3).map((s) => s.name)).toEqual(["Weapons", "Health", "Melee"]);
+    expect(stats.slice(0, 3).map((s) => s.value)).toEqual([50, 40, 30]);
+    expect(stats.slice(3).every((s) => s.value === 0)).toBe(true);
+  });
+});
 
 describe("resolveTertiaryStat", () => {
   test("returns 3rd highest armor 3.0 stat", () => {

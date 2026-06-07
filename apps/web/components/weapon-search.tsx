@@ -7,12 +7,10 @@ import {
   cn,
   CommandPalette,
   PillSelect,
-  SegmentedToggle,
   type PaletteCategory,
   type PaletteChip,
   type PaletteValueOption,
   type PillSelectOption,
-  type SegmentedToggleOption,
 } from "@repo/ui";
 import {
   collectColumnPerks,
@@ -37,7 +35,7 @@ import {
   sortOwnedArmor,
   type OwnedArmorFilters,
 } from "../lib/owned-armor-search";
-import { ArmorResultRow } from "./armor-result-row";
+import { ArmorResultRow, type ArmorActionState } from "./armor-result-row";
 import { WeaponResultRow } from "./weapon-result-row";
 
 const WeaponDetailModal = dynamic(
@@ -56,7 +54,7 @@ const MAX_RESULTS = 50;
 /** Cap fuzzy matches before filter/sort — filters may narrow further. */
 const FUSE_PRE_LIMIT = 300;
 
-const WEAPON_SORT_OPTIONS: SegmentedToggleOption<WeaponSort>[] = [
+const WEAPON_SORT_OPTIONS: PillSelectOption<WeaponSort>[] = [
   { value: "name", label: "A–Z" },
   { value: "season-desc", label: "Newest" },
   { value: "season-asc", label: "Oldest" },
@@ -113,9 +111,13 @@ export function WeaponSearch({
 }) {
   const { weapons, perks, damageTypes, isSample, byHash } = useWeapons();
   const [mode, setMode] = useState<Mode>(initialMode);
-  const { armor: owned, loading: armorLoading, error: armorLoadError } = useOwnedArmor(
-    signedIn && mode === "armor",
-  );
+  const {
+    armor: owned,
+    loading: armorLoading,
+    error: armorLoadError,
+    refetch: refetchArmor,
+  } = useOwnedArmor(signedIn);
+  const [armorAction, setArmorAction] = useState<ArmorActionState>({});
 
   const [query, setQuery] = useState("");
   const [chips, setChips] = useState<PaletteChip[]>([]);
@@ -211,15 +213,45 @@ export function WeaponSearch({
     setMode(next);
     setChips([]);
     setQuery("");
-    setPaletteOpen(false);
+    setArmorAction({});
+  }
+
+  async function runArmorAction(
+    instanceId: string,
+    action: "equip" | "transfer",
+    path: "/api/armor/equip" | "/api/armor/transfer",
+  ) {
+    setArmorAction({
+      pendingInstanceId: instanceId,
+      pendingAction: action,
+      error: undefined,
+      errorInstanceId: undefined,
+    });
+
+    try {
+      const res = await fetch(path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ instanceId }),
+      });
+      const json = (await res.json()) as { error?: string };
+      if (!res.ok) {
+        throw new Error(json.error ?? `HTTP ${res.status}`);
+      }
+      setArmorAction({});
+      await refetchArmor();
+    } catch (e: unknown) {
+      setArmorAction({
+        error: e instanceof Error ? e.message : "Action failed",
+        errorInstanceId: instanceId,
+      });
+    }
   }
 
   const armorOverlay = !signedIn ? (
     <a href={ARMOR_LOGIN_URL} className="inline-flex">
       <Badge variant="warning">Reconnect your bungie account ↗</Badge>
     </a>
-  ) : armorLoading ? (
-    <span className="text-muted-foreground text-sm">Loading your armor…</span>
   ) : armorLoadError ? (
     <span className="text-destructive text-sm">{armorLoadError}</span>
   ) : undefined;
@@ -231,7 +263,9 @@ export function WeaponSearch({
   const placeholder =
     mode === "weapon"
       ? "Press F to search"
-      : "Press F to search armor by class, set, archetype, or stats";
+      : armorLoading
+        ? "Loading your armor…"
+        : "Press F to search armor by class, set, archetype, or stats";
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -242,8 +276,9 @@ export function WeaponSearch({
       <main className="mx-auto flex w-full flex-1 flex-col px-4 pt-[16vh]">
         <div
           className={cn(
-            "mx-auto flex w-max max-w-[calc(100vw-2rem)] flex-col transition-[min-width] duration-200",
+            "mx-auto flex w-max max-w-[calc(100vw-2rem)] flex-col transition-[min-width,opacity] duration-200",
             paletteOpen ? "min-w-[600px]" : "min-w-[420px]",
+            selected && "pointer-events-none opacity-0",
           )}
         >
           <div className="mb-2 flex justify-end">
@@ -281,11 +316,25 @@ export function WeaponSearch({
             mode === "weapon"
               ? weaponShown.map((weapon) => ({
                   id: String(weapon.hash),
-                  content: <WeaponResultRow weapon={weapon} />,
+                  content: (
+                    <WeaponResultRow
+                      weapon={weapon}
+                      elementIconPath={elementIconMap.get(weapon.element)}
+                    />
+                  ),
                 }))
               : armorShown.map((armor) => ({
                   id: armor.instanceId,
-                  content: <ArmorResultRow armor={armor} />,
+                  content: (
+                    <ArmorResultRow
+                      armor={armor}
+                      actionState={armorAction}
+                      onEquip={() => void runArmorAction(armor.instanceId, "equip", "/api/armor/equip")}
+                      onMoveToCharacter={() =>
+                        void runArmorAction(armor.instanceId, "transfer", "/api/armor/transfer")
+                      }
+                    />
+                  ),
                 }))
           }
           onSelectResult={(id) => {
@@ -301,9 +350,16 @@ export function WeaponSearch({
                 {resultCount} {resultCount === 1 ? "result" : "results"}
               </div>
             ) : showResults && mode === "weapon" ? (
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-muted-foreground text-xs">Sort by</span>
-                <SegmentedToggle
+              <div
+                data-palette-ignore-close
+                className="flex items-center justify-between gap-3"
+                onClick={(e) => e.stopPropagation()}
+                onPointerDown={(e) => e.stopPropagation()}
+              >
+                <span className="text-muted-foreground text-xs">
+                  {resultCount} {resultCount === 1 ? "result" : "results"}
+                </span>
+                <PillSelect
                   aria-label="Sort weapons"
                   options={WEAPON_SORT_OPTIONS}
                   value={sort}
@@ -324,6 +380,10 @@ export function WeaponSearch({
           <p className="text-muted-foreground mt-3 text-center text-xs">
             Sample data — run <code>pnpm setup:bungie</code> for the full index.
           </p>
+        )}
+
+        {mode === "armor" && signedIn && armorLoading && (
+          <p className="text-muted-foreground mt-3 text-center text-xs">Loading your armor…</p>
         )}
 
         {mode === "armor" && signedIn && !armorLoading && !armorLoadError && owned.length === 0 && (

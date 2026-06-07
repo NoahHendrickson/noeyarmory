@@ -6,6 +6,7 @@ import {
   buildArchetypeMap,
   buildModMap,
   resolveArchetypeFromPlugMap,
+  resolveArmor30Stats,
   resolveTertiaryStat,
   resolveTunableStatForInstance,
   type ArmorDoc,
@@ -107,6 +108,7 @@ interface ProfileResponse {
     profileInventory?: { data?: { items: ProfileItem[] } };
     characterInventories?: { data?: Record<string, { items: ProfileItem[] }> };
     characterEquipment?: { data?: Record<string, { items: ProfileItem[] }> };
+    characters?: { data?: { characters?: Record<string, { classType: number }> } };
     itemComponents?: {
       sockets?: { data?: Record<string, { sockets: ProfileSocket[] }> };
       stats?: {
@@ -115,6 +117,25 @@ interface ProfileResponse {
       reusablePlugs?: { data?: Record<string, ProfileReusablePlugs> };
     };
   };
+}
+
+const CLASS_TYPE_NAMES: Record<number, string> = {
+  0: "Titan",
+  1: "Hunter",
+  2: "Warlock",
+};
+
+export type ArmorLocation = "vault" | "inventory" | "equipped";
+
+export interface CharacterRef {
+  characterId: string;
+  classType: string;
+}
+
+interface LocatedProfileItem {
+  item: ProfileItem;
+  location: ArmorLocation;
+  ownerCharacterId?: string;
 }
 
 export interface OwnedWeapon {
@@ -132,6 +153,9 @@ export interface OwnedArmor {
   archetype?: string;
   tertiaryStat?: string;
   tunableStat?: string;
+  stats?: ReturnType<typeof resolveArmor30Stats>;
+  location: ArmorLocation;
+  ownerCharacterId?: string;
 }
 
 let armorIndexCache: {
@@ -155,12 +179,42 @@ function loadArmorIndex(): {
   return armorIndexCache;
 }
 
-function collectProfileItems(r: ProfileResponse["Response"]): ProfileItem[] {
-  return [
-    ...(r.profileInventory?.data?.items ?? []),
-    ...Object.values(r.characterInventories?.data ?? {}).flatMap((c) => c.items),
-    ...Object.values(r.characterEquipment?.data ?? {}).flatMap((c) => c.items),
-  ];
+function collectLocatedProfileItems(r: ProfileResponse["Response"]): LocatedProfileItem[] {
+  const located: LocatedProfileItem[] = [];
+
+  for (const [characterId, equipment] of Object.entries(r.characterEquipment?.data ?? {})) {
+    for (const item of equipment.items) {
+      located.push({ item, location: "equipped", ownerCharacterId: characterId });
+    }
+  }
+
+  for (const [characterId, inventory] of Object.entries(r.characterInventories?.data ?? {})) {
+    for (const item of inventory.items) {
+      located.push({ item, location: "inventory", ownerCharacterId: characterId });
+    }
+  }
+
+  for (const item of r.profileInventory?.data?.items ?? []) {
+    located.push({ item, location: "vault" });
+  }
+
+  return located;
+}
+
+function parseCharacters(r: ProfileResponse["Response"]): CharacterRef[] {
+  const characters = r.characters?.data?.characters ?? {};
+  return Object.entries(characters).map(([characterId, character]) => ({
+    characterId,
+    classType: CLASS_TYPE_NAMES[character.classType] ?? "Any",
+  }));
+}
+
+/** Map armor class label to the matching account character id. */
+export function resolveCharacterForArmor(
+  classType: string,
+  characters: CharacterRef[],
+): string | undefined {
+  return characters.find((character) => character.classType === classType)?.characterId;
 }
 
 interface ProfileItemComponents {
@@ -171,6 +225,8 @@ interface ProfileItemComponents {
 
 async function fetchProfile(session: IronSession<SessionData>): Promise<{
   items: ProfileItem[];
+  locatedItems: LocatedProfileItem[];
+  characters: CharacterRef[];
   components: ProfileItemComponents;
 }> {
   const accessToken = await ensureAccessToken(session);
@@ -178,12 +234,16 @@ async function fetchProfile(session: IronSession<SessionData>): Promise<{
   if (membershipType == null || !membershipId) throw new Error("No membership in session");
 
   const profile = await authedGet<ProfileResponse>(
-    `/Destiny2/${membershipType}/Profile/${membershipId}/?components=102,201,205,300,304,305,310`,
+    `/Destiny2/${membershipType}/Profile/${membershipId}/?components=102,200,201,205,300,304,305,310`,
     accessToken,
   );
 
+  const locatedItems = collectLocatedProfileItems(profile.Response);
+
   return {
-    items: collectProfileItems(profile.Response),
+    items: locatedItems.map((located) => located.item),
+    locatedItems,
+    characters: parseCharacters(profile.Response),
     components: {
       socketData: profile.Response.itemComponents?.sockets?.data ?? {},
       statsData: profile.Response.itemComponents?.stats?.data ?? {},
@@ -249,12 +309,13 @@ export async function getOwnedWeapons(session: IronSession<SessionData>): Promis
 
 /** Fetch the user's profile and return every owned armor piece with Armor 3.0 roll data. */
 export async function getOwnedArmor(session: IronSession<SessionData>): Promise<OwnedArmor[]> {
-  const { items, components } = await fetchProfile(session);
+  const { locatedItems, components } = await fetchProfile(session);
   const { byHash, modMap, archetypeMap } = loadArmorIndex();
 
   const owned: OwnedArmor[] = [];
   const seen = new Set<string>();
-  for (const item of items) {
+  for (const located of locatedItems) {
+    const item = located.item;
     if (!item.itemInstanceId || seen.has(item.itemInstanceId)) continue;
     const armor = byHash.get(item.itemHash);
     if (!armor) continue;
@@ -282,9 +343,61 @@ export async function getOwnedArmor(session: IronSession<SessionData>): Promise<
             profileReusablePlugsToRecord(components.reusablePlugData[instanceId]),
           )
         : undefined,
+      stats: isArmor30
+        ? resolveArmor30Stats(profileStatsToItemStats(components.statsData[instanceId]?.stats))
+        : undefined,
+      location: located.location,
+      ownerCharacterId: located.ownerCharacterId,
     });
   }
 
   owned.sort((a, b) => a.armor.name.localeCompare(b.armor.name));
   return owned;
+}
+
+/** Look up one owned armor piece and the account's characters (single profile fetch). */
+export async function findOwnedArmorForAction(
+  session: IronSession<SessionData>,
+  instanceId: string,
+): Promise<{ armor: OwnedArmor; characters: CharacterRef[] } | undefined> {
+  const { locatedItems, characters, components } = await fetchProfile(session);
+  const { byHash, modMap, archetypeMap } = loadArmorIndex();
+
+  const located = locatedItems.find((entry) => entry.item.itemInstanceId === instanceId);
+  if (!located?.item.itemInstanceId) return undefined;
+
+  const armorDoc = byHash.get(located.item.itemHash);
+  if (!armorDoc) return undefined;
+
+  const instance = located.item.itemInstanceId;
+  const sockets = components.socketData[instance]?.sockets ?? [];
+  const isArmor30 = armorDoc.isArmor30 ?? false;
+
+  return {
+    characters,
+    armor: {
+      armor: armorDoc,
+      instanceId: instance,
+      rolledMods: resolveRolledPlugs(instance, modMap, components.socketData),
+      isArmor30,
+      setName: isArmor30 ? armorDoc.setName : undefined,
+      archetype: isArmor30
+        ? resolveArchetypeFromPlugMap(sockets, archetypeMap)
+        : undefined,
+      tertiaryStat: isArmor30
+        ? resolveTertiaryStat(profileStatsToItemStats(components.statsData[instance]?.stats))
+        : undefined,
+      tunableStat: isArmor30
+        ? resolveTunableStatForInstance(
+            sockets,
+            profileReusablePlugsToRecord(components.reusablePlugData[instance]),
+          )
+        : undefined,
+      stats: isArmor30
+        ? resolveArmor30Stats(profileStatsToItemStats(components.statsData[instance]?.stats))
+        : undefined,
+      location: located.location,
+      ownerCharacterId: located.ownerCharacterId,
+    },
+  };
 }

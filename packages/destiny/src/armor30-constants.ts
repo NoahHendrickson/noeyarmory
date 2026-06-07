@@ -22,6 +22,16 @@ export const ARMOR3_STAT_NAME_BY_HASH: Record<number, string> = {
   [ARMOR3_STAT_HASHES.Class]: "Class",
 };
 
+/** Bungie manifest icon paths for Armor 3.0 stats (DestinyStatDefinition). */
+export const ARMOR3_STAT_ICON_BY_HASH: Record<number, string> = {
+  [ARMOR3_STAT_HASHES.Weapons]: "/common/destiny2_content/icons/bc69675acdae9e6b9a68a02fb4d62e07.png",
+  [ARMOR3_STAT_HASHES.Health]: "/common/destiny2_content/icons/717b8b218cc14325a54869bef21d2964.png",
+  [ARMOR3_STAT_HASHES.Melee]: "/common/destiny2_content/icons/fa534aca76d7f2d7e7b4ba4df4271b42.png",
+  [ARMOR3_STAT_HASHES.Grenade]: "/common/destiny2_content/icons/065cdaabef560e5808e821cefaeaa22c.png",
+  [ARMOR3_STAT_HASHES.Super]: "/common/destiny2_content/icons/585ae4ede9c3da96b34086fccccdc8cd.png",
+  [ARMOR3_STAT_HASHES.Class]: "/common/destiny2_content/icons/7eb845acb5b3a4a9b7e0b2f05f5c43f1.png",
+};
+
 /** Balanced Tuning — present on every tuning socket alongside the +5/-5 mods. */
 export const BALANCED_TUNING_PLUG_HASH = 3122197216;
 

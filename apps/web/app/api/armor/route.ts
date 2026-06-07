@@ -31,6 +31,9 @@ export async function GET() {
         archetype: o.archetype,
         tertiaryStat: o.tertiaryStat,
         tunableStat: o.tunableStat,
+        stats: o.stats,
+        location: o.location,
+        ownerCharacterId: o.ownerCharacterId,
       })),
     });
   } catch (e) {

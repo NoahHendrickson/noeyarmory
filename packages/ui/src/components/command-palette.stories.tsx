@@ -352,6 +352,25 @@ export const DraftChipWhileDrilling: Story = {
     const chipInput = canvasElement.querySelector('[data-slot="filter-chip-input"]');
     expect(chipInput).toBeTruthy();
     expect(canvas.getByRole("combobox")).toBe(chipInput);
+    await expect(chipInput).toHaveAttribute("placeholder", "Firefly");
+  },
+};
+
+export const DraftChipWhisperFollowsHighlight: Story = {
+  render: () => <Demo />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole("combobox"));
+    await userEvent.keyboard("{Enter}");
+    await waitFor(() =>
+      expect(canvas.getByLabelText(/filtering by trait 1/i)).toBeInTheDocument(),
+    );
+    const chipInput = canvas.getByRole("combobox");
+    await expect(chipInput).toHaveAttribute("placeholder", "Firefly");
+    await userEvent.keyboard("{Tab}");
+    await waitFor(() => expect(chipInput).toHaveAttribute("placeholder", "Explosive Payload"));
+    await userEvent.hover(canvas.getByRole("option", { name: /Firefly/ }));
+    await waitFor(() => expect(chipInput).toHaveAttribute("placeholder", "Firefly"));
   },
 };
 

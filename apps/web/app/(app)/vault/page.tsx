@@ -1,10 +1,10 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 
-import { getOwnedWeapons } from "../../lib/bungie-profile";
-import { getSession, isSignedIn } from "../../lib/session";
-import { VaultView } from "../../components/vault-view";
-import type { VaultWeapon } from "../../lib/vault-types";
+import { getOwnedWeapons } from "../../../lib/bungie-profile";
+import { getSession, isSignedIn } from "../../../lib/session";
+import { VaultView } from "../../../components/vault-view";
+import type { VaultWeapon } from "../../../lib/vault-types";
 
 export const dynamic = "force-dynamic";
 

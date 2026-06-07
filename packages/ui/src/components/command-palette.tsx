@@ -127,6 +127,12 @@ type Item =
   | { kind: "value"; option: PaletteValueOption }
   | { kind: "result"; result: PaletteResultItem };
 
+/** Whisper text for the draft chip input — mirrors the highlighted list row. */
+function whisperForActiveItem(item: Item | undefined): string | undefined {
+  if (item?.kind === "value") return item.option.label;
+  return undefined;
+}
+
 const MAX_VALUE_SUGGESTIONS = 20;
 
 function listMode(panel: PanelKind, showResults: boolean, query: string): ListMode | null {
@@ -415,7 +421,9 @@ export function CommandPalette({
   const showAddMore = chips.length > 0 && state.panel !== "values";
   const drilling = state.panel === "values" && activeCategory != null;
   const effectivePlaceholder = showAddMore ? "Add more filters" : placeholder;
-  const valueInputPlaceholder = activeCategory ? `Filter ${activeCategory.label}…` : undefined;
+  const valueInputPlaceholder = activeCategory
+    ? (whisperForActiveItem(items[activeIndex]) ?? `Filter ${activeCategory.label}…`)
+    : undefined;
 
   const comboboxProps = {
     role: "combobox" as const,
@@ -474,6 +482,7 @@ export function CommandPalette({
                     onInputChange={(value) => dispatch({ type: "setValueQuery", value })}
                     onInputKeyDown={handleKeyDown}
                     inputPlaceholder={valueInputPlaceholder}
+                    onRemove={() => dispatch({ type: "back" })}
                     inputProps={{
                       ...comboboxProps,
                       onFocus: () => !disabled && openPanel(),
@@ -514,9 +523,9 @@ export function CommandPalette({
             <div className="flex shrink-0 items-center gap-2">
               <Button
                 type="button"
-                variant="destructive"
+                variant="ghost"
                 size="iconRound"
-                className="text-card hover:text-card"
+                className="text-white/60 hover:bg-white/10 hover:text-white"
                 aria-label="Clear all filters"
                 disabled={disabled}
                 onClick={onClearChips}
@@ -580,8 +589,8 @@ export function CommandPalette({
                     >
                       {item.kind === "category" ? (
                         <>
-                          <span className="flex min-w-0 items-baseline gap-2 text-xs">
-                            <span className="font-normal text-white">{item.category.label}:</span>
+                          <span className="flex min-w-0 items-baseline gap-2 text-xs font-medium">
+                            <span className="text-white">{item.category.label}:</span>
                             {item.category.examples && (
                               <span className="text-muted-foreground truncate">
                                 {item.category.examples}
@@ -602,8 +611,8 @@ export function CommandPalette({
                         </>
                       ) : item.kind === "chipSuggestion" ? (
                         <>
-                          <span className="flex min-w-0 items-baseline gap-2 text-xs">
-                            <span className="font-normal text-white">{item.category.label}:</span>
+                          <span className="flex min-w-0 items-baseline gap-2 text-xs font-medium">
+                            <span className="text-white">{item.category.label}:</span>
                             <span
                               className={cn(
                                 "truncate",
@@ -634,7 +643,7 @@ export function CommandPalette({
                         <>
                           <span
                             className={cn(
-                              "truncate text-xs",
+                              "truncate text-xs font-medium",
                               item.option.dimmed && "opacity-45",
                             )}
                           >

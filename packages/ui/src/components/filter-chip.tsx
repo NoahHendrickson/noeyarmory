@@ -10,13 +10,13 @@ const filterChipBase =
 const filterChipVariants = cva(filterChipBase, {
     variants: {
       tone: {
-        default: "text-card rounded-full bg-white/70 py-1 pr-0.5 pl-2",
-        trait: "rounded-full bg-filter-chip-trait py-1 pr-0.5 pl-2 text-filter-chip-trait-foreground",
+        default: "text-card rounded-full bg-white/70 py-1 pr-0.5 pl-2.5",
+        trait: "rounded-full bg-filter-chip-trait py-1 pr-0.5 pl-2.5 text-filter-chip-trait-foreground",
         "ammo-special":
-          "rounded-full bg-filter-chip-ammo-special py-1 pr-0.5 pl-2 text-filter-chip-ammo-special-foreground",
+          "rounded-full bg-filter-chip-ammo-special py-1 pr-0.5 pl-2.5 text-filter-chip-ammo-special-foreground",
         "ammo-heavy":
-          "rounded-full bg-filter-chip-ammo-heavy py-1 pr-0.5 pl-2 text-filter-chip-ammo-heavy-foreground",
-        element: "rounded-full py-1 pr-0.5 pl-2 text-filter-chip-element-foreground",
+          "rounded-full bg-filter-chip-ammo-heavy py-1 pr-0.5 pl-2.5 text-filter-chip-ammo-heavy-foreground",
+        element: "rounded-full py-1 pr-0.5 pl-2.5 text-filter-chip-element-foreground",
       },
       element: {
         Solar: "bg-filter-chip-element-solar",
@@ -63,7 +63,7 @@ export interface FilterChipProps extends Omit<ComponentProps<"span">, "title"> {
   valueIcon?: ReactNode;
   /** Suppress the category label prefix (e.g. icon-only element chips). */
   hideLabel?: boolean;
-  /** When provided, renders a × button (committed chips only). */
+  /** When provided, renders a × button to dismiss the chip or cancel an in-progress filter. */
   onRemove?: () => void;
   /** Draft chip: inline input for filtering values within this category. */
   inputRef?: Ref<HTMLInputElement>;
@@ -113,9 +113,9 @@ function FilterChip({
       aria-label={ariaLabel}
       className={cn(
         isDraft
-          ? cn(filterChipBase, "rounded-full bg-white/[0.08] py-1 pl-2 pr-2 text-white/70")
+          ? cn(filterChipBase, "rounded-full bg-white/[0.08] py-1 pl-2.5 pr-2 text-white/70")
           : filterChipVariants({ tone, element: tone === "element" ? element : undefined }),
-        hasInlineInput && "pr-2.5",
+        hasInlineInput && (onRemove ? "pr-0.5" : "pr-2.5"),
         iconOnly && "px-1.5",
         className,
       )}
@@ -154,12 +154,16 @@ function FilterChip({
           )}
         </span>
       )}
-      {onRemove && !isDraft && (
+      {onRemove && (
         <button
           type="button"
-          aria-label={`Remove ${label}: ${value}`}
+          aria-label={isDraft ? `Cancel ${label} filter` : `Remove ${label}: ${value}`}
           onClick={onRemove}
-          className={removeButtonVariants({ tone })}
+          className={
+            isDraft
+              ? "flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-full text-white/60 transition-colors hover:bg-white/10 hover:text-white"
+              : removeButtonVariants({ tone })
+          }
         >
           <X className="size-3" />
         </button>

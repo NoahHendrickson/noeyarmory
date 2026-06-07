@@ -13,7 +13,7 @@ Open [bungie.net/en/Application](https://www.bungie.net/en/Application) and crea
 | Name | e.g. `noeyarmory dev` |
 | OAuth Client Type | **Confidential** |
 | Redirect URL | `https://localhost:4111/api/auth/callback` |
-| Scopes | **ReadDestinyInventoryAndVault**, **ReadBasicUserProfile** |
+| Scopes | **ReadDestinyInventoryAndVault**, **ReadBasicUserProfile**, **MoveEquipDestinyItems** |
 
 ### Prod app (Vercel)
 
@@ -94,6 +94,8 @@ Do **not** set Install Command to `cd ../.. && pnpm install` when Root Directory
 | OAuth redirect error | Redirect URL in Bungie must **exactly** match (`https`, port `4111`, path `/api/auth/callback`) |
 | `Missing BUNGIE_*` on auth | Fill repo-root `.env` with **dev** app credentials, restart `pnpm dev` |
 | Empty vault/armor after sign-in | Run `pnpm setup:bungie` to generate `weapons.json` and `armor.json` |
+| Equip / Move armor fails with scope error | Add **MoveEquipDestinyItems** to your Bungie app scopes, then sign out and sign back in |
+| Equip fails in-game | Bungie requires you to be **in orbit or a social space** to equip or transfer items |
 | Prod OAuth fails | Confirm Vercel uses **prod** app credentials, not dev |
 | `No Next.js version detected` on deploy | Root Directory must be `apps/web` (with outside files enabled) **or** repo root with root `vercel.json`; clear custom Install/Build overrides in Vercel settings |
 

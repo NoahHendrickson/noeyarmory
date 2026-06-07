@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import { sampleWeapons } from "./fixtures/sample-weapons";
 import { buildPerkMapFromCatalog, internWeaponCatalog } from "./intern-weapons";
+import type { PerkRef, WeaponDoc } from "./types";
 import {
   collectColumnPerks,
   collectFacets,
@@ -156,6 +157,120 @@ describe("collectColumnPerks", () => {
   test("counts weapons per trait1 perk", () => {
     const { trait1 } = collectColumnPerks(sampleSummaries, samplePerks);
     expect(trait1.find((p) => p.name === "Firefly")?.count).toBe(2);
+  });
+
+  test("currentlyCanRoll stays true when any weapon can still roll the perk", () => {
+    const p = (hash: number, name: string, currentlyCanRoll: boolean): PerkRef => ({
+      hash,
+      name,
+      currentlyCanRoll,
+    });
+    const weapons: WeaponDoc[] = [
+      {
+        hash: 10,
+        name: "Retired Pool",
+        type: "Auto Rifle",
+        element: "Kinetic",
+        ammo: "Primary",
+        rarity: "Legendary",
+        slot: "Kinetic",
+        frame: "Adaptive Frame",
+        craftable: false,
+        adept: false,
+        releaseIndex: 1,
+        stats: [],
+        columns: [{ kind: "Trait", perks: [p(500, "Surrounded", false)] }],
+        perks: ["Surrounded"],
+        perkHashes: [500],
+      },
+      {
+        hash: 11,
+        name: "Active Pool",
+        type: "Auto Rifle",
+        element: "Solar",
+        ammo: "Primary",
+        rarity: "Legendary",
+        slot: "Energy",
+        frame: "Adaptive Frame",
+        craftable: false,
+        adept: false,
+        releaseIndex: 2,
+        stats: [],
+        columns: [{ kind: "Trait", perks: [p(500, "Surrounded", true)] }],
+        perks: ["Surrounded"],
+        perkHashes: [500],
+      },
+    ];
+    const { index } = internWeaponCatalog(weapons, "test");
+    const { trait1 } = collectColumnPerks(index.weapons, index.perks);
+    expect(trait1.find((perk) => perk.name === "Surrounded")?.currentlyCanRoll).toBe(true);
+  });
+
+  test("interning keeps enhanced descriptions when the first weapon lacked them", () => {
+    const p = (
+      hash: number,
+      name: string,
+      extra?: Pick<PerkRef, "description" | "enhancedDescription" | "alternateHashes">,
+    ): PerkRef => ({ hash, name, currentlyCanRoll: true, ...extra });
+    const weapons: WeaponDoc[] = [
+      {
+        hash: 20,
+        name: "Sparse",
+        type: "Hand Cannon",
+        element: "Arc",
+        ammo: "Primary",
+        rarity: "Legendary",
+        slot: "Kinetic",
+        frame: "Adaptive Frame",
+        craftable: false,
+        adept: false,
+        releaseIndex: 1,
+        stats: [],
+        columns: [
+          {
+            kind: "Trait",
+            perks: [p(600, "Firefly", { description: "Base only." })],
+          },
+        ],
+        perks: ["Firefly"],
+        perkHashes: [600],
+      },
+      {
+        hash: 21,
+        name: "Complete",
+        type: "Hand Cannon",
+        element: "Solar",
+        ammo: "Primary",
+        rarity: "Legendary",
+        slot: "Energy",
+        frame: "Adaptive Frame",
+        craftable: false,
+        adept: false,
+        releaseIndex: 2,
+        stats: [],
+        columns: [
+          {
+            kind: "Trait",
+            perks: [
+              p(600, "Firefly", {
+                description: "Base only.",
+                enhancedDescription: "Enhanced bonus.",
+                alternateHashes: [601],
+              }),
+            ],
+          },
+        ],
+        perks: ["Firefly"],
+        perkHashes: [600],
+      },
+    ];
+    const { index } = internWeaponCatalog(weapons, "test");
+    const firefly = index.perks.find((perk) => perk.name === "Firefly");
+    expect(firefly).toMatchObject({
+      description: "Base only.",
+      enhancedDescription: "Enhanced bonus.",
+      alternateHashes: [601],
+    });
   });
 });
 

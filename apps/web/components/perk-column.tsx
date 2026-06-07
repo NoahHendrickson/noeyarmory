@@ -91,14 +91,15 @@ function PerkTile({
   const clarityLines = getClarityDisplayLines(tiers);
   const icon = bungieIcon(perk.icon);
   const canRoll = perk.currentlyCanRoll;
-  const dim = size === "lg" ? "size-10" : "size-8";
-  const img = size === "lg" ? 40 : 32;
+  const tileDim = size === "lg" ? "size-14" : "size-12";
+  const iconDim = size === "lg" ? "size-12" : "size-10";
+  const imgPx = size === "lg" ? 48 : 40;
 
   const tile = (
     <span
       className={cn(
         "relative flex shrink-0 items-center justify-center rounded-md",
-        dim,
+        tileDim,
         canRoll ? "bg-[#3b6ea5]" : "bg-white/10 opacity-45",
       )}
     >
@@ -106,13 +107,13 @@ function PerkTile({
         <Image
           src={icon}
           alt=""
-          width={img}
-          height={img}
-          className={cn("object-contain", size === "lg" ? "size-8" : "size-6")}
+          width={imgPx}
+          height={imgPx}
+          className={cn("object-contain", iconDim)}
           unoptimized
         />
       ) : (
-        <span className="bg-muted size-6 rounded-full" />
+        <span className={cn("bg-muted rounded-full", iconDim)} />
       )}
     </span>
   );
@@ -162,15 +163,11 @@ function PerkTile({
   );
 }
 
-/**
- * One weapon perk column (light.gg-style): label over a vertical stack of perk
- * icons. Retired perks are dimmed. Intrinsic is
- * rendered as a single larger icon when passed alone.
- */
+/** One weapon perk column: vertical stack of perk icons (light.gg-style). */
 export function PerkColumnView({
   column,
   linkPerks = true,
-  /** Intrinsic columns use a larger lone icon with no header. */
+  /** Intrinsic columns use a larger lone icon. */
   compactIntrinsic = false,
   clarityDescriptions,
 }: {
@@ -194,20 +191,15 @@ export function PerkColumnView({
   }
 
   return (
-    <div className="flex shrink-0 flex-col gap-1.5">
-      <div className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">
-        {column.kind}
-      </div>
-      <div className="flex flex-col gap-1">
-        {dedupePerksByName(column.perks).map((perk) => (
-          <PerkTile
-            key={perk.hash}
-            perk={perk}
-            linkPerks={linkPerks}
-            clarityDescriptions={descriptions}
-          />
-        ))}
-      </div>
+    <div className="flex flex-col gap-2">
+      {dedupePerksByName(column.perks).map((perk) => (
+        <PerkTile
+          key={perk.hash}
+          perk={perk}
+          linkPerks={linkPerks}
+          clarityDescriptions={descriptions}
+        />
+      ))}
     </div>
   );
 }

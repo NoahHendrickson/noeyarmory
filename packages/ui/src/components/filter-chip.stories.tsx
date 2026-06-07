@@ -31,7 +31,15 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
 export const NoRemove: Story = { args: { onRemove: undefined } };
-export const Draft: Story = { args: { value: undefined, onRemove: undefined } };
+export const Draft: Story = {
+  args: {
+    value: undefined,
+    inputValue: "",
+    onInputChange: fn(),
+    inputPlaceholder: "Filter Trait 1…",
+    onRemove: fn(),
+  },
+};
 
 export const TraitTone: Story = {
   args: { tone: "trait", label: "Trait 1", value: "Bait and Switch" },
@@ -60,6 +68,21 @@ export const Removes: Story = {
   play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: /remove trait 1/i }));
+    await expect(args.onRemove).toHaveBeenCalled();
+  },
+};
+
+export const DraftRemoves: Story = {
+  args: {
+    value: undefined,
+    inputValue: "",
+    onInputChange: fn(),
+    inputPlaceholder: "Filter Trait 1…",
+    onRemove: fn(),
+  },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole("button", { name: /cancel trait 1 filter/i }));
     await expect(args.onRemove).toHaveBeenCalled();
   },
 };

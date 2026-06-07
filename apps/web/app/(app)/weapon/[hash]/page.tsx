@@ -1,5 +1,5 @@
-import { WeaponDetail } from "../../../components/weapon-detail";
-import { getWeaponDoc } from "../../../lib/weapon-index-server";
+import { WeaponDetail } from "../../../../components/weapon-detail";
+import { getWeaponDoc } from "../../../../lib/weapon-index-server";
 
 export default async function WeaponPage({ params }: { params: Promise<{ hash: string }> }) {
   const { hash } = await params;

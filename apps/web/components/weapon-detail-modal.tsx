@@ -3,6 +3,7 @@
 import { X } from "lucide-react";
 import {
   Button,
+  cn,
   Dialog,
   DialogBackdrop,
   DialogClose,
@@ -13,6 +14,10 @@ import {
 import type { WeaponDoc } from "@repo/destiny";
 
 import { WeaponDetailView } from "./weapon-detail";
+
+/** Match CommandPalette shell — frosted card over the shader background. */
+const glassPanel =
+  "border-border bg-card/35 shadow-lg shadow-black/25 backdrop-blur-xl rounded-2xl";
 
 /** Weapon detail in a modal — the primary in-app path from a search result. */
 export function WeaponDetailModal({
@@ -30,8 +35,8 @@ export function WeaponDetailModal({
       }}
     >
       <DialogPortal>
-        <DialogBackdrop />
-        <DialogPopup className="relative">
+        <DialogBackdrop className="bg-black/10 backdrop-blur-none" />
+        <DialogPopup className={cn("relative max-w-3xl", glassPanel)}>
           {weapon && (
             <>
               <DialogTitle className="sr-only">{weapon.name}</DialogTitle>

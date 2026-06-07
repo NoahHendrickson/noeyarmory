@@ -1,5 +1,5 @@
-import { WeaponSearch } from "../components/weapon-search";
-import { getSession, isSignedIn } from "../lib/session";
+import { WeaponSearch } from "../../components/weapon-search";
+import { getSession, isSignedIn } from "../../lib/session";
 
 export default async function Home({
   searchParams,

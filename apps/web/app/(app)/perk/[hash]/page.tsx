@@ -1,5 +1,5 @@
-import { PerkWeapons } from "../../../components/perk-weapons";
-import { getWeaponsForPerkHash } from "../../../lib/weapon-index-server";
+import { PerkWeapons } from "../../../../components/perk-weapons";
+import { getWeaponsForPerkHash } from "../../../../lib/weapon-index-server";
 
 export default async function PerkPage({ params }: { params: Promise<{ hash: string }> }) {
   const { hash } = await params;

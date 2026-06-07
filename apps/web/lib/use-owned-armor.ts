@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import type { OwnedArmorItem } from "./armor-types";
 
@@ -10,32 +10,76 @@ export interface OwnedArmorState {
   error?: string;
 }
 
-/** Fetch owned armor from the server when the user is signed in. */
-export function useOwnedArmor(enabled: boolean): OwnedArmorState {
-  const [state, setState] = useState<OwnedArmorState>({
-    armor: [],
-    loading: enabled,
-  });
+let cache: OwnedArmorItem[] | null = null;
+let inflight: Promise<OwnedArmorItem[]> | null = null;
+
+/** Drop the client armor cache so the next fetch hits the server. */
+export function clearOwnedArmorCache(): void {
+  cache = null;
+}
+
+function fetchOwnedArmor(): Promise<OwnedArmorItem[]> {
+  if (cache !== null) return Promise.resolve(cache);
+  if (inflight) return inflight;
+
+  inflight = fetch("/api/armor")
+    .then(async (res) => {
+      if (res.status === 401) {
+        return [] as OwnedArmorItem[];
+      }
+      const json = (await res.json()) as { armor?: OwnedArmorItem[]; error?: string };
+      if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
+      return json.armor ?? [];
+    })
+    .then((armor) => {
+      cache = armor;
+      return armor;
+    })
+    .finally(() => {
+      inflight = null;
+    });
+
+  return inflight;
+}
+
+/** Fetch owned armor when signed in. Cached after first load for instant mode switches. */
+export function useOwnedArmor(enabled: boolean): OwnedArmorState & { refetch: () => Promise<void> } {
+  const [state, setState] = useState<OwnedArmorState>(() => ({
+    armor: cache ?? [],
+    loading: enabled && cache === null,
+  }));
+
+  const refetch = useCallback(async () => {
+    clearOwnedArmorCache();
+    setState((prev) => ({ ...prev, loading: true, error: undefined }));
+    try {
+      const armor = await fetchOwnedArmor();
+      setState({ armor, loading: false });
+    } catch (e: unknown) {
+      setState({
+        armor: [],
+        loading: false,
+        error: e instanceof Error ? e.message : "Failed to load armor",
+      });
+    }
+  }, []);
 
   useEffect(() => {
     if (!enabled) {
-      setState({ armor: [], loading: false });
+      setState((prev) => ({ armor: cache ?? prev.armor, loading: false }));
+      return;
+    }
+
+    if (cache !== null) {
+      setState({ armor: cache, loading: false });
       return;
     }
 
     let active = true;
     setState((prev) => ({ ...prev, loading: true, error: undefined }));
 
-    fetch("/api/armor")
-      .then(async (res) => {
-        if (res.status === 401) {
-          return { armor: [] as OwnedArmorItem[] };
-        }
-        const json = (await res.json()) as { armor?: OwnedArmorItem[]; error?: string };
-        if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
-        return { armor: json.armor ?? [] };
-      })
-      .then(({ armor }) => {
+    fetchOwnedArmor()
+      .then((armor) => {
         if (active) setState({ armor, loading: false });
       })
       .catch((e: unknown) => {
@@ -53,5 +97,5 @@ export function useOwnedArmor(enabled: boolean): OwnedArmorState {
     };
   }, [enabled]);
 
-  return state;
+  return { ...state, refetch };
 }

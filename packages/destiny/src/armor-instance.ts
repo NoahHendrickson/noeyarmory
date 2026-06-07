@@ -1,4 +1,5 @@
 import {
+  ARMOR3_STAT_HASHES,
   ARMOR3_STAT_NAME_BY_HASH,
   BALANCED_TUNING_PLUG_HASH,
   PLUG_CATEGORY_ARMOR3_MASTERWORKS,
@@ -14,6 +15,34 @@ export interface ItemSocketPlug {
 export interface ItemStat {
   statHash: number;
   value: number;
+}
+
+export interface Armor30StatRoll {
+  hash: number;
+  name: string;
+  value: number;
+}
+
+const ARMOR3_STAT_HASH_LIST = Object.values(ARMOR3_STAT_HASHES);
+
+/** Ranked Armor 3.0 stats: primary → tertiary, then the remaining stats (zeros last). */
+export function resolveArmor30Stats(stats: ItemStat[]): Armor30StatRoll[] {
+  const byHash = new Map<number, number>();
+  for (const stat of stats) {
+    if (stat.statHash in ARMOR3_STAT_NAME_BY_HASH) {
+      byHash.set(stat.statHash, stat.value);
+    }
+  }
+
+  return ARMOR3_STAT_HASH_LIST.map((hash) => ({
+    hash,
+    name: ARMOR3_STAT_NAME_BY_HASH[hash]!,
+    value: byHash.get(hash) ?? 0,
+  })).sort((a, b) => {
+    if (a.value > 0 && b.value === 0) return -1;
+    if (a.value === 0 && b.value > 0) return 1;
+    return b.value - a.value;
+  });
 }
 
 export interface ReusablePlug {

@@ -21,11 +21,13 @@ export {
   PLUG_CATEGORY_ARMOR3_MASTERWORKS,
   ARMOR3_STAT_HASHES,
   ARMOR3_STAT_NAME_BY_HASH,
+  ARMOR3_STAT_ICON_BY_HASH,
   TUNING_MOD_TO_STAT_HASH,
 } from "./armor30-constants";
 export {
   isArmor30ItemDef,
   resolveArchetypeFromSockets,
+  resolveArmor30Stats,
   resolveTertiaryStat,
   resolveTunableStat,
   findTuningSocketIndex,
@@ -33,6 +35,7 @@ export {
   resolveTunableStatFromReusablePlugs,
   resolveTunableStatForInstance,
   buildArchetypeMap,
+  type Armor30StatRoll,
   type ItemSocketPlug,
   type ItemStat,
   type ReusablePlug,

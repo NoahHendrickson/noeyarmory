@@ -86,7 +86,22 @@ export function internWeaponCatalog(
 
   const internPerk = (perk: PerkRef): number => {
     const existing = hashToIndex.get(perk.hash);
-    if (existing !== undefined) return existing;
+    if (existing !== undefined) {
+      const entry = perks[existing]!;
+      // Same plug hash can differ per weapon pool — merge the richest metadata.
+      entry.currentlyCanRoll = entry.currentlyCanRoll || perk.currentlyCanRoll;
+      if (!entry.description && perk.description) entry.description = perk.description;
+      if (!entry.enhancedDescription && perk.enhancedDescription) {
+        entry.enhancedDescription = perk.enhancedDescription;
+      }
+      if (!entry.icon && perk.icon) entry.icon = perk.icon;
+      if (perk.alternateHashes?.length) {
+        const alts = new Set(entry.alternateHashes ?? []);
+        for (const hash of perk.alternateHashes) alts.add(hash);
+        entry.alternateHashes = [...alts];
+      }
+      return existing;
+    }
 
     const index = perks.length;
     perks.push({

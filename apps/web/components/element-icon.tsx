@@ -2,7 +2,7 @@ import Image from "next/image";
 
 import { cn } from "@repo/ui";
 
-import { bungieIcon } from "../lib/bungie";
+import { bungieIcon, ELEMENT_COLOR } from "../lib/bungie";
 
 const ELEMENTS = ["Solar", "Arc", "Void", "Stasis", "Strand", "Kinetic"] as const;
 export type ElementName = (typeof ELEMENTS)[number];
@@ -11,19 +11,46 @@ function isElementName(value: string): value is ElementName {
   return (ELEMENTS as readonly string[]).includes(value);
 }
 
+const MASK_STYLE = (src: string) =>
+  ({
+    maskImage: `url("${src}")`,
+    WebkitMaskImage: `url("${src}")`,
+    maskSize: "contain",
+    WebkitMaskSize: "contain",
+    maskRepeat: "no-repeat",
+    WebkitMaskRepeat: "no-repeat",
+    maskPosition: "center",
+    WebkitMaskPosition: "center",
+    backgroundColor: "currentColor",
+  }) as const;
+
 /** Destiny damage-type icon — Bungie manifest image when available, inline SVG fallback. */
 export function ElementIcon({
   element,
   iconPath,
   className,
+  /** When true, tints the icon to match the element (e.g. Solar orange). Default white for chips. */
+  colored = false,
 }: {
   element: string;
   /** Bungie manifest icon path from DestinyDamageTypeDefinition. */
   iconPath?: string;
   className?: string;
+  colored?: boolean;
 }) {
   const name = isElementName(element) ? element : "Kinetic";
+  const colorClass = ELEMENT_COLOR[name] ?? "";
   const src = bungieIcon(iconPath);
+
+  if (src && colored) {
+    return (
+      <span
+        aria-hidden
+        className={cn("size-3.5 shrink-0 inline-block", colorClass, className)}
+        style={MASK_STYLE(src)}
+      />
+    );
+  }
 
   if (src) {
     return (
@@ -41,7 +68,7 @@ export function ElementIcon({
   return (
     <svg
       viewBox="0 0 16 16"
-      className={cn("size-3.5 shrink-0 text-white", className)}
+      className={cn("size-3.5 shrink-0", colored ? colorClass : "text-white", className)}
       aria-hidden
       fill="currentColor"
     >

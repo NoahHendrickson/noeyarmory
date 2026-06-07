@@ -3,7 +3,8 @@ import { ResultRow } from "@repo/ui";
 import type { WeaponSummary } from "@repo/destiny";
 
 import { CraftableBadge } from "./craftable-badge";
-import { bungieIcon, ELEMENT_COLOR } from "../lib/bungie";
+import { ElementIcon } from "./element-icon";
+import { bungieIcon } from "../lib/bungie";
 
 /** Subset a result row needs (works for browse summaries and owned weapons). */
 export type WeaponResultData = Pick<
@@ -23,9 +24,12 @@ export type WeaponResultData = Pick<
 /** A single weapon row in the command-palette results list. */
 export function WeaponResultRow({
   weapon,
+  elementIconPath,
   onSelect,
 }: {
   weapon: WeaponResultData;
+  /** Bungie manifest icon path for the weapon's damage type. */
+  elementIconPath?: string;
   onSelect?: () => void;
 }) {
   const icon = bungieIcon(weapon.icon);
@@ -54,11 +58,10 @@ export function WeaponResultRow({
       }
       title={weapon.name}
       subtitle={
-        <>
-          <span className={ELEMENT_COLOR[weapon.element] ?? ""}>{weapon.element}</span>
-          {" · "}
+        <span className="inline-flex items-center gap-1">
+          <ElementIcon element={weapon.element} iconPath={elementIconPath} colored />
           {weapon.type}
-        </>
+        </span>
       }
       trailing={weapon.craftable ? <CraftableBadge compact /> : undefined}
     />
