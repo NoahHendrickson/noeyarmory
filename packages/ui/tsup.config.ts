@@ -17,7 +17,7 @@ export default defineConfig({
     "components/filter-chip": "src/components/filter-chip.tsx",
     "components/result-row": "src/components/result-row.tsx",
     "components/dialog": "src/components/dialog.tsx",
-    "components/command-palette": "src/components/command-palette.tsx",
+    "components/command-palette": "src/components/command-palette/command-palette.tsx",
     "lib/utils": "src/lib/utils.ts",
   },
   format: ["esm"],
