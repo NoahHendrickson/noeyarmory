@@ -1,6 +1,5 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { ListFilterPlus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -43,12 +42,9 @@ import { useWeaponDetail, useWeapons } from "../lib/weapons-context";
 import { getFilterChipAppearance } from "../lib/filter-chip-appearance";
 import { ArmorResultRow } from "./armor-result-row";
 import { PopularWeapons } from "./popular-weapons";
+import { WeaponDetailModal } from "./weapon-detail-modal";
 import { WeaponResultRow } from "./weapon-result-row";
 import { trackWeaponView } from "../lib/track-weapon-view";
-
-const loadWeaponDetailModal = () => import("./weapon-detail-modal").then((m) => m.WeaponDetailModal);
-
-const WeaponDetailModal = dynamic(loadWeaponDetailModal, { ssr: false });
 
 type Mode = "weapon" | "armor";
 
@@ -133,7 +129,6 @@ export function HomeSearch({
     if (mode !== "weapon" || weapons.length === 0) return;
     let detailPreloadTimer: number | undefined;
     const cancelIdle = scheduleIdle(() => {
-      void loadWeaponDetailModal();
       detailPreloadTimer = window.setTimeout(() => {
         void preloadWeaponDetails();
       }, 1500);
