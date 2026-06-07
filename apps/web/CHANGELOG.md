@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.3.0](https://github.com/NoahHendrickson/noeyarmory/compare/v0.2.0...v0.3.0) (2026-06-07)
+
+
+### Features
+
+* add DPS rankings, custom filters, and richer weapon search ([bfca574](https://github.com/NoahHendrickson/noeyarmory/commit/bfca574894d29d8e46cfae2ebfa413a679dc132c))
+* Create custom filters inline in the command palette ([24a7818](https://github.com/NoahHendrickson/noeyarmory/commit/24a7818b4b3f786b24276e46858ce0576a53625d))
+* Remove icons from What's new and Feedback toolbar buttons. ([c34785e](https://github.com/NoahHendrickson/noeyarmory/commit/c34785ecfe428886de5c2a0471df70ac08c9f4cd))
+* Sync changelog.json for v0.2.0 release. ([ad835cf](https://github.com/NoahHendrickson/noeyarmory/commit/ad835cff7608404c16a576a9552ab7c16dcf9b2b))
+
+
+### Bug Fixes
+
+* address PR [#7](https://github.com/NoahHendrickson/noeyarmory/issues/7) review follow-ups ([609e5cf](https://github.com/NoahHendrickson/noeyarmory/commit/609e5cf09b0c032fc42f82a171fa893aa1431070))
+* harden web security boundaries ([7d0ea93](https://github.com/NoahHendrickson/noeyarmory/commit/7d0ea939e39af8640784a1e91f3e00761547bb25))
+
 ## [0.2.0](https://github.com/NoahHendrickson/noeyarmory/compare/v0.1.0...v0.2.0) (2026-06-07)
 
 
