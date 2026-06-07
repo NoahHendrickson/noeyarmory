@@ -25,17 +25,6 @@ function getWeaponGridColumns(): number {
   return 1;
 }
 
-/** Matches `sm:grid-cols-2 xl:grid-cols-3` on VirtualizedVaultGrid. */
-function getVaultGridColumns(): number {
-  if (window.matchMedia(XL).matches) return 3;
-  if (window.matchMedia(SM).matches) return 2;
-  return 1;
-}
-
 export function useWeaponGridColumns(): number {
   return useSyncExternalStore(subscribe, getWeaponGridColumns, () => 1);
-}
-
-export function useVaultGridColumns(): number {
-  return useSyncExternalStore(subscribe, getVaultGridColumns, () => 1);
 }

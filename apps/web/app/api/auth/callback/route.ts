@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   const session = await getSession();
 
   if (!code || !state || state !== session.oauthState) {
-    return NextResponse.redirect(new URL("/vault?error=oauth_state", req.url));
+    return NextResponse.redirect(new URL("/?error=oauth_state", req.url));
   }
   session.oauthState = undefined;
 
@@ -27,12 +27,12 @@ export async function GET(req: NextRequest) {
     session.membershipType = membership.membershipType;
     session.bungieName = membership.bungieName;
 
-    const returnTo = session.oauthReturnTo ?? "/vault";
+    const returnTo = session.oauthReturnTo ?? "/";
     session.oauthReturnTo = undefined;
     await session.save();
 
     return NextResponse.redirect(new URL(returnTo, req.url));
   } catch {
-    return NextResponse.redirect(new URL("/vault?error=token", req.url));
+    return NextResponse.redirect(new URL("/?error=token", req.url));
   }
 }

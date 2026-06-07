@@ -1,7 +1,6 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import Link from "next/link";
 import { ListFilterPlus } from "lucide-react";
 import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import {
@@ -731,16 +730,8 @@ export function WeaponSearch({
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="flex items-center justify-center gap-3 px-4 pb-4">
+      <header className="flex items-center justify-center px-4 pb-4">
         <span className="font-pixel text-base font-bold">moonfang armory</span>
-        {signedIn && (
-          <Link
-            href="/vault"
-            className="text-muted-foreground hover:text-foreground text-sm"
-          >
-            Vault
-          </Link>
-        )}
       </header>
 
       <main className="mx-auto flex w-full flex-1 flex-col px-4 pt-4 sm:pt-[12vh]">
