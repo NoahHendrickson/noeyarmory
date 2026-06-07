@@ -39,7 +39,7 @@ For full catalog + vault/armor flows, configure repo-root `.env` (see `.env.exam
 
 ### Code → Figma
 
-When pushing UI from this repo into Figma, follow the project skill at `.cursor/skills/code-to-figma/SKILL.md`: capture live UI with `generate_figma_design` (Storybook or `/design/*` routes), never hand-draw frames. Design routes live outside `app/(app)/` so `AppShell` chrome is excluded.
+When pushing UI into Figma, follow `~/.cursor/skills/code-to-figma/SKILL.md` — capture live UI with `generate_figma_design`, never hand-draw frames. In this repo, use Storybook (`:6006`) or `/design/*` routes outside `app/(app)/` (no AppShell chrome).
 
 ### Search UX
 
