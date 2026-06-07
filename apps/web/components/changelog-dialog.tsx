@@ -11,7 +11,7 @@ import {
   PopoverTitle,
   PopoverTrigger,
 } from "@repo/ui/components/popover";
-import { X } from "lucide-react";
+import { Sparkles, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import {
@@ -94,13 +94,14 @@ export function ChangelogDialog() {
             variant="outline"
             aria-label="What's new"
             data-palette-ignore-close
-            className={cn(secondaryButtonClass, "relative px-3 backdrop-blur-sm")}
+            className={cn(secondaryButtonClass, "relative px-2.5 backdrop-blur-sm sm:px-3")}
             onClick={(e) => e.stopPropagation()}
             onPointerDown={(e) => e.stopPropagation()}
           />
         }
       >
-        What&apos;s new
+        <Sparkles className="size-3.5 shrink-0 sm:hidden" aria-hidden />
+        <span className="hidden sm:inline">What&apos;s new</span>
         {showBadge && (
           <span
             className="bg-primary absolute -top-0.5 -right-0.5 size-2 rounded-full"

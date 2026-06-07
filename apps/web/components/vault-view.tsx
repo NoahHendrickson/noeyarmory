@@ -1,7 +1,8 @@
 "use client";
 
+import { ChevronDown } from "lucide-react";
 import { useMemo, useState } from "react";
-import { Badge, Input } from "@repo/ui";
+import { Badge, Input, cn } from "@repo/ui";
 
 import type { VaultWeapon } from "../lib/vault-types";
 import { FacetFilter } from "./facet-filter";
@@ -28,6 +29,7 @@ export function VaultView({ weapons }: { weapons: VaultWeapon[] }) {
   const [query, setQuery] = useState("");
   const [perkInput, setPerkInput] = useState("");
   const [filters, setFilters] = useState<Filters>(EMPTY);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const facetOptions = useMemo(() => {
     const calc = (select: (w: VaultWeapon) => string | undefined) => {
@@ -93,8 +95,29 @@ export function VaultView({ weapons }: { weapons: VaultWeapon[] }) {
   const activeCount = FACETS.reduce((n, { key }) => n + filters[key].length, 0) + filters.perks.length;
 
   return (
-    <div className="mx-auto grid max-w-7xl gap-6 p-4 md:grid-cols-[18rem_1fr] md:p-6">
-      <aside className="space-y-5 md:sticky md:top-4 md:h-fit">
+    <div className="mx-auto grid max-w-7xl gap-4 p-4 md:grid-cols-[18rem_1fr] md:gap-6 md:p-6">
+      <button
+        type="button"
+        className="border-border bg-card/35 flex w-full items-center justify-between rounded-lg border px-3 py-2.5 text-sm font-medium backdrop-blur-sm md:hidden"
+        aria-expanded={filtersOpen}
+        onClick={() => setFiltersOpen((open) => !open)}
+      >
+        <span>
+          Filters
+          {activeCount > 0 ? ` (${activeCount})` : ""}
+        </span>
+        <ChevronDown
+          className={cn("text-muted-foreground size-4 shrink-0 transition-transform", filtersOpen && "rotate-180")}
+          aria-hidden
+        />
+      </button>
+
+      <aside
+        className={cn(
+          "space-y-5 md:sticky md:top-4 md:h-fit",
+          filtersOpen ? "block" : "hidden md:block",
+        )}
+      >
         <Input
           placeholder="Search your weapons or rolls…"
           value={query}

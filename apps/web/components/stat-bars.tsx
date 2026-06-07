@@ -24,7 +24,7 @@ export function StatBars({ stats }: { stats: WeaponStat[] }) {
         const showBar = BAR_STATS.has(stat.name);
         return (
           <div key={stat.hash} className="flex items-center gap-3 text-base">
-            <div className="text-muted-foreground w-32 shrink-0 truncate">{stat.name}</div>
+            <div className="text-muted-foreground w-24 shrink-0 truncate sm:w-32">{stat.name}</div>
             <div className="bg-muted h-2 flex-1 overflow-hidden rounded">
               {showBar && (
                 <div

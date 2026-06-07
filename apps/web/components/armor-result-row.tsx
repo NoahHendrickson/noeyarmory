@@ -109,14 +109,15 @@ export function ArmorResultRow({
       trailing={
         <div
           data-palette-ignore-close
-          className="flex shrink-0 flex-col items-end gap-1"
+          className="flex w-full shrink-0 flex-col items-stretch gap-1 sm:w-auto sm:items-end"
           onPointerDown={isolatePalettePointer}
         >
-          <div className="flex items-center gap-1.5">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-1.5">
             <Button
               type="button"
               variant="outline"
               size="sm"
+              className="w-full sm:w-auto"
               disabled={!equipEnabled}
               title={equipTooltip(armor) ?? "Equip on matching class character (must be in orbit)"}
               onClick={() => onEquip?.()}
@@ -127,6 +128,7 @@ export function ArmorResultRow({
               type="button"
               variant="outline"
               size="sm"
+              className="w-full sm:w-auto"
               disabled={!moveEnabled}
               title={
                 moveTooltip(armor) ??
@@ -134,11 +136,16 @@ export function ArmorResultRow({
               }
               onClick={() => onMoveToCharacter?.()}
             >
-              {transferPending ? "Moving…" : "Move to character"}
+              {transferPending ? "Moving…" : (
+                <>
+                  <span className="sm:hidden">Move</span>
+                  <span className="hidden sm:inline">Move to character</span>
+                </>
+              )}
             </Button>
           </div>
           {showError ? (
-            <span className="text-destructive max-w-[14rem] truncate text-base">
+            <span className="text-destructive max-w-full truncate text-base sm:max-w-[14rem]">
               {actionState.error}
             </span>
           ) : null}

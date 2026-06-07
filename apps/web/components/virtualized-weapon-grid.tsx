@@ -4,13 +4,12 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { useRef, type ReactNode } from "react";
 import { cn } from "@repo/ui";
 
+import { useWeaponGridColumns } from "../lib/use-grid-columns";
 import type { WeaponCardData } from "./weapon-card";
 
 const VIRTUALIZE_THRESHOLD = 60;
 const ROW_HEIGHT = 92;
-const COLUMNS = 4;
-const GRID_CLASS =
-  "grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4";
+const GRID_CLASS = "grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4";
 
 export function VirtualizedWeaponGrid<T extends WeaponCardData>({
   weapons,
@@ -38,7 +37,8 @@ function VirtualizedWeaponGridInner<T extends WeaponCardData>({
   className?: string;
 }) {
   const parentRef = useRef<HTMLDivElement>(null);
-  const rowCount = Math.ceil(weapons.length / COLUMNS);
+  const columns = useWeaponGridColumns();
+  const rowCount = Math.ceil(weapons.length / columns);
 
   const rowVirtualizer = useVirtualizer({
     count: rowCount,
@@ -50,15 +50,15 @@ function VirtualizedWeaponGridInner<T extends WeaponCardData>({
   return (
     <div
       ref={parentRef}
-      className={cn("max-h-[calc(100vh-10rem)] overflow-auto", className)}
+      className={cn("max-h-[calc(100dvh-10rem)] overflow-auto sm:max-h-[calc(100vh-10rem)]", className)}
     >
       <div
         className="relative w-full"
         style={{ height: `${rowVirtualizer.getTotalSize()}px` }}
       >
         {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-          const start = virtualRow.index * COLUMNS;
-          const rowItems = weapons.slice(start, start + COLUMNS);
+          const start = virtualRow.index * columns;
+          const rowItems = weapons.slice(start, start + columns);
           return (
             <div
               key={virtualRow.key}

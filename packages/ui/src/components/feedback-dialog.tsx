@@ -1,6 +1,6 @@
 "use client";
 
-import { X } from "lucide-react";
+import { MessageSquare, X } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "./button";
@@ -131,7 +131,7 @@ export function FeedbackDialog({
       variant="outline"
       aria-label="Send feedback"
       data-palette-ignore-close
-      className={cn(secondaryButtonClass, "px-3 backdrop-blur-sm")}
+      className={cn(secondaryButtonClass, "px-2.5 backdrop-blur-sm sm:px-3")}
       onClick={(e) => e.stopPropagation()}
       onPointerDown={(e) => e.stopPropagation()}
     />
@@ -146,7 +146,10 @@ export function FeedbackDialog({
           }
         />
       ) : (
-        <PopoverTrigger render={triggerButton}>Feedback</PopoverTrigger>
+        <PopoverTrigger render={triggerButton}>
+          <MessageSquare className="size-3.5 shrink-0 sm:hidden" aria-hidden />
+          <span className="hidden sm:inline">Feedback</span>
+        </PopoverTrigger>
       )}
       <PopoverPortal>
         <PopoverPositioner side="bottom" align="end" sideOffset={8}>

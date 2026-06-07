@@ -41,7 +41,7 @@ export function PerkWeapons({
         <div className="text-muted-foreground text-xs tracking-wide uppercase">
           Weapons that can roll
         </div>
-        <h1 className="text-2xl font-bold tracking-tight">{perkName ?? "Unknown perk"}</h1>
+        <h1 className="text-xl font-bold tracking-tight sm:text-2xl">{perkName ?? "Unknown perk"}</h1>
         <p className="text-muted-foreground text-sm">
           {matches.length} weapon{matches.length === 1 ? "" : "s"}
         </p>

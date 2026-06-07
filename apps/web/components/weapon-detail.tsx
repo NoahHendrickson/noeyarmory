@@ -65,7 +65,7 @@ export function WeaponDetailView({
           )}
         </div>
         <div className="min-w-0">
-          <h2 className="text-xl font-bold tracking-tight">{weapon.name}</h2>
+          <h2 className="text-lg font-bold tracking-tight sm:text-xl">{weapon.name}</h2>
           <div className="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-x-2 text-sm">
             <span className="inline-flex items-center" title={weapon.element}>
               <ElementIcon
