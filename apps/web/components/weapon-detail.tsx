@@ -2,13 +2,14 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { Badge, cn } from "@repo/ui";
 import { computeWeaponStats, type WeaponDoc } from "@repo/destiny";
 
 import { useWeaponBuild } from "../lib/use-weapon-build";
 import { useWeaponDps } from "../lib/use-weapon-dps";
 import { useStatGroups, useWeaponDetail, useWeapons } from "../lib/weapons-context";
+import { trackWeaponView } from "../lib/track-weapon-view";
 import { bungieIcon } from "../lib/bungie";
 import { AmmoIcon } from "./ammo-icon";
 import { CraftableBadge } from "./craftable-badge";
@@ -196,6 +197,13 @@ export function WeaponDetail({
 }) {
   const { weapon, loading } = useWeaponDetail(hash, initialWeapon);
   const { dpsByName } = useWeaponDps();
+  const trackedHashRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!weapon || trackedHashRef.current === weapon.hash) return;
+    trackedHashRef.current = weapon.hash;
+    trackWeaponView(weapon.hash, "direct");
+  }, [weapon]);
 
   if (!weapon && loading) {
     return <div className="text-muted-foreground p-6">Loading…</div>;
