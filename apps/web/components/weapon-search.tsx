@@ -195,6 +195,38 @@ export function WeaponSearch({
   const resultCount = mode === "weapon" ? weaponResults.length : armorResults.length;
   const shownCount = mode === "weapon" ? weaponShown.length : armorShown.length;
 
+  const weaponPaletteResults = useMemo(
+    () =>
+      weaponShown.map((weapon) => ({
+        id: String(weapon.hash),
+        content: (
+          <WeaponResultRow
+            weapon={weapon}
+            elementIconPath={elementIconMap.get(weapon.element)}
+          />
+        ),
+      })),
+    [weaponShown, elementIconMap],
+  );
+
+  const armorPaletteResults = useMemo(
+    () =>
+      armorShown.map((armor) => ({
+        id: armor.instanceId,
+        content: (
+          <ArmorResultRow
+            armor={armor}
+            actionState={armorAction}
+            onEquip={() => void runArmorAction(armor.instanceId, "equip", "/api/armor/equip")}
+            onMoveToCharacter={() =>
+              void runArmorAction(armor.instanceId, "transfer", "/api/armor/transfer")
+            }
+          />
+        ),
+      })),
+    [armorShown, armorAction],
+  );
+
   function addChip(categoryId: string, option: PaletteValueOption) {
     const category = categories.find((c) => c.id === categoryId);
     if (!category) return;
@@ -276,15 +308,14 @@ export function WeaponSearch({
       <main className="mx-auto flex w-full flex-1 flex-col px-4 pt-[16vh]">
         <div
           className={cn(
-            "mx-auto flex w-max max-w-[calc(100vw-2rem)] flex-col transition-[min-width,opacity] duration-200 ease-out motion-reduce:transition-none",
-            paletteOpen ? "min-w-[600px]" : "min-w-[420px]",
+            "mx-auto flex w-fit max-w-[calc(100vw-2rem)] flex-col transition-opacity duration-200 ease-out motion-reduce:transition-none",
             selected && "pointer-events-none opacity-0",
           )}
         >
-          <div className="mb-2 flex justify-end">
+          <div className="mb-4 flex justify-end">
             <div
               data-palette-ignore-close
-              className="flex shrink-0 cursor-pointer items-center"
+              className="mr-6 flex shrink-0 cursor-pointer items-center"
               onClick={(e) => e.stopPropagation()}
               onPointerDown={(e) => e.stopPropagation()}
             >
@@ -297,7 +328,7 @@ export function WeaponSearch({
             </div>
           </div>
           <CommandPalette
-            className="mx-0 w-full max-w-none min-w-0"
+            className="mx-0"
             placeholder={placeholder}
             categories={categories}
           chips={chips}
@@ -312,38 +343,14 @@ export function WeaponSearch({
           query={query}
           onQueryChange={setQuery}
           showResults={showResults}
-          results={
-            mode === "weapon"
-              ? weaponShown.map((weapon) => ({
-                  id: String(weapon.hash),
-                  content: (
-                    <WeaponResultRow
-                      weapon={weapon}
-                      elementIconPath={elementIconMap.get(weapon.element)}
-                    />
-                  ),
-                }))
-              : armorShown.map((armor) => ({
-                  id: armor.instanceId,
-                  content: (
-                    <ArmorResultRow
-                      armor={armor}
-                      actionState={armorAction}
-                      onEquip={() => void runArmorAction(armor.instanceId, "equip", "/api/armor/equip")}
-                      onMoveToCharacter={() =>
-                        void runArmorAction(armor.instanceId, "transfer", "/api/armor/transfer")
-                      }
-                    />
-                  ),
-                }))
-          }
+          results={mode === "weapon" ? weaponPaletteResults : armorPaletteResults}
           onSelectResult={(id) => {
             if (mode === "weapon") {
               const weapon = byHash.get(Number(id));
               if (weapon) setSelectedHash(weapon.hash);
             }
           }}
-          resultsEmpty={mode === "weapon" ? "No weapons match." : "No armor matches."}
+          resultsEmpty={mode === "weapon" ? "No weapons match." : "Go farm!"}
           resultsHeader={
             showResults && mode === "armor" ? (
               <div className="text-muted-foreground text-base tracking-body">
@@ -360,6 +367,7 @@ export function WeaponSearch({
                   {resultCount} {resultCount === 1 ? "result" : "results"}
                 </span>
                 <PillSelect
+                  variant="ghost"
                   aria-label="Sort weapons"
                   options={WEAPON_SORT_OPTIONS}
                   value={sort}

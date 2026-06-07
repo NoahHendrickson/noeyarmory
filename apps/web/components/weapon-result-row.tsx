@@ -1,4 +1,3 @@
-import Image from "next/image";
 import { ResultRow } from "@repo/ui";
 import type { WeaponSummary } from "@repo/destiny";
 
@@ -42,16 +41,25 @@ export function WeaponResultRow({
       icon={
         <>
           {icon && (
-            <Image src={icon} alt="" width={40} height={40} className="size-full" unoptimized />
+            <img
+              src={icon}
+              alt=""
+              width={40}
+              height={40}
+              className="size-full"
+              loading="lazy"
+              decoding="async"
+            />
           )}
           {watermark && (
-            <Image
+            <img
               src={watermark}
               alt=""
               width={40}
               height={40}
               className="absolute inset-0 size-full"
-              unoptimized
+              loading="lazy"
+              decoding="async"
             />
           )}
         </>

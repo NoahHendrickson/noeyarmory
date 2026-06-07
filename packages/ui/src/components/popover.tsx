@@ -27,6 +27,7 @@ function PopoverPositioner({
 function PopoverPopup({ className, ...props }: ComponentProps<typeof BasePopover.Popup>) {
   return (
     <BasePopover.Popup
+      data-palette-ignore-close
       className={cn(
         "bg-popover text-popover-foreground pointer-events-auto border outline-none",
         // Opacity-only — scale fights Floating UI positioning and reads as a close hitch.

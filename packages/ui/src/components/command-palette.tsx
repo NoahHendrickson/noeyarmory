@@ -1,6 +1,6 @@
-import { useEffect, useId, useMemo, useReducer, useRef } from "react";
+import { useCallback, useEffect, useId, useMemo, useReducer, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { ArrowRight, CornerDownLeft, Search, X } from "lucide-react";
+import { ArrowRight, CornerDownLeft, Plus, Search, X } from "lucide-react";
 
 import { cn } from "../lib/utils";
 import { Button } from "./button";
@@ -135,10 +135,15 @@ function whisperForActiveItem(item: Item | undefined): string | undefined {
 
 const MAX_VALUE_SUGGESTIONS = 20;
 
-function listMode(panel: PanelKind, showResults: boolean, query: string): ListMode | null {
+function listMode(
+  panel: PanelKind,
+  showResults: boolean,
+  query: string,
+  browseFilters: boolean,
+): ListMode | null {
   if (panel === "closed") return null;
   if (panel === "values") return "values";
-  if (showResults && !query.trim()) return "results";
+  if (showResults && !query.trim() && !browseFilters) return "results";
   return "categories";
 }
 
@@ -242,9 +247,33 @@ export function CommandPalette({
       ? (categories.find((c) => c.id === state.categoryId) ?? null)
       : null;
 
-  const mode = listMode(state.panel, showResults, query);
+  const [browseFilters, setBrowseFilters] = useState(false);
+  const [hoverIndex, setHoverIndex] = useState(-1);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const listScrollingRef = useRef(false);
+  const listScrollEndRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  const handleListScroll = useCallback(() => {
+    listScrollingRef.current = true;
+    clearTimeout(listScrollEndRef.current);
+    listScrollEndRef.current = setTimeout(() => {
+      listScrollingRef.current = false;
+    }, 80);
+  }, []);
+
+  useEffect(() => () => clearTimeout(listScrollEndRef.current), []);
+
   const panelOpen = isControlled ? openProp : state.panel !== "closed";
   const open = !disabled && !renderBarOverlay && panelOpen;
+  const mode = listMode(state.panel, showResults, query, browseFilters);
+
+  useEffect(() => {
+    if (!open) setBrowseFilters(false);
+  }, [open]);
+
+  useEffect(() => {
+    if (chips.length === 0) setBrowseFilters(false);
+  }, [chips.length]);
 
   function openPanel() {
     dispatch({ type: "open" });
@@ -285,13 +314,19 @@ export function CommandPalette({
           ? results.map((result) => ({ kind: "result", result }))
           : [];
 
-  const activeIndex = Math.min(state.activeIndex, Math.max(0, items.length - 1));
+  const activeIndex =
+    state.activeIndex < 0
+      ? -1
+      : Math.min(state.activeIndex, Math.max(0, items.length - 1));
+  const displayIndex = hoverIndex >= 0 ? hoverIndex : activeIndex;
+  const keyboardFocus = hoverIndex < 0 && activeIndex >= 0;
   const resultsOrderKey =
     mode === "results" ? results.map((result) => result.id).join("\u0000") : "";
 
   // Reset highlight when list content changes.
   useEffect(() => {
     dispatch({ type: "setActive", index: 0 });
+    setHoverIndex(-1);
   }, [mode, state.categoryId, state.valueQuery, query, results.length, chips.length, resultsOrderKey]);
 
   // Sync controlled open prop into internal drill/back state machine.
@@ -345,12 +380,14 @@ export function CommandPalette({
   }, [state.panel, state.categoryId, disabled, renderBarOverlay]);
 
   function moveActive(delta: number) {
+    setHoverIndex(-1);
     if (!open) {
       openPanel();
       return;
     }
     if (items.length === 0) return;
-    const next = Math.max(0, Math.min(activeIndex + delta, items.length - 1));
+    const base = activeIndex < 0 ? -1 : activeIndex;
+    const next = Math.max(0, Math.min(base + delta, items.length - 1));
     dispatch({ type: "setActive", index: next });
   }
 
@@ -361,9 +398,11 @@ export function CommandPalette({
     } else if (item.kind === "chipSuggestion") {
       onAddChip(item.category.id, item.option);
       onQueryChange("");
+      setBrowseFilters(false);
     } else if (item.kind === "value" && activeCategory) {
       onAddChip(activeCategory.id, item.option);
       onQueryChange("");
+      setBrowseFilters(false);
       dispatch({ type: "back" });
     } else if (item.kind === "result") {
       onSelectResult?.(item.result.id);
@@ -418,11 +457,19 @@ export function CommandPalette({
     }
   }
 
+  function showFilterCategories() {
+    setBrowseFilters(true);
+    onQueryChange("");
+    dispatch({ type: "back" });
+    openPanel();
+    inputRef.current?.focus();
+  }
+
   const showAddMore = chips.length > 0 && state.panel !== "values";
   const drilling = state.panel === "values" && activeCategory != null;
   const effectivePlaceholder = showAddMore ? "Add more filters" : placeholder;
   const valueInputPlaceholder = activeCategory
-    ? (whisperForActiveItem(items[activeIndex]) ?? `Filter ${activeCategory.label}…`)
+    ? (whisperForActiveItem(items[displayIndex]) ?? `Filter ${activeCategory.label}…`)
     : undefined;
 
   const comboboxProps = {
@@ -430,34 +477,39 @@ export function CommandPalette({
     "aria-expanded": open,
     "aria-controls": open ? listId : undefined,
     "aria-autocomplete": "list" as const,
-    "aria-activedescendant": open && items[activeIndex] ? optionId(activeIndex) : undefined,
+    "aria-activedescendant": open && displayIndex >= 0 && items[displayIndex]
+      ? optionId(displayIndex)
+      : undefined,
   };
 
   return (
     <div
       ref={rootRef}
-      className={cn(
-        "mx-auto w-max max-w-[calc(100vw-2rem)] transition-[min-width] duration-200 ease-out motion-reduce:transition-none",
-        open ? "min-w-[600px]" : "min-w-[420px]",
-        className,
-      )}
+      className={cn("mx-auto w-max min-w-[600px] max-w-[calc(100vw-2rem)]", className)}
     >
       <div
         className={cn(
-          "overflow-hidden border border-border bg-card/35 shadow-lg shadow-black/25 backdrop-blur-xl",
-          open ? "rounded-2xl" : "rounded-full",
+          "relative overflow-hidden border border-border shadow-lg shadow-black/25",
+          open ? "rounded-[16px]" : "rounded-[1.75rem]",
         )}
       >
+        {/* Blur on a fixed layer — not on the scroll ancestor (avoids scroll jank). */}
+        <div
+          className="pointer-events-none absolute inset-0 bg-card/35 backdrop-blur-xl"
+          aria-hidden
+        />
+        <div className="relative flex flex-col">
         {/* Input row */}
         {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events */}
         <div
           className={cn(
-            "flex h-14 items-center justify-between gap-3 px-[18px]",
-            open && "border-b border-border",
+            "flex h-14 items-center justify-between gap-3 border-b pl-[18px] transition-[border-color] duration-200 ease-out motion-reduce:transition-none",
+            chips.length > 0 && onClearChips != null && !renderBarOverlay ? "pr-6" : "pr-[18px]",
+            open ? "border-border" : "border-transparent",
           )}
           onClick={() => !disabled && !renderBarOverlay && inputRef.current?.focus()}
         >
-          <div className="flex flex-nowrap items-center gap-2.5">
+          <div className="flex min-w-0 flex-nowrap items-center gap-2.5 overflow-x-auto">
             <span className="text-muted-foreground flex size-4 shrink-0 items-center justify-center">
               {leftAdornment ?? <Search className="size-4" />}
             </span>
@@ -490,48 +542,69 @@ export function CommandPalette({
                   />
                 )}
                 {!drilling && (
-                  <input
-                    ref={inputRef}
-                    type="text"
-                    size={Math.max(12, inputValue.length + 1, effectivePlaceholder.length)}
-                    className="placeholder:text-muted-foreground min-w-[8ch] shrink-0 bg-transparent text-base tracking-body outline-none disabled:cursor-not-allowed"
-                    placeholder={effectivePlaceholder}
-                    value={inputValue}
-                    disabled={disabled}
-                    onChange={(e) => onQueryChange(e.target.value)}
-                    onFocus={() => !disabled && openPanel()}
-                    onKeyDown={handleKeyDown}
-                    {...comboboxProps}
-                  />
+                  <>
+                    {showAddMore && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="iconRound"
+                        className="bg-white text-card hover:bg-white/90 shrink-0"
+                        aria-label="Browse filter categories"
+                        disabled={disabled}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          showFilterCategories();
+                        }}
+                      >
+                        <Plus className="size-4" />
+                      </Button>
+                    )}
+                    <input
+                      ref={inputRef}
+                      type="text"
+                      size={Math.max(12, inputValue.length + 1, effectivePlaceholder.length)}
+                      className="placeholder:text-muted-foreground min-w-[8ch] shrink-0 bg-transparent text-base tracking-body outline-none disabled:cursor-not-allowed"
+                      placeholder={effectivePlaceholder}
+                      value={inputValue}
+                      disabled={disabled}
+                      onChange={(e) => onQueryChange(e.target.value)}
+                      onFocus={() => !disabled && openPanel()}
+                      onKeyDown={handleKeyDown}
+                      {...comboboxProps}
+                    />
+                  </>
                 )}
               </>
             )}
           </div>
 
-          {rightAdornment != null && (
-            <div
-              data-palette-ignore-close
-              className="flex shrink-0 cursor-pointer items-center"
-              onClick={(e) => e.stopPropagation()}
-              onPointerDown={(e) => e.stopPropagation()}
-            >
-              {rightAdornment}
-            </div>
-          )}
-
-          {chips.length > 0 && onClearChips != null && !renderBarOverlay && (
+          {(rightAdornment != null ||
+            (chips.length > 0 && onClearChips != null && !renderBarOverlay)) && (
             <div className="flex shrink-0 items-center gap-2">
-              <Button
-                type="button"
-                variant="ghost"
-                size="iconRound"
-                className="text-white/60 hover:bg-white/10 hover:text-white"
-                aria-label="Clear all filters"
-                disabled={disabled}
-                onClick={onClearChips}
-              >
-                <X className="size-4" />
-              </Button>
+              {rightAdornment != null && (
+                <div
+                  data-palette-ignore-close
+                  className="flex cursor-pointer items-center"
+                  onClick={(e) => e.stopPropagation()}
+                  onPointerDown={(e) => e.stopPropagation()}
+                >
+                  {rightAdornment}
+                </div>
+              )}
+
+              {chips.length > 0 && onClearChips != null && !renderBarOverlay && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="iconRound"
+                  className="text-white/60 hover:bg-white/10 hover:text-white"
+                  aria-label="Clear all filters"
+                  disabled={disabled}
+                  onClick={onClearChips}
+                >
+                  <X className="size-4" />
+                </Button>
+              )}
             </div>
           )}
         </div>
@@ -546,7 +619,11 @@ export function CommandPalette({
           aria-hidden={!open}
         >
           <div className="min-h-0 overflow-hidden">
-            <div className="max-h-[376px] overflow-y-auto px-1.5 py-1.5 tracking-body">
+            <div
+              ref={scrollRef}
+              className="max-h-[376px] touch-pan-y overscroll-contain overflow-y-auto px-1.5 py-1.5 tracking-body [overflow-anchor:none]"
+              onScroll={handleListScroll}
+            >
               {mode === "results" && resultsHeader != null && (
                 <div className="px-1.5 pb-2">{resultsHeader}</div>
               )}
@@ -568,9 +645,11 @@ export function CommandPalette({
                       : mode
                   }
                   className="flex flex-col gap-0.5"
+                  onMouseLeave={() => setHoverIndex(-1)}
                 >
                   {items.map((item, i) => {
-                    const selected = i === activeIndex;
+                    const selected = displayIndex >= 0 && i === displayIndex;
+                    const showEnterHint = keyboardFocus && i === activeIndex;
                     return (
                       // eslint-disable-next-line jsx-a11y/click-events-have-key-events
                       <li
@@ -587,14 +666,17 @@ export function CommandPalette({
                         role="option"
                         aria-selected={selected}
                         onMouseDown={(e) => e.preventDefault()}
-                        onMouseMove={() => {
-                          if (!selected) dispatch({ type: "setActive", index: i });
+                        onMouseEnter={() => {
+                          if (listScrollingRef.current) return;
+                          setHoverIndex(i);
+                          if (activeIndex !== i) dispatch({ type: "setActive", index: i });
                         }}
                         onClick={() => selectItem(item)}
                         className={cn(
                           "flex cursor-pointer items-center justify-between gap-3 rounded-lg px-3 py-1.5",
                           selected && "bg-white/[0.08]",
-                          item.kind === "result" && "p-0",
+                          item.kind === "result" &&
+                            "p-0 [contain-intrinsic-size:auto_3.5rem] [content-visibility:auto] [&>*]:hover:bg-transparent [&>*]:focus-visible:bg-transparent",
                         )}
                       >
                         {item.kind === "category" ? (
@@ -607,7 +689,7 @@ export function CommandPalette({
                                 </span>
                               )}
                             </span>
-                            {selected ? (
+                            {showEnterHint ? (
                               <Kbd>
                                 Enter
                                 <CornerDownLeft className="size-3" />
@@ -636,7 +718,7 @@ export function CommandPalette({
                               {item.option.hint != null && (
                                 <span className="text-muted-foreground text-xs">{item.option.hint}</span>
                               )}
-                              {selected ? (
+                              {showEnterHint ? (
                                 <Kbd>
                                   Enter
                                   <CornerDownLeft className="size-3" />
@@ -665,7 +747,7 @@ export function CommandPalette({
                                   {item.option.hint}
                                 </span>
                               )}
-                              {selected ? (
+                              {showEnterHint ? (
                                 <Kbd>
                                   Enter
                                   <CornerDownLeft className="size-3" />
@@ -693,6 +775,7 @@ export function CommandPalette({
               )}
             </div>
           </div>
+        </div>
         </div>
       </div>
     </div>

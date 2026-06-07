@@ -4,8 +4,11 @@ import "@fontsource-variable/geist";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "noeyarmory",
+  title: "MF Armory",
   description: "Search Destiny 2 weapons by perks, rolls, and attributes.",
+  icons: {
+    icon: "/moonfang.svg",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

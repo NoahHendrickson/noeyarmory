@@ -13,6 +13,8 @@ export interface PillSelectProps<T extends string> {
   options: PillSelectOption<T>[];
   value: T;
   onValueChange: (value: T) => void;
+  /** Filled glass pill (default) or border-only ghost. */
+  variant?: "filled" | "ghost";
   className?: string;
   "aria-label"?: string;
 }
@@ -25,6 +27,7 @@ function PillSelect<T extends string>({
   options,
   value,
   onValueChange,
+  variant = "filled",
   className,
   "aria-label": ariaLabel,
 }: PillSelectProps<T>) {
@@ -37,9 +40,11 @@ function PillSelect<T extends string>({
         onClick={(e) => e.stopPropagation()}
         onPointerDown={(e) => e.stopPropagation()}
         className={cn(
-          // Match CommandPalette bar shell: border-border bg-card/35 + blur
-          "border-border bg-card/35 backdrop-blur-xl inline-flex h-8 cursor-pointer items-center gap-1 rounded-pill border px-2 py-1 text-xs font-normal text-foreground outline-none",
+          "border-border inline-flex h-8 cursor-pointer items-center gap-1 rounded-pill border py-1 text-xs font-normal text-foreground outline-none",
           "focus-visible:ring-ring focus-visible:ring-2",
+          variant === "ghost"
+            ? "bg-transparent pl-3 pr-2"
+            : "bg-card/35 pl-3 pr-2 shadow-lg shadow-black/25 backdrop-blur-xl",
           className,
         )}
       >
@@ -75,6 +80,7 @@ function PillSelect<T extends string>({
                   onClick={() => onValueChange(option.value)}
                   className={cn(
                     "flex cursor-pointer items-center rounded-md px-2 py-1.5 text-xs outline-none select-none",
+                    "transition-colors duration-100 ease-out motion-reduce:transition-none",
                     "data-highlighted:bg-white/[0.08]",
                     active ? "text-foreground" : "text-foreground/80",
                   )}

@@ -130,7 +130,10 @@ export function FeedbackDialog({
     <Button
       variant="outline"
       aria-label="Send feedback"
+      data-palette-ignore-close
       className={cn(secondaryButtonClass, "px-3 backdrop-blur-sm")}
+      onClick={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
     />
   );
 
