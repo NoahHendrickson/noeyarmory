@@ -6,20 +6,14 @@ import { Aurora, ChromaFlow, Dither, Shader } from "shaders/react";
 import { useShaderPreference } from "../lib/shader-preference";
 
 export function ShaderBackground() {
-  const { enabled: preferenceEnabled } = useShaderPreference();
-  const [reducedMotion, setReducedMotion] = useState(true);
+  const { enabled, webgpuSupported } = useShaderPreference();
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const update = () => setReducedMotion(media.matches);
-    update();
-    media.addEventListener("change", update);
-    return () => media.removeEventListener("change", update);
+    setMounted(true);
   }, []);
 
-  const enabled = preferenceEnabled && !reducedMotion;
-
-  if (!enabled) return null;
+  if (!mounted || !enabled || webgpuSupported !== true) return null;
 
   return (
     <div

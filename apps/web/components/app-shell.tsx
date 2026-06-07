@@ -1,18 +1,13 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import type { ReactNode } from "react";
 import { FeedbackDialog, TooltipProvider } from "@repo/ui";
 
 import { ClarityProvider } from "../lib/clarity-provider";
 import { ShaderPreferenceProvider } from "../lib/shader-preference";
 import { WeaponsProvider } from "../lib/weapons-context";
+import { ShaderBackground } from "./shader-background";
 import { ShaderToggle } from "./shader-toggle";
-
-const ShaderBackground = dynamic(
-  () => import("./shader-background").then((m) => m.ShaderBackground),
-  { ssr: false },
-);
 
 export function AppShell({ children }: { children: ReactNode }) {
   return (
