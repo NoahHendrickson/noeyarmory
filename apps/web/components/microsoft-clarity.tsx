@@ -1,9 +1,8 @@
-"use client";
-
 import Script from "next/script";
 
 const projectId = process.env.NEXT_PUBLIC_CLARITY_PROJECT_ID;
 
+/** Loads Microsoft Clarity on Vercel production only (server-evaluated gate). */
 export function MicrosoftClarity() {
   if (!projectId || process.env.VERCEL_ENV !== "production") {
     return null;
