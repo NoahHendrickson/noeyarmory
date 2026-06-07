@@ -2,7 +2,7 @@ import "server-only";
 
 import { Redis } from "@upstash/redis";
 
-import { isPopularWeaponsMockEnabled } from "./mock";
+import { isPopularityPublishingEnabled } from "./enabled";
 
 export const ROLLING_DAYS = 7;
 export const MIN_TOTAL_VIEWS = 20;
@@ -108,7 +108,7 @@ function parseUnionEntries(raw: unknown): PopularWeaponEntry[] {
 }
 
 export async function recordWeaponView(weaponHash: number): Promise<void> {
-  if (isPopularWeaponsMockEnabled()) return;
+  if (!isPopularityPublishingEnabled()) return;
 
   const client = getRedis();
   if (!client) return;
@@ -119,7 +119,7 @@ export async function recordWeaponView(weaponHash: number): Promise<void> {
 }
 
 export async function getPopularWeapons(): Promise<PopularWeaponsResult> {
-  if (isPopularWeaponsMockEnabled()) {
+  if (!isPopularityPublishingEnabled()) {
     return { weapons: [], totalViews: 0, distinctWeapons: 0 };
   }
 

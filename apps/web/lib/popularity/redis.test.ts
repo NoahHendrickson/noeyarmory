@@ -1,9 +1,14 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 
+vi.mock("./enabled", () => ({
+  isPopularityPublishingEnabled: vi.fn(() => true),
+}));
+
 vi.mock("./mock", () => ({
   isPopularWeaponsMockEnabled: vi.fn(() => false),
 }));
 
+import { isPopularityPublishingEnabled } from "./enabled";
 import { isPopularWeaponsMockEnabled } from "./mock";
 import {
   applyPopularThreshold,
@@ -15,6 +20,7 @@ import {
   ROLLING_DAYS,
 } from "./redis";
 
+const mockedIsPopularityPublishingEnabled = vi.mocked(isPopularityPublishingEnabled);
 const mockedIsPopularWeaponsMockEnabled = vi.mocked(isPopularWeaponsMockEnabled);
 
 describe("dayKeyForDate", () => {
@@ -98,12 +104,14 @@ describe("applyPopularThreshold", () => {
 
 describe("getPopularWeapons", () => {
   afterEach(() => {
+    mockedIsPopularityPublishingEnabled.mockReset();
+    mockedIsPopularityPublishingEnabled.mockReturnValue(true);
     mockedIsPopularWeaponsMockEnabled.mockReset();
     mockedIsPopularWeaponsMockEnabled.mockReturnValue(false);
   });
 
-  test("returns empty rankings when mock mode is enabled", async () => {
-    mockedIsPopularWeaponsMockEnabled.mockReturnValue(true);
+  test("returns empty rankings when publishing is disabled", async () => {
+    mockedIsPopularityPublishingEnabled.mockReturnValue(false);
     await expect(getPopularWeapons()).resolves.toEqual({
       weapons: [],
       totalViews: 0,

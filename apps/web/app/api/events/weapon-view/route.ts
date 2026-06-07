@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { isPopularWeaponsMockEnabled } from "../../../../lib/popularity/mock";
+import { isPopularityPublishingEnabled } from "../../../../lib/popularity/enabled";
 import { isPopularityConfigured, recordWeaponView } from "../../../../lib/popularity/redis";
 import { createRateLimiter } from "../../../../lib/rate-limit";
 import { isSameOriginRequest } from "../../../../lib/request-guards";
@@ -60,7 +60,7 @@ export async function POST(request: Request) {
     return new NextResponse(null, { status: 400 });
   }
 
-  if (isPopularWeaponsMockEnabled()) {
+  if (!isPopularityPublishingEnabled()) {
     return new NextResponse(null, { status: 204 });
   }
 

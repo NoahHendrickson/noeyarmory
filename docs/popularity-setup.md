@@ -33,7 +33,15 @@ Only works when `NODE_ENV=development`. **Do not set this on Vercel.** Mock mode
 
 ## Step 3 — Vercel (production)
 
-In **Vercel → Project → Settings → Environment Variables**, add both vars for **Production** (and **Preview** if you want popularity in PR previews).
+In **Vercel → Project → Settings → Environment Variables**, add both Upstash vars for **Production** (and **Preview** if you want popularity in PR previews).
+
+**Popular lately** stays hidden on Vercel until you also set:
+
+```env
+POPULAR_WEAPONS_ENABLED=true
+```
+
+Leave this unset while testing Redis or seeding view counts — production will not read/write counters or show the section until you opt in. Local dev does not need this flag.
 
 Redeploy after saving.
 
@@ -62,7 +70,7 @@ Use real weapon hashes from your generated index. Repeat across at least four we
 
 | Symptom | Check |
 |--------|--------|
-| Section never appears | Redis env vars set? Enough distinct weapons viewed in the last 7 days? |
+| Section never appears | Redis env vars set? `POPULAR_WEAPONS_ENABLED=true` on Vercel? Enough distinct weapons viewed in the last 7 days? |
 | Views not counting locally | `.env` has Upstash creds and dev server was restarted |
 | 503 on POST in Network tab | Redis not configured — expected locally without `.env` |
 | Stale rankings | GET is cached ~1 hour; wait or hard-refresh after CDN TTL |
