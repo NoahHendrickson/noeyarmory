@@ -5,9 +5,34 @@ import { Aurora, ChromaFlow, Dither, Shader } from "shaders/react";
 
 import { useShaderPreference } from "../lib/shader-preference";
 
+/** Dither pixel size tuned for ~1920px-wide viewports; scales with screen width. */
+const REFERENCE_VIEWPORT_WIDTH = 1920;
+const BASE_DITHER_PIXEL_SIZE = 7;
+const MIN_DITHER_PIXEL_SIZE = 1;
+const MAX_DITHER_PIXEL_SIZE = 20;
+
+function ditherPixelSizeForWidth(width: number): number {
+  const scaled = Math.round((BASE_DITHER_PIXEL_SIZE * width) / REFERENCE_VIEWPORT_WIDTH);
+  return Math.min(MAX_DITHER_PIXEL_SIZE, Math.max(MIN_DITHER_PIXEL_SIZE, scaled));
+}
+
+function useDitherPixelSize(): number {
+  const [pixelSize, setPixelSize] = useState(BASE_DITHER_PIXEL_SIZE);
+
+  useEffect(() => {
+    const update = () => setPixelSize(ditherPixelSizeForWidth(window.innerWidth));
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
+  return pixelSize;
+}
+
 export function ShaderBackground() {
   const { enabled, webgpuSupported } = useShaderPreference();
   const [mounted, setMounted] = useState(false);
+  const ditherPixelSize = useDitherPixelSize();
 
   useEffect(() => {
     setMounted(true);
@@ -37,7 +62,7 @@ export function ShaderBackground() {
           transform={{ rotation: 180 }}
           waviness={133}
         />
-        <Dither colorMode="source" pixelSize={7} />
+        <Dither colorMode="source" pixelSize={ditherPixelSize} />
       </Shader>
     </div>
   );
