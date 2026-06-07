@@ -10,10 +10,15 @@ export type {
   WeaponIndex,
   WeaponDetailIndex,
   DamageTypeRef,
+  WeaponTypeRef,
   ArmorDoc,
   ArmorIndex,
   ArmorArchetypeRef,
   Armor30SetRef,
+  StatMod,
+  StatGroupRef,
+  StatGroupScaledStat,
+  StatInterpolationPoint,
 } from "./types";
 export {
   PLUG_CATEGORY_ARMOR_ARCHETYPES,
@@ -87,7 +92,17 @@ export {
 } from "./armor-search";
 export { sampleWeapons } from "./fixtures/sample-weapons";
 export { sampleDamageTypes } from "./fixtures/sample-damage-types";
+export { sampleWeaponTypes } from "./fixtures/sample-weapon-types";
 export { sampleArmor } from "./fixtures/sample-armor";
+export {
+  computeWeaponStats,
+  interpolateStatValue,
+  sampleStatGroup,
+  scaleInvestmentStats,
+  sumInvestmentStats,
+  SAMPLE_STAT_GROUP_HASH,
+  type ComputedWeaponStats,
+} from "./weapon-stats";
 export {
   buildWeaponDpsIndex,
   extractTraitPerksFromRow,

@@ -26,7 +26,9 @@ export {
   type PaletteAction,
   type PaletteValueOption,
   type PaletteChip,
+  type PaletteRecentItem,
   type PaletteResultItem,
+  type PalettePanelState,
 } from "./components/command-palette";
 export {
   Dialog,

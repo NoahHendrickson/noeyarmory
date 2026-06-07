@@ -59,10 +59,12 @@ export interface FilterChipProps extends Omit<ComponentProps<"span">, "title"> {
   tone?: FilterChipTone;
   /** Damage type for element-tone chips — selects the element background color. */
   element?: FilterChipElement;
-  /** When set, renders instead of quoted value text (e.g. an element icon). */
+  /** When set, renders before the value text (e.g. an element icon). */
   valueIcon?: ReactNode;
-  /** Suppress the category label prefix (e.g. icon-only element chips). */
+  /** Suppress the category label prefix (e.g. element or weapon-type chips). */
   hideLabel?: boolean;
+  /** When true with hideLabel + valueIcon, renders only the icon (no value text). */
+  iconOnly?: boolean;
   /** When provided, renders a × button to dismiss the chip or cancel an in-progress filter. */
   onRemove?: () => void;
   /** Draft chip: inline input for filtering values within this category. */
@@ -80,7 +82,7 @@ export interface FilterChipProps extends Omit<ComponentProps<"span">, "title"> {
 
 /**
  * A filter token inside the command bar.
- * - **Committed** (value set): light pill per Figma — `Trait 1: "value" ×`
+ * - **Committed** (value set): light pill per Figma — `Trait 1: value ×`
  * - **Draft** (no value): muted dark pill while drilling — `Trait 1:`
  */
 function FilterChip({
@@ -90,6 +92,7 @@ function FilterChip({
   element,
   valueIcon,
   hideLabel = false,
+  iconOnly = false,
   onRemove,
   inputRef,
   inputValue,
@@ -102,8 +105,8 @@ function FilterChip({
 }: FilterChipProps) {
   const isDraft = value == null || value === "";
   const hasInlineInput = isDraft && onInputChange != null;
-  const iconOnly = !isDraft && hideLabel && valueIcon != null;
-  const ariaLabel = iconOnly ? `${label}: ${value}` : undefined;
+  const showIconOnly = !isDraft && iconOnly && valueIcon != null;
+  const ariaLabel = !isDraft && hideLabel ? `${label}: ${value}` : undefined;
 
   return (
     <span
@@ -116,7 +119,7 @@ function FilterChip({
           ? cn(filterChipBase, "rounded-full bg-white/[0.08] pl-2.5 pr-2 text-white/70")
           : filterChipVariants({ tone, element: tone === "element" ? element : undefined }),
         hasInlineInput && (onRemove ? "pr-0" : "pr-2.5"),
-        iconOnly && "px-1.5",
+        showIconOnly && "px-1.5",
         className,
       )}
       {...props}
@@ -139,7 +142,7 @@ function FilterChip({
             />
           )}
         </>
-      ) : iconOnly ? (
+      ) : showIconOnly ? (
         <span className="flex size-3.5 items-center justify-center">{valueIcon}</span>
       ) : (
         <span>
@@ -147,10 +150,10 @@ function FilterChip({
           {valueIcon ? (
             <span className="inline-flex items-center gap-1">
               {valueIcon}
-              &ldquo;{value}&rdquo;
+              {value}
             </span>
           ) : (
-            <>&ldquo;{value}&rdquo;</>
+            value
           )}
         </span>
       )}

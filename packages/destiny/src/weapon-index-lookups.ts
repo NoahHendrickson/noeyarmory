@@ -1,11 +1,12 @@
 import { buildPerkMapFromCatalog, normalizeWeaponIndex, summariesForPerkName } from "./intern-weapons";
-import type { DamageTypeRef, PerkRef, WeaponIndex, WeaponSummary } from "./types";
+import type { DamageTypeRef, PerkRef, WeaponIndex, WeaponSummary, WeaponTypeRef } from "./types";
 
 /** Precomputed lookups over a weapon index for O(1) hash/perk resolution. */
 export interface WeaponIndexLookups {
   weapons: WeaponSummary[];
   perks: PerkRef[];
   damageTypes: DamageTypeRef[];
+  weaponTypes: WeaponTypeRef[];
   byHash: Map<number, WeaponSummary>;
   perkMap: Map<number, PerkRef>;
   /** Lowercase perk name → weapons that can roll it. */
@@ -33,6 +34,7 @@ export function buildWeaponIndexLookups(raw: WeaponIndex): WeaponIndexLookups {
     weapons: index.weapons,
     perks: index.perks,
     damageTypes: index.damageTypes ?? [],
+    weaponTypes: index.weaponTypes ?? [],
     byHash,
     perkMap: buildPerkMapFromCatalog(index.perks),
     weaponsByPerkName,

@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { ListFilterPlus } from "lucide-react";
-import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import {
   Badge,
   cn,
@@ -13,6 +13,8 @@ import {
   type PaletteAction,
   type PaletteCategory,
   type PaletteChip,
+  type PalettePanelState,
+  type PaletteRecentItem,
   type PaletteValueOption,
   type PillSelectOption,
 } from "@repo/ui";
@@ -33,6 +35,11 @@ import {
 
 import { useOwnedArmor } from "../lib/use-owned-armor";
 import { useCustomWeaponFilters } from "../lib/use-custom-weapon-filters";
+import {
+  filterRecentSearches,
+  formatRecentSearchLabel,
+  useRecentSearches,
+} from "../lib/use-recent-searches";
 import { useWeaponDps } from "../lib/use-weapon-dps";
 import { useWeaponDetail, useWeapons } from "../lib/weapons-context";
 import { getFilterChipAppearance } from "../lib/filter-chip-appearance";
@@ -59,6 +66,7 @@ const MODES: PillSelectOption<Mode>[] = [
 ];
 
 const MAX_RESULTS = 50;
+const MAX_PREVIEW_RESULTS = 20;
 /** Cap fuzzy matches before filter/sort — filters may narrow further. */
 const FUSE_PRE_LIMIT = 300;
 
@@ -89,11 +97,14 @@ function draftPerkChips(perkNames: string[]): PaletteChip[] {
   }));
 }
 
+function formatExamples(labels: string[], limit = 3): string {
+  return labels.slice(0, limit).join(", ");
+}
+
 function weaponNameCategory(weapons: WeaponSummary[]): PaletteCategory {
-  const examples = weapons
-    .slice(0, 3)
-    .map((w) => `"${w.name}"`)
-    .join("  ");
+  const examples = formatExamples(
+    weapons.slice(0, 3).map((weapon) => weapon.name),
+  );
   return {
     id: "name",
     label: "Exact Weapon",
@@ -112,10 +123,7 @@ function facetCategory(id: string, label: string, options: FacetOption[]): Palet
   return {
     id,
     label,
-    examples: options
-      .slice(0, 3)
-      .map((o) => `"${o.value}"`)
-      .join("  "),
+    examples: formatExamples(options.map((option) => option.value)),
     getValues: (q) => {
       const ql = q.trim().toLowerCase();
       return options
@@ -130,10 +138,10 @@ function perkCategory(id: string, label: string, options: PerkOption[] | ModOpti
     id,
     label,
     single: true,
-    examples: options
-      .slice(0, 2)
-      .map((o) => `"${o.name}"`)
-      .join("  "),
+    examples: formatExamples(
+      options.slice(0, 2).map((option) => option.name),
+      2,
+    ),
     getValues: (q) => {
       const ql = q.trim().toLowerCase();
       return options
@@ -163,16 +171,80 @@ function mergeTraitPerkOptions(cols: ReturnType<typeof collectColumnPerks>): Per
   return [...byName.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
 }
 
+function categoryIsFull(category: PaletteCategory, chips: PaletteChip[]): boolean {
+  return category.single === true && chips.some((c) => c.categoryId === category.id);
+}
+
+function availableCategories(categories: PaletteCategory[], chips: PaletteChip[]): PaletteCategory[] {
+  return categories.filter((c) => !categoryIsFull(c, chips));
+}
+
+function chipsToWeaponFilters(
+  chips: PaletteChip[],
+  customFilters: ReturnType<typeof useCustomWeaponFilters>["filters"],
+): WeaponFilters {
+  const f: Record<string, string[]> = {};
+  const customPerkGroups: string[][] = [];
+  for (const chip of chips) {
+    if (chip.categoryId === CUSTOM_FILTER_CATEGORY_ID) {
+      const filter = customFilters.find((candidate) => candidate.id === chip.valueId);
+      if (filter) customPerkGroups.push(filter.perkNames);
+      continue;
+    }
+    (f[chip.categoryId] ??= []).push(chip.value);
+  }
+  return customPerkGroups.length > 0 ? { ...f, customPerkGroups } : f;
+}
+
+function withHypotheticalChip(
+  base: WeaponFilters,
+  categoryId: string,
+  value: string,
+  valueId: string,
+  customFilters: ReturnType<typeof useCustomWeaponFilters>["filters"],
+): WeaponFilters {
+  if (categoryId === CUSTOM_FILTER_CATEGORY_ID) {
+    const filter = customFilters.find((candidate) => candidate.id === valueId);
+    if (!filter) return base;
+    const groups = [...(base.customPerkGroups ?? []), filter.perkNames];
+    return { ...base, customPerkGroups: groups };
+  }
+  const existing = (base[categoryId as keyof WeaponFilters] as string[] | undefined) ?? [];
+  return { ...base, [categoryId]: [...existing, value] };
+}
+
+function collectValueSuggestions(
+  categories: PaletteCategory[],
+  query: string,
+  chips: PaletteChip[],
+): { categoryId: string; value: string; valueId: string }[] {
+  const q = query.trim();
+  if (!q) return [];
+
+  const applied = new Set(chips.map((c) => `${c.categoryId}:${c.valueId}`));
+  const items: { categoryId: string; value: string; valueId: string }[] = [];
+
+  for (const category of categories) {
+    if (categoryIsFull(category, chips)) continue;
+    for (const option of category.getValues(q)) {
+      if (applied.has(`${category.id}:${option.id}`)) continue;
+      items.push({ categoryId: category.id, value: option.label, valueId: option.id });
+      if (items.length >= MAX_PREVIEW_RESULTS) return items;
+    }
+  }
+  return items;
+}
+
 function customFilterCategory(
   filters: ReturnType<typeof useCustomWeaponFilters>["filters"],
 ): PaletteCategory {
   return {
     id: CUSTOM_FILTER_CATEGORY_ID,
     label: "Custom filters",
-    examples: filters
-      .slice(0, 2)
-      .map((filter) => `"${filter.name}"`)
-      .join("  "),
+    examples: formatExamples(
+      filters.slice(0, 2).map((filter) => filter.name),
+      2,
+    ),
     getValues: (q) => {
       const ql = q.trim().toLowerCase();
       return filters
@@ -193,9 +265,10 @@ export function WeaponSearch({
   signedIn?: boolean;
   initialMode?: Mode;
 }) {
-  const { weapons, perks, damageTypes, isSample, byHash } = useWeapons();
+  const { weapons, perks, damageTypes, weaponTypes, isSample, byHash } = useWeapons();
   const { dpsByName } = useWeaponDps();
   const { filters: customFilters, createFilter } = useCustomWeaponFilters();
+  const { recordSearch, getRecentForMode, findById } = useRecentSearches();
   const [mode, setMode] = useState<Mode>(initialMode);
   const {
     armor: owned,
@@ -208,6 +281,14 @@ export function WeaponSearch({
   const [query, setQuery] = useState("");
   const [chips, setChips] = useState<PaletteChip[]>([]);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [panelState, setPanelState] = useState<PalettePanelState>({
+    panel: "closed",
+    categoryId: null,
+    valueQuery: "",
+  });
+  const handlePanelStateChange = useCallback((state: PalettePanelState) => {
+    setPanelState(state);
+  }, []);
   const [sort, setSort] = useState<WeaponSort>("season-desc");
   const [showAllResults, setShowAllResults] = useState(false);
   const [customFilterComposer, setCustomFilterComposer] = useState<CustomFilterComposer | null>(
@@ -219,6 +300,11 @@ export function WeaponSearch({
   const elementIconMap = useMemo(
     () => new Map(damageTypes.map((d) => [d.name, d.icon] as const)),
     [damageTypes],
+  );
+
+  const typeIconMap = useMemo(
+    () => new Map(weaponTypes.map((t) => [t.name, t.icon] as const)),
+    [weaponTypes],
   );
 
   const weaponColumnPerks = useMemo(() => collectColumnPerks(weapons, perks), [weapons, perks]);
@@ -322,6 +408,74 @@ export function WeaponSearch({
     [weaponShown, elementIconMap, dpsByName],
   );
 
+  const weaponPreviewWeapons = useMemo(() => {
+    if (mode !== "weapon" || composingCustomFilter) return [];
+
+    const base = chipsToWeaponFilters(chips, customFilters);
+    let filterSets: WeaponFilters[] = [];
+
+    if (panelState.panel === "values" && panelState.categoryId && panelState.valueQuery.trim()) {
+      const category = weaponCategories.find((c) => c.id === panelState.categoryId);
+      if (category) {
+        filterSets = category
+          .getValues(panelState.valueQuery)
+          .map((option) =>
+            withHypotheticalChip(base, category.id, option.label, option.id, customFilters),
+          );
+      }
+    } else if (panelState.panel === "categories" && query.trim()) {
+      const suggestions = collectValueSuggestions(
+        availableCategories(weaponCategories, chips),
+        query,
+        chips,
+      );
+      filterSets = suggestions.map((s) =>
+        withHypotheticalChip(base, s.categoryId, s.value, s.valueId, customFilters),
+      );
+    }
+
+    if (filterSets.length === 0) return [];
+
+    const seen = new Set<number>();
+    const merged: WeaponSummary[] = [];
+    for (const filters of filterSets) {
+      for (const weapon of filterWeapons(weapons, filters, perks)) {
+        if (!seen.has(weapon.hash)) {
+          seen.add(weapon.hash);
+          merged.push(weapon);
+        }
+      }
+    }
+    return sortWeapons(merged, sort, dpsByName).slice(0, MAX_PREVIEW_RESULTS);
+  }, [
+    mode,
+    composingCustomFilter,
+    chips,
+    customFilters,
+    panelState,
+    weaponCategories,
+    query,
+    weapons,
+    perks,
+    sort,
+    dpsByName,
+  ]);
+
+  const weaponPreviewPaletteResults = useMemo(
+    () =>
+      weaponPreviewWeapons.map((weapon) => ({
+        id: String(weapon.hash),
+        content: (
+          <WeaponResultRow
+            weapon={weapon}
+            elementIconPath={elementIconMap.get(weapon.element)}
+            dps={dpsByName.get(weapon.name)}
+          />
+        ),
+      })),
+    [weaponPreviewWeapons, elementIconMap, dpsByName],
+  );
+
   const armorPaletteResults = useMemo(
     () =>
       armorShown.map((armor) => ({
@@ -417,6 +571,37 @@ export function WeaponSearch({
     customFilterComposer != null &&
     customFilterComposer.name.trim().length > 0 &&
     customFilterComposer.perkNames.length > 0;
+
+  function recordCurrentSearch() {
+    if (composingCustomFilter) return;
+    if (chips.length === 0 && !query.trim()) return;
+    recordSearch(
+      mode,
+      query,
+      chips.map((chip) => ({
+        categoryId: chip.categoryId,
+        categoryLabel: chip.categoryLabel,
+        value: chip.value,
+        valueId: chip.valueId,
+      })),
+    );
+  }
+
+  function handleSelectRecent(id: string) {
+    const recent = findById(id);
+    if (!recent) return;
+    setCustomFilterComposer(null);
+    setChips(
+      recent.chips.map((chip) => ({
+        id: `${chip.categoryId}:${chip.valueId}`,
+        categoryId: chip.categoryId,
+        categoryLabel: chip.categoryLabel,
+        value: chip.value,
+        valueId: chip.valueId,
+      })),
+    );
+    setQuery(recent.query);
+  }
 
   const categoryActions = useMemo<PaletteAction[]>(() => {
     if (mode !== "weapon") return [];
@@ -516,6 +701,17 @@ export function WeaponSearch({
   const isFiltering = query.trim().length > 0;
   const showResults = hasFilters && !isFiltering && !composingCustomFilter;
 
+  const recentPaletteItems = useMemo<PaletteRecentItem[]>(() => {
+    if (composingCustomFilter) return [];
+    const recents = query.trim()
+      ? filterRecentSearches(getRecentForMode(mode), query)
+      : getRecentForMode(mode);
+    return recents.map((search) => ({
+      id: search.id,
+      label: formatRecentSearchLabel(search.chips, search.query),
+    }));
+  }, [composingCustomFilter, getRecentForMode, mode, query]);
+
   const placeholder = composingCustomFilter
     ? customFilterComposer.perkNames.length > 0
       ? "Add more perks…"
@@ -529,7 +725,7 @@ export function WeaponSearch({
   return (
     <div className="flex min-h-screen flex-col">
       <header className="relative px-4 py-4 text-center">
-        <span className="text-base font-semibold tracking-tight">moonfang armory</span>
+        <span className="font-pixel text-base font-bold">moonfang armory</span>
         {signedIn && (
           <Link
             href="/vault"
@@ -540,7 +736,7 @@ export function WeaponSearch({
         )}
       </header>
 
-      <main className="mx-auto flex w-full flex-1 flex-col px-4 pt-6 sm:pt-[16vh]">
+      <main className="mx-auto flex w-full flex-1 flex-col px-4 pt-4 sm:pt-[12vh]">
         <div
           className={cn(
             "mx-auto flex w-full max-w-[calc(100vw-2rem)] flex-col transition-opacity duration-200 ease-out motion-reduce:transition-none sm:w-fit",
@@ -571,9 +767,14 @@ export function WeaponSearch({
             chips={paletteChips}
             open={paletteOpen}
             onOpenChange={(open) => {
+              if (!open) {
+                recordCurrentSearch();
+                setCustomFilterComposer(null);
+              }
               setPaletteOpen(open);
-              if (!open) setCustomFilterComposer(null);
             }}
+            recentItems={recentPaletteItems}
+            onSelectRecent={handleSelectRecent}
             onAddChip={handleAddChip}
             onRemoveChip={handleRemoveChip}
             onClearChips={handleClearChips}
@@ -581,7 +782,10 @@ export function WeaponSearch({
               if (chip.categoryId === CUSTOM_FILTER_DRAFT_CATEGORY_ID) {
                 return { tone: "trait", hideLabel: true };
               }
-              return getFilterChipAppearance(chip.categoryId, chip.value, elementIconMap);
+              return getFilterChipAppearance(chip.categoryId, chip.value, {
+                elementIcons: elementIconMap,
+                weaponTypeIcons: typeIconMap,
+              });
             }}
             hideCategoryList={composingCustomFilter}
             plainPanelHeader={composingCustomFilter}
@@ -616,9 +820,14 @@ export function WeaponSearch({
             }
             query={query}
             onQueryChange={setQuery}
+            onPanelStateChange={handlePanelStateChange}
             showResults={showResults}
+            previewResults={
+              mode === "weapon" && !showResults ? weaponPreviewPaletteResults : undefined
+            }
           results={mode === "weapon" ? weaponPaletteResults : armorPaletteResults}
           onSelectResult={(id) => {
+            recordCurrentSearch();
             if (mode === "weapon") {
               const weapon = byHash.get(Number(id));
               if (weapon) setSelectedHash(weapon.hash);

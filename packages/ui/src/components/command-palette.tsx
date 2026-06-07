@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useId, useMemo, useReducer, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { ArrowRight, CornerDownLeft, Plus, Search, X } from "lucide-react";
+import { ArrowRight, CornerDownLeft, History, ListFilter, Plus, Search, X } from "lucide-react";
 
 import { cn } from "../lib/utils";
 import { Button } from "./button";
@@ -19,7 +19,7 @@ export interface PaletteValueOption {
 export interface PaletteCategory {
   id: string;
   label: string;
-  /** Inline example values shown next to the category, e.g. `"Arc" "Solar"`. */
+  /** Inline example values shown next to the category, e.g. `Arc, Solar`. */
   examples?: string;
   /** When true, hide this category from suggestions once a chip is committed (e.g. Trait 1). */
   single?: boolean;
@@ -38,6 +38,12 @@ export interface PaletteChip {
 export interface PaletteResultItem {
   id: string;
   content: ReactNode;
+}
+
+export interface PaletteRecentItem {
+  id: string;
+  label: string;
+  hint?: ReactNode;
 }
 
 export interface PaletteAction {
@@ -60,6 +66,8 @@ export interface PaletteAction {
 
 export interface CommandPaletteProps {
   placeholder?: string;
+  /** Placeholder when the panel is closed with no chips or query. */
+  idlePlaceholder?: string;
   categories: PaletteCategory[];
   /** Action rows shown at the bottom of the filter category list. */
   categoryActions?: PaletteAction[];
@@ -67,7 +75,7 @@ export interface CommandPaletteProps {
   chips: PaletteChip[];
   onAddChip: (categoryId: string, option: PaletteValueOption) => void;
   onRemoveChip: (chipId: string) => void;
-  /** Clears every filter chip — shows an × button in the bar when chips are present. */
+  /** Clears every filter chip — the × button also clears the free-text query when typed. */
   onClearChips?: () => void;
   /** Free-text query (controlled) — narrows visible filter categories; consumer may also use it for result search. */
   query: string;
@@ -109,8 +117,27 @@ export interface CommandPaletteProps {
   /** Optional per-chip styling (tone, icons) based on category/value. */
   getChipAppearance?: (
     chip: PaletteChip,
-  ) => Pick<FilterChipProps, "tone" | "element" | "valueIcon" | "hideLabel">;
+  ) => Pick<FilterChipProps, "tone" | "element" | "valueIcon" | "hideLabel" | "iconOnly">;
+  /** Recent searches shown at the top of the filter category list. */
+  recentItems?: PaletteRecentItem[];
+  onSelectRecent?: (id: string) => void;
+  /** Section label above recent search rows. */
+  recentSectionLabel?: string;
+  /** Section label above filter category rows. */
+  filtersSectionLabel?: string;
+  /** Result rows shown below filter suggestions while typing (categories/values mode). */
+  previewResults?: PaletteResultItem[];
+  /** Section label above `previewResults` rows. */
+  previewSectionLabel?: string;
+  /** Fired when drill state changes so consumers can compute preview filters. */
+  onPanelStateChange?: (state: PalettePanelState) => void;
   className?: string;
+}
+
+export interface PalettePanelState {
+  panel: PanelKind;
+  categoryId: string | null;
+  valueQuery: string;
 }
 
 type PanelKind = "closed" | "categories" | "values";
@@ -154,9 +181,77 @@ function reducer(state: State, action: Action): State {
 type Item =
   | { kind: "category"; category: PaletteCategory }
   | { kind: "action"; action: PaletteAction }
+  | { kind: "section"; id: string; label?: string; divider?: boolean }
+  | { kind: "recent"; recent: PaletteRecentItem }
   | { kind: "chipSuggestion"; category: PaletteCategory; option: PaletteValueOption }
   | { kind: "value"; option: PaletteValueOption }
   | { kind: "result"; result: PaletteResultItem };
+
+function isSelectableItem(item: Item): boolean {
+  return item.kind !== "section";
+}
+
+function firstSelectableIndex(items: Item[]): number {
+  const index = items.findIndex(isSelectableItem);
+  return index >= 0 ? index : 0;
+}
+
+function nextSelectableIndex(items: Item[], from: number, delta: 1 | -1): number {
+  if (items.length === 0) return 0;
+  let i = from;
+  for (let step = 0; step < items.length; step++) {
+    i += delta;
+    if (i < 0 || i >= items.length) return firstSelectableIndex(items);
+    if (isSelectableItem(items[i]!)) return i;
+  }
+  return firstSelectableIndex(items);
+}
+
+function appendPreviewResults(
+  items: Item[],
+  previewResults: PaletteResultItem[],
+  previewSectionLabel: string,
+): Item[] {
+  if (previewResults.length === 0) return items;
+  if (items.length > 0) {
+    items.push({ kind: "section", id: "preview-divider", divider: true });
+  }
+  items.push({ kind: "section", id: "preview", label: previewSectionLabel });
+  items.push(...previewResults.map((result) => ({ kind: "result" as const, result })));
+  return items;
+}
+
+function buildCategoryModeItems(
+  valueSuggestions: Item[],
+  recentListItems: Item[],
+  categoryItems: Item[],
+  actionItems: Item[],
+  recentSectionLabel: string,
+  filtersSectionLabel: string,
+  previewResults: PaletteResultItem[],
+  previewSectionLabel: string,
+): Item[] {
+  const items: Item[] = [...valueSuggestions];
+
+  if (recentListItems.length > 0) {
+    if (items.length > 0) {
+      items.push({ kind: "section", id: "recent-divider", divider: true });
+    }
+    items.push({ kind: "section", id: "recent-searches", label: recentSectionLabel });
+    items.push(...recentListItems);
+  }
+
+  if (categoryItems.length > 0) {
+    if (items.length > 0) {
+      items.push({ kind: "section", id: "filters-divider", divider: true });
+    }
+    items.push({ kind: "section", id: "filters", label: filtersSectionLabel });
+    items.push(...categoryItems);
+  }
+
+  items.push(...actionItems);
+  return appendPreviewResults(items, previewResults, previewSectionLabel);
+}
 
 /** Whisper text for the draft chip input — mirrors the highlighted list row. */
 function whisperForActiveItem(item: Item | undefined): string | undefined {
@@ -254,6 +349,7 @@ function searchValueSuggestions(
  */
 export function CommandPalette({
   placeholder = "Search…",
+  idlePlaceholder = "Press F to search",
   categories,
   categoryActions = [],
   chips,
@@ -281,6 +377,13 @@ export function CommandPalette({
   onOpenChange,
   suspendResults = false,
   getChipAppearance,
+  recentItems = [],
+  onSelectRecent,
+  recentSectionLabel = "Recent searches",
+  filtersSectionLabel = "Filters",
+  previewResults = [],
+  previewSectionLabel = "Results",
+  onPanelStateChange,
   className,
 }: CommandPaletteProps) {
   const isControlled = openProp !== undefined;
@@ -410,22 +513,36 @@ export function CommandPalette({
     ? []
     : visibleCategories.map((category) => ({ kind: "category" as const, category }));
 
+  const recentListItems: Item[] =
+    hideCategoryList || mode !== "categories"
+      ? []
+      : recentItems.map((recent) => ({ kind: "recent" as const, recent }));
+
   const items: Item[] =
     mode === "categories"
-      ? query.trim()
-        ? [
-            ...valueSuggestions,
-            ...categoryItems,
-            ...visibleActions.map((action) => ({ kind: "action" as const, action })),
-          ]
-        : [
-            ...(hideCategoryList
+      ? buildCategoryModeItems(
+          valueSuggestions,
+          recentListItems,
+          query.trim()
+            ? categoryItems
+            : hideCategoryList
               ? []
-              : openCategories.map((category) => ({ kind: "category" as const, category }))),
-            ...categoryActions.map((action) => ({ kind: "action" as const, action })),
-          ]
+              : openCategories.map((category) => ({ kind: "category" as const, category })),
+          (query.trim() ? visibleActions : categoryActions).map((action) => ({
+            kind: "action" as const,
+            action,
+          })),
+          recentSectionLabel,
+          filtersSectionLabel,
+          previewResults,
+          previewSectionLabel,
+        )
       : mode === "values" && activeCategory
-        ? activeCategory.getValues(state.valueQuery).map((option) => ({ kind: "value", option }))
+        ? appendPreviewResults(
+            activeCategory.getValues(state.valueQuery).map((option) => ({ kind: "value", option })),
+            previewResults,
+            previewSectionLabel,
+          )
         : mode === "results"
           ? results.map((result) => ({ kind: "result", result }))
           : [];
@@ -438,11 +555,21 @@ export function CommandPalette({
   const keyboardFocus = hoverIndex < 0 && activeIndex >= 0;
   const resultsOrderKey =
     mode === "results" ? results.map((result) => result.id).join("\u0000") : "";
+  const previewOrderKey = previewResults.map((result) => result.id).join("\u0000");
   const actionsOrderKey = categoryActions.map((action) => action.id).join("\u0000");
+  const recentOrderKey = recentItems.map((item) => item.id).join("\u0000");
+
+  useEffect(() => {
+    onPanelStateChange?.({
+      panel: state.panel,
+      categoryId: state.categoryId,
+      valueQuery: state.valueQuery,
+    });
+  }, [state.panel, state.categoryId, state.valueQuery, onPanelStateChange]);
 
   // Reset highlight when list content changes.
   useEffect(() => {
-    dispatch({ type: "setActive", index: 0 });
+    dispatch({ type: "setActive", index: firstSelectableIndex(items) });
     setHoverIndex(-1);
   }, [
     mode,
@@ -452,7 +579,9 @@ export function CommandPalette({
     results.length,
     chips.length,
     resultsOrderKey,
+    previewOrderKey,
     actionsOrderKey,
+    recentOrderKey,
   ]);
 
   // Sync controlled open prop into internal drill/back state machine.
@@ -514,12 +643,13 @@ export function CommandPalette({
       return;
     }
     if (items.length === 0) return;
-    const base = activeIndex < 0 ? -1 : activeIndex;
-    const next = Math.max(0, Math.min(base + delta, items.length - 1));
+    const base = activeIndex < 0 ? (delta > 0 ? -1 : items.length) : activeIndex;
+    const next = nextSelectableIndex(items, base, delta > 0 ? 1 : -1);
     dispatch({ type: "setActive", index: next });
   }
 
   function selectItem(item: Item) {
+    if (item.kind === "section") return;
     if (item.kind === "category") {
       onQueryChange("");
       dispatch({ type: "drill", categoryId: item.category.id });
@@ -532,6 +662,9 @@ export function CommandPalette({
     } else if (item.kind === "chipSuggestion") {
       onAddChip(item.category.id, item.option);
       onQueryChange("");
+      setBrowseFilters(false);
+    } else if (item.kind === "recent") {
+      onSelectRecent?.(item.recent.id);
       setBrowseFilters(false);
     } else if (item.kind === "value" && activeCategory) {
       onAddChip(activeCategory.id, item.option);
@@ -563,7 +696,7 @@ export function CommandPalette({
         break;
       case "Enter": {
         const item = open ? items[activeIndex] : undefined;
-        if (item) {
+        if (item && isSelectableItem(item)) {
           e.preventDefault();
           selectItem(item);
         } else {
@@ -602,10 +735,45 @@ export function CommandPalette({
 
   const showAddMore = chips.length > 0 && state.panel !== "values" && !hideCategoryList;
   const drilling = state.panel === "values" && activeCategory != null;
-  const effectivePlaceholder = showAddMore ? "Add more filters" : placeholder;
+  const isIdleBar =
+    !open &&
+    !disabled &&
+    !drilling &&
+    chips.length === 0 &&
+    !query.trim() &&
+    !renderBarOverlay;
+  const effectivePlaceholder = showAddMore
+    ? "Add more filters"
+    : isIdleBar
+      ? idlePlaceholder
+      : placeholder;
+  const inputCharCount =
+    inputValue.length > 0 ? inputValue.length : effectivePlaceholder.length;
+  const inputSize = Math.max(12, Math.min(24, inputCharCount + 1));
   const valueInputPlaceholder = activeCategory
     ? (whisperForActiveItem(items[displayIndex]) ?? `Filter ${activeCategory.label}…`)
     : undefined;
+
+  const hasTypedInput = inputValue.trim().length > 0;
+  const showClearButton =
+    !renderBarOverlay && (hasTypedInput || (chips.length > 0 && onClearChips != null));
+
+  function handleClearBar() {
+    if (state.panel === "values") {
+      dispatch({ type: "setValueQuery", value: "" });
+    } else {
+      if (hasTypedInput) onQueryChange("");
+      if (chips.length > 0) onClearChips?.();
+    }
+    inputRef.current?.focus();
+  }
+
+  const clearBarLabel =
+    chips.length > 0 && onClearChips != null && hasTypedInput
+      ? "Clear search and filters"
+      : chips.length > 0 && onClearChips != null
+        ? "Clear all filters"
+        : "Clear search";
 
   const panelClosing = closingSnapshot != null;
   const renderMode = open ? mode : (closingSnapshot?.mode ?? null);
@@ -647,7 +815,7 @@ export function CommandPalette({
         <div
           className={cn(
             "flex min-h-12 items-center justify-between gap-2 border-b pl-3 transition-[border-color] duration-200 ease-out motion-reduce:transition-none sm:h-14 sm:gap-3 sm:pl-[18px]",
-            chips.length > 0 && onClearChips != null && !renderBarOverlay ? "pr-6" : "pr-[18px]",
+            showClearButton ? "pr-6" : "pr-[18px]",
             open ? "border-border" : "border-transparent",
           )}
           onClick={() => !disabled && !renderBarOverlay && inputRef.current?.focus()}
@@ -705,7 +873,7 @@ export function CommandPalette({
                     <input
                       ref={inputRef}
                       type="text"
-                      size={Math.max(12, Math.min(24, inputValue.length + 1))}
+                      size={inputSize}
                       className="placeholder:text-muted-foreground min-w-[8ch] shrink-0 bg-transparent text-base tracking-body outline-none disabled:cursor-not-allowed"
                       placeholder={effectivePlaceholder}
                       value={inputValue}
@@ -721,8 +889,7 @@ export function CommandPalette({
             )}
           </div>
 
-          {(rightAdornment != null ||
-            (chips.length > 0 && onClearChips != null && !renderBarOverlay)) && (
+          {(rightAdornment != null || showClearButton) && (
             <div className="flex shrink-0 items-center gap-2">
               {rightAdornment != null && (
                 <div
@@ -735,15 +902,18 @@ export function CommandPalette({
                 </div>
               )}
 
-              {chips.length > 0 && onClearChips != null && !renderBarOverlay && (
+              {showClearButton && (
                 <Button
                   type="button"
                   variant="ghost"
                   size="iconRound"
                   className="text-white/60 hover:bg-white/10 hover:text-white"
-                  aria-label="Clear all filters"
+                  aria-label={clearBarLabel}
                   disabled={disabled}
-                  onClick={onClearChips}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleClearBar();
+                  }}
                 >
                   <X className="size-4" />
                 </Button>
@@ -808,8 +978,10 @@ export function CommandPalette({
                   onMouseLeave={() => setHoverIndex(-1)}
                 >
                   {renderItems.map((item, i) => {
-                    const selected = displayIndex >= 0 && i === displayIndex;
-                    const showEnterHint = keyboardFocus && i === activeIndex;
+                    const selected =
+                      isSelectableItem(item) && displayIndex >= 0 && i === displayIndex;
+                    const showEnterHint =
+                      isSelectableItem(item) && keyboardFocus && i === activeIndex;
                     return (
                       // eslint-disable-next-line jsx-a11y/click-events-have-key-events
                       <li
@@ -818,6 +990,10 @@ export function CommandPalette({
                             ? item.category.id
                             : item.kind === "action"
                               ? `action:${item.action.id}`
+                              : item.kind === "section"
+                                ? item.id
+                              : item.kind === "recent"
+                                ? `recent:${item.recent.id}`
                               : item.kind === "chipSuggestion"
                                 ? `${item.category.id}:${item.option.id}`
                                 : item.kind === "value"
@@ -825,19 +1001,30 @@ export function CommandPalette({
                                   : item.result.id
                         }
                         id={optionId(i)}
-                        role="option"
-                        aria-selected={selected}
-                        onMouseDown={(e) => e.preventDefault()}
-                        onMouseEnter={() => {
-                          if (listScrollingRef.current) return;
-                          setHoverIndex(i);
-                          if (activeIndex !== i) dispatch({ type: "setActive", index: i });
-                        }}
-                        onClick={() => selectItem(item)}
+                        role={item.kind === "section" ? "presentation" : "option"}
+                        aria-selected={item.kind === "section" ? undefined : selected}
+                        onMouseDown={
+                          item.kind === "section" ? undefined : (e) => e.preventDefault()
+                        }
+                        onMouseEnter={
+                          item.kind === "section"
+                            ? undefined
+                            : () => {
+                                if (listScrollingRef.current) return;
+                                setHoverIndex(i);
+                                if (activeIndex !== i) dispatch({ type: "setActive", index: i });
+                              }
+                        }
+                        onClick={
+                          item.kind === "section" ? undefined : () => selectItem(item)
+                        }
                         aria-disabled={item.kind === "action" && item.action.disabled ? true : undefined}
                         className={cn(
-                          "flex cursor-pointer items-center justify-between gap-3 rounded-lg px-3 py-1.5",
-                          selected && "bg-white/[0.05]",
+                          item.kind === "section"
+                            ? "pointer-events-none list-none py-0"
+                            : "flex cursor-pointer items-center justify-between gap-3 rounded-lg px-3 py-1.5",
+                          selected &&
+                            (item.kind === "result" ? "bg-white/[0.033]" : "bg-white/[0.05]"),
                           item.kind === "action" &&
                             "mt-1 justify-center py-2",
                           item.kind === "action" &&
@@ -860,12 +1047,16 @@ export function CommandPalette({
                             item.action.variant !== "primary" &&
                             "hover:bg-white/[0.04]",
                           item.kind === "result" &&
-                            "p-0 [contain-intrinsic-size:auto_3.5rem] [content-visibility:auto] [&>*]:hover:bg-transparent [&>*]:focus-visible:bg-transparent",
+                            "p-0 [contain-intrinsic-size:auto_3.5rem] [content-visibility:auto] [&_*]:hover:bg-transparent [&_*]:focus-visible:bg-transparent",
                         )}
                       >
                         {item.kind === "category" ? (
                           <>
-                            <span className="flex min-w-0 items-baseline gap-2 text-xs font-medium">
+                            <span className="flex min-w-0 items-center gap-2 text-xs font-normal">
+                              <ListFilter
+                                className="text-muted-foreground size-3.5 shrink-0"
+                                aria-hidden
+                              />
                               <span className="text-white">{item.category.label}:</span>
                               {item.category.examples && (
                                 <span className="text-muted-foreground hidden truncate sm:inline">
@@ -920,9 +1111,50 @@ export function CommandPalette({
                                 </Kbd>
                               ))}
                           </span>
+                        ) : item.kind === "section" ? (
+                          <>
+                            {item.divider && (
+                              <div
+                                className="border-border/40 -mx-1.5 my-1.5 border-t"
+                                role="separator"
+                                aria-hidden
+                              />
+                            )}
+                            {item.label && (
+                              <div className="text-muted-foreground px-3 pt-2 pb-0.5 text-[11px] font-normal tracking-wide">
+                                {item.label}
+                              </div>
+                            )}
+                          </>
+                        ) : item.kind === "recent" ? (
+                          <>
+                            <span className="flex min-w-0 items-center gap-2 text-xs font-normal">
+                              <History
+                                className="text-muted-foreground size-3.5 shrink-0"
+                                aria-hidden
+                              />
+                              <span className="truncate text-white">{item.recent.label}</span>
+                            </span>
+                            <span className="flex shrink-0 items-center gap-2">
+                              {item.recent.hint != null && (
+                                <span className="text-muted-foreground text-xs">{item.recent.hint}</span>
+                              )}
+                              {showEnterHint ? (
+                                <Kbd className="hidden sm:inline-flex">
+                                  Enter
+                                  <CornerDownLeft className="size-3" />
+                                </Kbd>
+                              ) : (
+                                <Kbd className="hidden sm:inline-flex">
+                                  Tab
+                                  <ArrowRight className="size-3" />
+                                </Kbd>
+                              )}
+                            </span>
+                          </>
                         ) : item.kind === "chipSuggestion" ? (
                           <>
-                            <span className="flex min-w-0 items-baseline gap-2 text-xs font-medium">
+                            <span className="flex min-w-0 items-baseline gap-2 text-xs font-normal">
                               <span className="text-white">{item.category.label}:</span>
                               <span
                                 className={cn(
@@ -930,7 +1162,7 @@ export function CommandPalette({
                                   item.option.dimmed ? "text-muted-foreground/45" : "text-muted-foreground",
                                 )}
                               >
-                                &ldquo;{item.option.label}&rdquo;
+                                {item.option.label}
                               </span>
                             </span>
                             <span className="flex shrink-0 items-center gap-2">
@@ -954,7 +1186,7 @@ export function CommandPalette({
                           <>
                             <span
                               className={cn(
-                                "truncate text-xs font-medium",
+                                "truncate text-xs font-normal",
                                 item.option.dimmed && "opacity-45",
                               )}
                             >

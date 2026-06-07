@@ -2,12 +2,18 @@ import { createElement } from "react";
 import type { FilterChipElement, FilterChipProps, FilterChipTone } from "@repo/ui";
 
 import { ElementIcon, isElementName } from "../components/element-icon";
+import { bungieIcon } from "./bungie";
+
+export interface FilterChipIconMaps {
+  elementIcons?: ReadonlyMap<string, string | undefined>;
+  weaponTypeIcons?: ReadonlyMap<string, string | undefined>;
+}
 
 export function getFilterChipAppearance(
   categoryId: string,
   value: string,
-  elementIcons?: ReadonlyMap<string, string | undefined>,
-): Pick<FilterChipProps, "tone" | "element" | "valueIcon" | "hideLabel"> {
+  iconMaps?: FilterChipIconMaps,
+): Pick<FilterChipProps, "tone" | "element" | "valueIcon" | "hideLabel" | "iconOnly"> {
   if (categoryId === "trait1" || categoryId === "trait2" || categoryId === "customFilter") {
     return { tone: "trait" satisfies FilterChipTone };
   }
@@ -21,6 +27,7 @@ export function getFilterChipAppearance(
   if (categoryId === "craftable" && value === "Yes") {
     return {
       hideLabel: true,
+      iconOnly: true,
       valueIcon: createElement("img", {
         src: "/craftable.png",
         alt: "",
@@ -38,10 +45,35 @@ export function getFilterChipAppearance(
       tone: "element" satisfies FilterChipTone,
       element,
       hideLabel: true,
+      iconOnly: true,
       valueIcon: createElement(ElementIcon, {
         element: value,
-        iconPath: elementIcons?.get(value),
+        iconPath: iconMaps?.elementIcons?.get(value),
       }),
+    };
+  }
+
+  if (categoryId === "type") {
+    const iconPath = iconMaps?.weaponTypeIcons?.get(value);
+    const iconSrc = iconPath
+      ? iconPath.startsWith("/weapon-types/")
+        ? iconPath
+        : bungieIcon(iconPath)
+      : undefined;
+    return {
+      hideLabel: true,
+      ...(iconSrc
+        ? {
+            valueIcon: createElement("img", {
+              src: iconSrc,
+              alt: "",
+              width: 18,
+              height: 18,
+              className: "h-[18px] w-auto max-w-7 shrink-0 object-contain opacity-80",
+              "aria-hidden": true,
+            }),
+          }
+        : {}),
     };
   }
 

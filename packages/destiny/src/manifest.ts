@@ -10,6 +10,7 @@ export const MANIFEST_SLICES = [
   "DestinyInventoryItemDefinition",
   "DestinyPlugSetDefinition",
   "DestinyStatDefinition",
+  "DestinyStatGroupDefinition",
   "DestinyDamageTypeDefinition",
   "DestinySeasonDefinition",
   "DestinyEquipableItemSetDefinition",

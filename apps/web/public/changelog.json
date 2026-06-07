@@ -1,6 +1,28 @@
 {
-  "version": "0.2.0",
+  "version": "0.3.0",
   "releases": [
+    {
+      "version": "0.3.0",
+      "date": "2026-06-07",
+      "sections": [
+        {
+          "title": "Features",
+          "items": [
+            "add DPS rankings, custom filters, and richer weapon search",
+            "Create custom filters inline in the command palette",
+            "Remove icons from What's new and Feedback toolbar buttons.",
+            "Sync changelog.json for v0.2.0 release."
+          ]
+        },
+        {
+          "title": "Bug Fixes",
+          "items": [
+            "address PR [#7](https://github.com/NoahHendrickson/noeyarmory/issues/7) review follow-ups",
+            "harden web security boundaries"
+          ]
+        }
+      ]
+    },
     {
       "version": "0.2.0",
       "date": "2026-06-07",

@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import {
   cn,
   Tooltip,
@@ -81,12 +82,16 @@ function PerkTile({
   linkPerks,
   size = "md",
   highlighted = false,
+  selected = false,
+  onSelect,
   clarityDescriptions,
 }: {
   perk: PerkRef;
   linkPerks: boolean;
   size?: "md" | "lg";
   highlighted?: boolean;
+  selected?: boolean;
+  onSelect?: (perk: PerkRef) => void;
   clarityDescriptions: ClarityDescriptionMap | null;
 }) {
   const tiers = getClarityPerkTiers(clarityDescriptions, perk);
@@ -103,6 +108,7 @@ function PerkTile({
         "relative flex shrink-0 items-center justify-center rounded-md",
         tileDim,
         canRoll ? "bg-[#3b6ea5]" : "bg-white/10 opacity-45",
+        selected && "ring-2 ring-white ring-offset-2 ring-offset-background",
         highlighted && "ring-2 ring-amber-400/90 ring-offset-2 ring-offset-background",
       )}
     >
@@ -121,20 +127,37 @@ function PerkTile({
     </span>
   );
 
+  const wrapInteractive = (content: ReactNode) => {
+    if (onSelect) {
+      return (
+        <button
+          type="button"
+          aria-label={perk.name}
+          aria-pressed={selected}
+          onClick={() => onSelect(perk)}
+          className="inline-flex rounded-md transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          {content}
+        </button>
+      );
+    }
+    if (linkPerks) {
+      return (
+        <Link
+          href={`/perk/${perk.hash}`}
+          className="inline-flex rounded-md transition-opacity hover:opacity-80"
+        >
+          {content}
+        </Link>
+      );
+    }
+    return content;
+  };
+
   if (!hasClarityOrBungieTooltip(perk, tiers)) {
-    const wrapped = linkPerks ? (
-      <Link
-        href={`/perk/${perk.hash}`}
-        className="inline-flex rounded-md transition-opacity hover:opacity-80"
-      >
-        {tile}
-      </Link>
-    ) : (
-      tile
-    );
     return (
-      <span title={perk.name} className="inline-flex">
-        {wrapped}
+      <span title={onSelect ? undefined : perk.name} className="inline-flex">
+        {wrapInteractive(tile)}
       </span>
     );
   }
@@ -144,7 +167,15 @@ function PerkTile({
       <TooltipTrigger
         delay={0}
         render={
-          linkPerks ? (
+          onSelect ? (
+            <button
+              type="button"
+              aria-label={perk.name}
+              aria-pressed={selected}
+              onClick={() => onSelect(perk)}
+              className="inline-flex rounded-md transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+          ) : linkPerks ? (
             <Link
               href={`/perk/${perk.hash}`}
               className="inline-flex rounded-md transition-opacity hover:opacity-80"
@@ -174,6 +205,8 @@ export function PerkColumnView({
   /** Intrinsic columns use a larger lone icon. */
   compactIntrinsic = false,
   highlightedPerks,
+  selectedPerkHash,
+  onSelectPerk,
   clarityDescriptions,
 }: {
   column: PerkColumn;
@@ -181,6 +214,8 @@ export function PerkColumnView({
   compactIntrinsic?: boolean;
   /** Lowercase perk names from the community DPS benchmark build. */
   highlightedPerks?: ReadonlySet<string>;
+  selectedPerkHash?: number;
+  onSelectPerk?: (perk: PerkRef) => void;
   clarityDescriptions?: ClarityDescriptionMap | null;
 }) {
   const contextDescriptions = useClarityDescriptions();
@@ -206,6 +241,8 @@ export function PerkColumnView({
           perk={perk}
           linkPerks={linkPerks}
           highlighted={highlightedPerks?.has(perk.name.toLowerCase())}
+          selected={selectedPerkHash === perk.hash}
+          onSelect={onSelectPerk}
           clarityDescriptions={descriptions}
         />
       ))}

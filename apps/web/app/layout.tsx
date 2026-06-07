@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 
 import "@fontsource-variable/geist";
+import "@fontsource/silkscreen/400.css";
+import "@fontsource/silkscreen/700.css";
 import "./globals.css";
 
 export const metadata: Metadata = {

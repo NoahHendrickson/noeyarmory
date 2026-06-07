@@ -1,3 +1,9 @@
+/** Raw investment-stat delta from a plug (pre stat-group scaling). */
+export interface StatMod {
+  hash: number;
+  value: number;
+}
+
 /** A single perk option that can appear in a weapon's column. */
 export interface PerkRef {
   hash: number;
@@ -12,6 +18,8 @@ export interface PerkRef {
   enhancedDescription?: string;
   /** Other plug hashes for the same perk (e.g. enhanced tier) — not shown separately in the UI. */
   alternateHashes?: number[];
+  /** Non-conditional investment stat modifiers when this plug is selected. */
+  statMods?: StatMod[];
 }
 
 /** One perk column on a weapon (barrel, magazine, a trait slot, origin, …). */
@@ -66,12 +74,35 @@ export interface WeaponSummary {
   perkHashes: number[];
 }
 
+/** Piecewise-linear segment for stat-group scaling (manifest displayInterpolation). */
+export interface StatInterpolationPoint {
+  value: number;
+  weight: number;
+}
+
+/** Scaled-stat entry from DestinyStatGroupDefinition — used to transform investment → display. */
+export interface StatGroupScaledStat {
+  statHash: number;
+  maximumValue: number;
+  displayInterpolation: StatInterpolationPoint[];
+}
+
+/** Compact stat-group definition shipped alongside weapon details. */
+export interface StatGroupRef {
+  hash: number;
+  maximumValue: number;
+  scaledStats: StatGroupScaledStat[];
+}
+
 /** Detail fields stored separately and loaded on demand. */
 export interface WeaponDetailFields {
   hash: number;
   screenshot?: string;
   flavor?: string;
   stats: WeaponStat[];
+  /** Base investment stats (pre stat-group scaling). */
+  investmentStats?: WeaponStat[];
+  statGroupHash?: number;
 }
 
 /** Full weapon with resolved columns — merged from summary + detail at runtime. */
@@ -79,11 +110,19 @@ export interface WeaponDoc extends Omit<WeaponSummary, "columns" | "perksLower">
   screenshot?: string;
   flavor?: string;
   stats: WeaponStat[];
+  investmentStats?: WeaponStat[];
+  statGroupHash?: number;
   columns: PerkColumn[];
 }
 
 export interface DamageTypeRef {
   hash: number;
+  name: string;
+  /** Bungie icon path; prefix with https://www.bungie.net to render. */
+  icon?: string;
+}
+
+export interface WeaponTypeRef {
   name: string;
   /** Bungie icon path; prefix with https://www.bungie.net to render. */
   icon?: string;
@@ -100,12 +139,16 @@ export interface WeaponIndex {
   weaponsByPerkName: Record<string, number[]>;
   /** Damage type catalog from DestinyDamageTypeDefinition (element filter icons). */
   damageTypes: DamageTypeRef[];
+  /** Weapon type catalog from DestinyItemCategoryDefinition (type filter icons). */
+  weaponTypes?: WeaponTypeRef[];
 }
 
 export interface WeaponDetailIndex {
   version: string;
   /** Weapon hash (string key) → detail fields. */
   details: Record<string, WeaponDetailFields>;
+  /** Stat groups referenced by weapon details (string key = statGroupHash). */
+  statGroups?: Record<string, StatGroupRef>;
 }
 
 export type ArmorStat = WeaponStat;

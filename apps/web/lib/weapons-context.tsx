@@ -6,8 +6,12 @@ import {
   expandWeapon,
   internWeaponCatalog,
   sampleDamageTypes,
+  sampleStatGroup,
+  sampleWeaponTypes,
   type DamageTypeRef,
+  type WeaponTypeRef,
   type PerkRef,
+  type StatGroupRef,
   type WeaponDetailFields,
   type WeaponDetailIndex,
   type WeaponDoc,
@@ -28,6 +32,7 @@ export interface WeaponsState {
   weapons: WeaponSummary[];
   perks: PerkRef[];
   damageTypes: DamageTypeRef[];
+  weaponTypes: WeaponTypeRef[];
   byHash: Map<number, WeaponSummary>;
   perkMap: WeaponIndexLookups["perkMap"];
   weaponsByPerkName: WeaponIndexLookups["weaponsByPerkName"];
@@ -41,6 +46,7 @@ const defaultState: WeaponsState = {
   weapons: [],
   perks: [],
   damageTypes: sampleDamageTypes,
+  weaponTypes: sampleWeaponTypes,
   byHash: new Map(),
   perkMap: new Map(),
   weaponsByPerkName: new Map(),
@@ -53,6 +59,7 @@ const WeaponsContext = createContext<WeaponsState>(defaultState);
 
 let moduleCache: WeaponIndexLookups | null = null;
 let detailCache: Map<number, WeaponDetailFields> | null = null;
+let statGroupsCache: Record<string, StatGroupRef> | undefined;
 let loadPromise: Promise<WeaponIndexLookups> | null = null;
 let detailLoadPromise: Promise<Map<number, WeaponDetailFields>> | null = null;
 let isSampleCache = false;
@@ -61,6 +68,7 @@ function seedDetails(index: WeaponDetailIndex): void {
   detailCache = new Map(
     Object.entries(index.details).map(([hash, detail]) => [Number(hash), detail]),
   );
+  statGroupsCache = index.statGroups;
 }
 
 async function loadWeaponDetails(): Promise<Map<number, WeaponDetailFields>> {
@@ -76,6 +84,7 @@ async function loadWeaponDetails(): Promise<Map<number, WeaponDetailFields>> {
         return detailCache!;
       } catch {
         detailCache = new Map();
+        statGroupsCache = undefined;
         return detailCache;
       } finally {
         detailLoadPromise = null;
@@ -95,6 +104,7 @@ function lookupsToState(
     weapons: lookups.weapons,
     perks: lookups.perks,
     damageTypes: lookups.damageTypes.length > 0 ? lookups.damageTypes : sampleDamageTypes,
+    weaponTypes: lookups.weaponTypes.length > 0 ? lookups.weaponTypes : sampleWeaponTypes,
     byHash: lookups.byHash,
     perkMap: lookups.perkMap,
     weaponsByPerkName: lookups.weaponsByPerkName,
@@ -121,10 +131,14 @@ async function fetchWeaponIndex(): Promise<{ lookups: WeaponIndexLookups; isSamp
       } catch {
         const { sampleWeapons } = await import("@repo/destiny");
         const { index, detailIndex } = internWeaponCatalog(sampleWeapons, "sample");
-        seedDetails(detailIndex);
+        seedDetails({
+          ...detailIndex,
+          statGroups: { [String(sampleStatGroup.hash)]: sampleStatGroup },
+        });
         const lookups = buildWeaponIndexLookups({
           ...index,
           damageTypes: sampleDamageTypes,
+          weaponTypes: sampleWeaponTypes,
         });
         moduleCache = lookups;
         isSampleCache = true;
@@ -147,7 +161,11 @@ export function WeaponsProvider({ children }: { children: ReactNode }) {
 
     if (isSampleCache && !detailCache) {
       const { sampleWeapons } = await import("@repo/destiny");
-      seedDetails(buildDetailIndexFromDocs(sampleWeapons, "sample"));
+      seedDetails(
+        buildDetailIndexFromDocs(sampleWeapons, "sample", {
+          [String(sampleStatGroup.hash)]: sampleStatGroup,
+        }),
+      );
     } else if (!detailCache) {
       await loadWeaponDetails();
     }
@@ -218,4 +236,40 @@ export function useWeaponDetail(
   }, [hash, initial, getWeaponDoc]);
 
   return { weapon, loading };
+}
+
+/** Stat groups from weapons-detail.json — needed for perk stat preview. */
+export function useStatGroups(): Record<string, StatGroupRef> | undefined {
+  const { isSample } = useWeapons();
+  const [statGroups, setStatGroups] = useState<Record<string, StatGroupRef> | undefined>(
+    statGroupsCache,
+  );
+
+  useEffect(() => {
+    if (statGroupsCache) {
+      setStatGroups(statGroupsCache);
+      return;
+    }
+
+    let active = true;
+    void (async () => {
+      if (isSample) {
+        const { sampleWeapons } = await import("@repo/destiny");
+        seedDetails(
+          buildDetailIndexFromDocs(sampleWeapons, "sample", {
+            [String(sampleStatGroup.hash)]: sampleStatGroup,
+          }),
+        );
+      } else {
+        await loadWeaponDetails();
+      }
+      if (active) setStatGroups(statGroupsCache);
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [isSample]);
+
+  return statGroups;
 }

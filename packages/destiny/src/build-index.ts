@@ -2,7 +2,18 @@ import type { DestinyInventoryItemDefinition } from "bungie-api-ts/destiny2";
 
 import type { ManifestDefs } from "./manifest";
 import { internWeaponCatalog } from "./intern-weapons";
-import type { DamageTypeRef, PerkColumn, PerkRef, WeaponDoc, WeaponIndex, WeaponStat } from "./types";
+import { GENERIC_WEAPON_TYPE_ICONS } from "./weapon-type-icon-paths";
+import type {
+  DamageTypeRef,
+  PerkColumn,
+  PerkRef,
+  StatGroupRef,
+  StatMod,
+  WeaponDoc,
+  WeaponIndex,
+  WeaponStat,
+  WeaponTypeRef,
+} from "./types";
 import type { WeaponDetailIndex } from "./types";
 
 const WEAPON_ITEM_TYPE = 3; // DestinyItemType.Weapon
@@ -41,6 +52,29 @@ function plugDescription(def: DestinyInventoryItemDefinition): string | undefine
   return description || undefined;
 }
 
+/** Non-conditional investment stat modifiers from a plug definition. */
+function plugStatMods(def: DestinyInventoryItemDefinition): StatMod[] | undefined {
+  const mods: StatMod[] = [];
+  for (const inv of def.investmentStats ?? []) {
+    if (inv.isConditionallyActive || inv.value === 0) continue;
+    mods.push({ hash: inv.statTypeHash, value: inv.value });
+  }
+  return mods.length > 0 ? mods : undefined;
+}
+
+/** Base investment stats from a weapon item definition. */
+function weaponInvestmentStats(
+  item: DestinyInventoryItemDefinition,
+  stats: ManifestDefs["DestinyStatDefinition"],
+): WeaponStat[] {
+  const weaponStats: WeaponStat[] = [];
+  for (const s of item.investmentStats ?? []) {
+    const statName = stats[s.statTypeHash]?.displayProperties?.name;
+    if (statName) weaponStats.push({ hash: s.statTypeHash, name: statName, value: s.value });
+  }
+  return weaponStats;
+}
+
 /** One visible perk per name; enhanced-tier hashes are kept as `alternateHashes` for vault resolution. */
 export function buildColumnPerks(
   candidates: { hash: number; canRoll: boolean }[],
@@ -56,6 +90,7 @@ export function buildColumnPerks(
       description?: string;
       enhancedHash?: number;
       enhancedDescription?: string;
+      statMods?: StatMod[];
     }
   >();
   let identifier = "";
@@ -84,6 +119,7 @@ export function buildColumnPerks(
       description: plugDescription(pd),
       enhancedHash: row?.enhancedHash,
       enhancedDescription: row?.enhancedDescription,
+      statMods: plugStatMods(pd) ?? row?.statMods,
     });
   }
 
@@ -98,6 +134,7 @@ export function buildColumnPerks(
       description: row.description,
       enhancedDescription: row.enhancedDescription,
       alternateHashes: row.enhancedHash ? [row.enhancedHash] : undefined,
+      statMods: row.statMods,
     });
   }
   return { perks, identifier };
@@ -122,6 +159,25 @@ function columnKind(isIntrinsic: boolean, identifier: string): string {
   return "Trait";
 }
 
+/** Build the weapon-type catalog (Hand Cannon, Fusion Rifle, …) for filter chip icons. */
+export function buildWeaponTypeCatalog(defs: ManifestDefs): WeaponTypeRef[] {
+  const items = defs.DestinyInventoryItemDefinition;
+  const present = new Set<string>();
+
+  for (const item of Object.values(items)) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison -- compared to the known Weapon value
+    if (item.itemType !== WEAPON_ITEM_TYPE || item.redacted) continue;
+    if (item.itemTypeDisplayName) present.add(item.itemTypeDisplayName);
+  }
+
+  const refs: WeaponTypeRef[] = [];
+  for (const name of present) {
+    const icon = GENERIC_WEAPON_TYPE_ICONS[name];
+    if (icon) refs.push({ name, icon });
+  }
+  return refs.sort((a, b) => a.name.localeCompare(b.name));
+}
+
 /** Build the damage-type catalog (Solar, Arc, Void, …) for element icons. */
 export function buildDamageTypeCatalog(defs: ManifestDefs): DamageTypeRef[] {
   const damageTypes: DamageTypeRef[] = [];
@@ -136,6 +192,32 @@ export function buildDamageTypeCatalog(defs: ManifestDefs): DamageTypeRef[] {
   }
   damageTypes.sort((a, b) => a.name.localeCompare(b.name));
   return damageTypes;
+}
+
+/** Build compact stat-group definitions referenced by weapons. */
+export function buildStatGroupCatalog(
+  defs: ManifestDefs,
+  statGroupHashes: Iterable<number>,
+): Record<string, StatGroupRef> {
+  const groups = defs.DestinyStatGroupDefinition;
+  const catalog: Record<string, StatGroupRef> = {};
+  for (const hash of statGroupHashes) {
+    const group = groups[hash];
+    if (!group) continue;
+    catalog[String(hash)] = {
+      hash: group.hash,
+      maximumValue: group.maximumValue,
+      scaledStats: (group.scaledStats ?? []).map((scaled) => ({
+        statHash: scaled.statHash,
+        maximumValue: scaled.maximumValue,
+        displayInterpolation: (scaled.displayInterpolation ?? []).map((point) => ({
+          value: point.value,
+          weight: point.weight,
+        })),
+      })),
+    };
+  }
+  return catalog;
 }
 
 /** Flatten the manifest definitions into a searchable weapon index. */
@@ -202,6 +284,9 @@ export function buildWeaponIndex(
       if (statName) weaponStats.push({ hash: s.statHash, name: statName, value: s.value });
     }
 
+    const investmentStats = weaponInvestmentStats(item, stats);
+    const statGroupHash = item.stats?.statGroupHash ?? undefined;
+
     const element =
       (item.defaultDamageTypeHash != null
         ? damageTypes[item.defaultDamageTypeHash]?.displayProperties?.name
@@ -236,6 +321,8 @@ export function buildWeaponIndex(
         item.seasonHash != null ? seasons[item.seasonHash]?.seasonNumber : undefined,
       releaseIndex: item.index,
       stats: weaponStats,
+      investmentStats: investmentStats.length > 0 ? investmentStats : undefined,
+      statGroupHash,
       columns,
       perks: [...new Set(perkNames)],
       perkHashes: [...new Set(perkHashes)],
@@ -244,8 +331,19 @@ export function buildWeaponIndex(
 
   weapons.sort((a, b) => a.name.localeCompare(b.name));
   const { index, detailIndex } = internWeaponCatalog(weapons, version);
+  const statGroupHashes = new Set<number>();
+  for (const weapon of weapons) {
+    if (weapon.statGroupHash != null) statGroupHashes.add(weapon.statGroupHash);
+  }
   return {
-    index: { ...index, damageTypes: buildDamageTypeCatalog(defs) },
-    detailIndex,
+    index: {
+      ...index,
+      damageTypes: buildDamageTypeCatalog(defs),
+      weaponTypes: buildWeaponTypeCatalog(defs),
+    },
+    detailIndex: {
+      ...detailIndex,
+      statGroups: buildStatGroupCatalog(defs, statGroupHashes),
+    },
   };
 }

@@ -1,10 +1,11 @@
 import type { PerkRef, WeaponDoc } from "../types";
+import { SAMPLE_STAT_GROUP_HASH } from "../weapon-stats";
 
 const p = (
   hash: number,
   name: string,
   currentlyCanRoll = true,
-  extra?: Pick<PerkRef, "description" | "enhancedDescription" | "alternateHashes">,
+  extra?: Pick<PerkRef, "description" | "enhancedDescription" | "alternateHashes" | "statMods">,
 ): PerkRef => ({
   hash,
   name,
@@ -30,14 +31,37 @@ export const sampleWeapons: WeaponDoc[] = [
     adept: false,
     seasonNumber: 14,
     releaseIndex: 100,
+    statGroupHash: SAMPLE_STAT_GROUP_HASH,
     stats: [
       { hash: 1, name: "Impact", value: 84 },
       { hash: 2, name: "Range", value: 46 },
+      { hash: 3, name: "Stability", value: 50 },
+      { hash: 4, name: "Handling", value: 30 },
+    ],
+    investmentStats: [
+      { hash: 1, name: "Impact", value: 84 },
+      { hash: 2, name: "Range", value: 46 },
+      { hash: 3, name: "Stability", value: 50 },
+      { hash: 4, name: "Handling", value: 30 },
     ],
     columns: [
       { kind: "Intrinsic", perks: [p(100, "Adaptive Frame", false)] },
-      { kind: "Barrel", perks: [p(101, "Fluted Barrel"), p(102, "Corkscrew Rifling")] },
-      { kind: "Magazine", perks: [p(103, "Accurized Rounds"), p(104, "Tactical Mag")] },
+      {
+        kind: "Barrel",
+        perks: [
+          p(101, "Fluted Barrel", true, { statMods: [{ hash: 4, value: 20 }, { hash: 2, value: -5 }] }),
+          p(102, "Corkscrew Rifling", true, {
+            statMods: [{ hash: 2, value: 10 }, { hash: 3, value: 10 }],
+          }),
+        ],
+      },
+      {
+        kind: "Magazine",
+        perks: [
+          p(103, "Accurized Rounds", true, { statMods: [{ hash: 2, value: 10 }] }),
+          p(104, "Tactical Mag", true, { statMods: [{ hash: 3, value: 10 }, { hash: 4, value: 10 }] }),
+        ],
+      },
       {
         kind: "Trait",
         perks: [

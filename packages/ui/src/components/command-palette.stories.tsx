@@ -33,12 +33,12 @@ const CATEGORIES: PaletteCategory[] = [
     id: "trait1",
     label: "Trait 1",
     single: true,
-    examples: '"Firefly" "Explosive Payload"',
+    examples: "Firefly, Explosive Payload",
     getValues: match("trait1"),
   },
-  { id: "trait2", label: "Trait 2", single: true, examples: '"Surrounded"', getValues: match("trait2") },
-  { id: "element", label: "Element", examples: '"Arc" "Solar"', getValues: match("element") },
-  { id: "slot", label: "Slot", examples: '"Energy" "Kinetic"', getValues: () => [] },
+  { id: "trait2", label: "Trait 2", single: true, examples: "Surrounded", getValues: match("trait2") },
+  { id: "element", label: "Element", examples: "Arc, Solar", getValues: match("element") },
+  { id: "slot", label: "Slot", examples: "Energy, Kinetic", getValues: () => [] },
 ];
 
 const meta = {
@@ -111,6 +111,13 @@ function storyChipAppearance(categoryId: string, value: string) {
     return {
       tone: "element" as FilterChipTone,
       element: value as FilterChipElement,
+      hideLabel: true,
+      iconOnly: true,
+      valueIcon: <ElementPlaceholder label={value} />,
+    };
+  }
+  if (categoryId === "type") {
+    return {
       hideLabel: true,
       valueIcon: <ElementPlaceholder label={value} />,
     };
@@ -452,6 +459,167 @@ export const ShowsResultsAfterChip: Story = {
     );
     await waitFor(() =>
       expect(canvas.queryByRole("option", { name: /Trait 1/ })).toBeNull(),
+    );
+  },
+};
+
+function PreviewWhileTypingDemo() {
+  const [query, setQuery] = useState("");
+  const [chips, setChips] = useState<PaletteChip[]>([]);
+  return (
+    <CommandPalette
+      placeholder="Press F to search"
+      categories={CATEGORIES}
+      chips={chips}
+      query={query}
+      onQueryChange={setQuery}
+      previewResults={
+        query.trim()
+          ? [
+              {
+                id: "preview-1",
+                content: (
+                  <ResultRow render={<div />} title="Palindrome" subtitle="Void · Hand Cannon" />
+                ),
+              },
+            ]
+          : []
+      }
+      onSelectResult={fn()}
+      onAddChip={(categoryId, option) => {
+        const category = CATEGORIES.find((c) => c.id === categoryId)!;
+        setChips((prev) => [
+          ...prev,
+          {
+            id: `${categoryId}:${option.id}`,
+            categoryId,
+            categoryLabel: category.label,
+            value: option.label,
+            valueId: option.id,
+          },
+        ]);
+      }}
+      onRemoveChip={(id) => setChips((prev) => prev.filter((c) => c.id !== id))}
+    />
+  );
+}
+
+export const ShowsPreviewWhileTyping: Story = {
+  render: () => <PreviewWhileTypingDemo />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const input = canvas.getByRole("combobox");
+    await userEvent.click(input);
+    await userEvent.type(input, "surr");
+    await waitFor(() =>
+      expect(canvas.getByRole("option", { name: /Trait 2.*Surrounded/i })).toBeInTheDocument(),
+    );
+    await waitFor(() =>
+      expect(canvas.getByRole("option", { name: /Palindrome/ })).toBeInTheDocument(),
+    );
+  },
+};
+
+const RECENT_ITEMS = [
+  { id: "recent-trait2", label: "Trait 2: Surrounded" },
+  { id: "recent-element", label: "Element: Arc" },
+];
+
+function RecentWithSuggestionsDemo() {
+  const [query, setQuery] = useState("");
+  const [chips, setChips] = useState<PaletteChip[]>([]);
+  return (
+    <CommandPalette
+      placeholder="Press F to search"
+      categories={CATEGORIES}
+      chips={chips}
+      query={query}
+      onQueryChange={setQuery}
+      recentItems={RECENT_ITEMS}
+      onSelectRecent={fn()}
+      previewResults={
+        query.trim()
+          ? [
+              {
+                id: "preview-1",
+                content: (
+                  <ResultRow render={<div />} title="Palindrome" subtitle="Void · Hand Cannon" />
+                ),
+              },
+            ]
+          : []
+      }
+      onSelectResult={fn()}
+      onAddChip={(categoryId, option) => {
+        const category = CATEGORIES.find((c) => c.id === categoryId)!;
+        setChips((prev) => [
+          ...prev,
+          {
+            id: `${categoryId}:${option.id}`,
+            categoryId,
+            categoryLabel: category.label,
+            value: option.label,
+            valueId: option.id,
+          },
+        ]);
+      }}
+      onRemoveChip={(id) => setChips((prev) => prev.filter((c) => c.id !== id))}
+    />
+  );
+}
+
+export const RecentSearchesSeparatedFromSuggestions: Story = {
+  render: () => <RecentWithSuggestionsDemo />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const input = canvas.getByRole("combobox");
+    await userEvent.click(input);
+    await userEvent.type(input, "surr");
+    await waitFor(() => {
+      expect(canvas.getByText("Recent searches")).toBeInTheDocument();
+      expect(canvas.getAllByRole("option", { name: /Surrounded/i }).length).toBeGreaterThanOrEqual(2);
+    });
+    expect(canvasElement.querySelectorAll('[role="separator"]').length).toBeGreaterThanOrEqual(1);
+    expect(canvas.getByText("Results")).toBeInTheDocument();
+    expect(canvas.queryByText("Weapons")).toBeNull();
+  },
+};
+
+export const ShowsPreviewWhileDrilling: Story = {
+  render: () => (
+    <CommandPalette
+      placeholder="Press F to search"
+      categories={CATEGORIES}
+      chips={[]}
+      query=""
+      onQueryChange={() => {}}
+      onAddChip={() => {}}
+      onRemoveChip={() => {}}
+      previewResults={[
+        {
+          id: "preview-1",
+          content: (
+            <ResultRow render={<div />} title="Palindrome" subtitle="Void · Hand Cannon" />
+          ),
+        },
+      ]}
+      onSelectResult={fn()}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole("combobox"));
+    await userEvent.keyboard("{ArrowDown}{ArrowDown}{Enter}");
+    await waitFor(() =>
+      expect(canvas.getByLabelText(/filtering by trait 2/i)).toBeInTheDocument(),
+    );
+    const chipInput = canvas.getByRole("combobox");
+    await userEvent.type(chipInput, "surr");
+    await waitFor(() =>
+      expect(canvas.getByRole("option", { name: /Surrounded/i })).toBeInTheDocument(),
+    );
+    await waitFor(() =>
+      expect(canvas.getByRole("option", { name: /Palindrome/ })).toBeInTheDocument(),
     );
   },
 };

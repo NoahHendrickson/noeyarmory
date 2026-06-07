@@ -60,6 +60,7 @@ export const ElementIconOnly: Story = {
     label: "Element",
     value: "Arc",
     hideLabel: true,
+    iconOnly: true,
     valueIcon: <ElementPlaceholder />,
   },
 };

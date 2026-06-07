@@ -7,6 +7,7 @@
 /* Tell Tailwind which files to scan for class names: this app + the
  * @repo/ui components it renders (consumed as source). */
 @source "../app";
+@source "../components";
 @source "../../../packages/ui/src/components";
 
 @layer base {
@@ -21,6 +22,13 @@
 }
 
 @layer components {
+  .font-pixel {
+    font-family: "Silkscreen", ui-monospace, monospace;
+    -webkit-font-smoothing: none;
+    -moz-osx-font-smoothing: auto;
+    text-rendering: geometricPrecision;
+  }
+
   .moonfang-screensaver {
     transform: translate3d(var(--moonfang-x, 0px), var(--moonfang-y, 0px), 0);
     will-change: transform;

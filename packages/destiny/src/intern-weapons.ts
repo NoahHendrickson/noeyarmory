@@ -48,6 +48,8 @@ export function expandWeapon(
     screenshot: detail?.screenshot,
     flavor: detail?.flavor,
     stats: detail?.stats ?? [],
+    investmentStats: detail?.investmentStats,
+    statGroupHash: detail?.statGroupHash,
     columns: resolveInternedColumns(columns, perks),
   };
 }
@@ -100,6 +102,9 @@ export function internWeaponCatalog(
         for (const hash of perk.alternateHashes) alts.add(hash);
         entry.alternateHashes = [...alts];
       }
+      if (perk.statMods?.length && !entry.statMods?.length) {
+        entry.statMods = perk.statMods;
+      }
       return existing;
     }
 
@@ -112,6 +117,7 @@ export function internWeaponCatalog(
       description: perk.description,
       enhancedDescription: perk.enhancedDescription,
       alternateHashes: perk.alternateHashes,
+      statMods: perk.statMods,
     });
     hashToIndex.set(perk.hash, index);
     for (const alt of perk.alternateHashes ?? []) {
@@ -155,6 +161,8 @@ export function internWeaponCatalog(
       screenshot: weapon.screenshot,
       flavor: weapon.flavor,
       stats: weapon.stats,
+      investmentStats: weapon.investmentStats,
+      statGroupHash: weapon.statGroupHash,
     };
   }
 
@@ -166,6 +174,7 @@ export function internWeaponCatalog(
       weapons: summaries,
       weaponsByPerkName: buildWeaponsByPerkNameRecord(summaries),
       damageTypes: [],
+      weaponTypes: [],
     },
     detailIndex: { version, details },
   };
@@ -177,6 +186,7 @@ export function normalizeWeaponIndex(raw: {
   generatedAt: string;
   weapons: (WeaponSummary | WeaponDoc)[];
   damageTypes?: WeaponIndex["damageTypes"];
+  weaponTypes?: WeaponIndex["weaponTypes"];
   perks?: PerkRef[];
   weaponsByPerkName?: Record<string, number[]>;
 }): WeaponIndex {
@@ -188,6 +198,7 @@ export function normalizeWeaponIndex(raw: {
       weapons: raw.weapons as WeaponSummary[],
       weaponsByPerkName: raw.weaponsByPerkName,
       damageTypes: raw.damageTypes ?? [],
+      weaponTypes: raw.weaponTypes ?? [],
     };
   }
 
@@ -200,17 +211,23 @@ export function normalizeWeaponIndex(raw: {
       weapons: raw.weapons as WeaponSummary[],
       weaponsByPerkName: {},
       damageTypes: raw.damageTypes ?? [],
+      weaponTypes: raw.weaponTypes ?? [],
     };
   }
 
   const { index } = internWeaponCatalog(legacy, raw.version, raw.generatedAt);
-  return { ...index, damageTypes: raw.damageTypes ?? [] };
+  return {
+    ...index,
+    damageTypes: raw.damageTypes ?? [],
+    weaponTypes: raw.weaponTypes ?? [],
+  };
 }
 
 /** Build a detail index from legacy full weapon docs (for sample fallback). */
 export function buildDetailIndexFromDocs(
   weapons: WeaponDoc[],
   version: string,
+  statGroups?: WeaponDetailIndex["statGroups"],
 ): WeaponDetailIndex {
   const details: Record<string, WeaponDetailFields> = {};
   for (const weapon of weapons) {
@@ -219,9 +236,11 @@ export function buildDetailIndexFromDocs(
       screenshot: weapon.screenshot,
       flavor: weapon.flavor,
       stats: weapon.stats,
+      investmentStats: weapon.investmentStats,
+      statGroupHash: weapon.statGroupHash,
     };
   }
-  return { version, details };
+  return { version, details, statGroups };
 }
 
 /** Resolve weapon summaries from a precomputed weaponsByPerkName record. */

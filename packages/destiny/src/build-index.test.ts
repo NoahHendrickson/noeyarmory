@@ -1,9 +1,8 @@
 import type { DestinyInventoryItemDefinition } from "bungie-api-ts/destiny2";
 import { describe, expect, it } from "vitest";
 
-import { buildColumnPerks, buildDamageTypeCatalog } from "./build-index";
+import { buildColumnPerks, buildDamageTypeCatalog, buildWeaponTypeCatalog } from "./build-index";
 import type { ManifestDefs } from "./manifest";
-
 function traitPlug(
   hash: number,
   name: string,
@@ -44,6 +43,38 @@ describe("buildDamageTypeCatalog", () => {
     expect(buildDamageTypeCatalog(defs)).toEqual([
       { hash: 1, name: "Arc", icon: "/common/destiny2_content/icons/arc.png" },
       { hash: 3, name: "Solar", icon: "/common/destiny2_content/icons/solar.png" },
+    ]);
+  });
+});
+
+describe("buildWeaponTypeCatalog", () => {
+  it("maps present weapon types to generic Bungie silhouette icons", () => {
+    const defs = {
+      DestinyInventoryItemDefinition: {
+        100: {
+          hash: 100,
+          itemType: 3,
+          itemTypeDisplayName: "Hand Cannon",
+          displayProperties: { name: "Better Gun", icon: "/specific-gun.jpg" },
+        },
+        200: {
+          hash: 200,
+          itemType: 3,
+          itemTypeDisplayName: "Fusion Rifle",
+          displayProperties: { name: "Zeta Fusion", icon: "/another-gun.jpg" },
+        },
+        300: {
+          hash: 300,
+          itemType: 2,
+          itemTypeDisplayName: "Helmet",
+          displayProperties: { name: "Helm", icon: "/helm.jpg" },
+        },
+      },
+    } as unknown as ManifestDefs;
+
+    expect(buildWeaponTypeCatalog(defs)).toEqual([
+      { name: "Fusion Rifle", icon: "/weapon-types/fusion_rifle.svg" },
+      { name: "Hand Cannon", icon: "/weapon-types/hand_cannon.svg" },
     ]);
   });
 });
