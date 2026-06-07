@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { ResultRow } from "@repo/ui";
 import type { WeaponDpsEntry, WeaponSummary } from "@repo/destiny";
 
@@ -29,7 +30,7 @@ export type WeaponResultData = Pick<
 >;
 
 /** A single weapon row in the command-palette results list. */
-export function WeaponResultRow({
+export const WeaponResultRow = memo(function WeaponResultRow({
   weapon,
   elementIconPath,
   dps,
@@ -87,4 +88,4 @@ export function WeaponResultRow({
       }
     />
   );
-}
+});

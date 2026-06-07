@@ -57,9 +57,9 @@ All auth code imports `"server-only"`; secrets never reach the client. Runtime O
 Flow:
 - `lib/session.ts` — iron-session encrypted cookie (`SessionData`); `isSignedIn` gate.
 - `app/api/auth/login` → sets a CSRF `oauthState`, redirects to Bungie authorize.
-- `app/api/auth/callback` → verifies state, exchanges code (`bungie-auth.ts`), resolves membership (`bungie-profile.ts`), saves tokens, redirects to `/vault`.
-- `lib/bungie-profile.ts` `ensureAccessToken()` auto-refreshes the access token ~60s before expiry; `getOwnedWeapons()` pulls profile components `102,201,205,305`.
-- `/vault` is `export const dynamic = "force-dynamic"`.
+- `app/api/auth/callback` → verifies state, exchanges code (`bungie-auth.ts`), resolves membership (`bungie-profile.ts`), saves tokens, redirects to home (or `oauthReturnTo`).
+- `lib/bungie-profile.ts` `ensureAccessToken()` auto-refreshes the access token ~60s before expiry; `getOwnedArmor()` pulls profile components for owned armor search on the home page.
+- Owned armor search/equip/transfer live on `/` in armor mode (no separate `/vault` route).
 
 Dev runs over **HTTPS on the fixed port 4111** (`next dev --experimental-https`, mkcert cert in `apps/web/certificates/`) specifically because Bungie OAuth requires an `https` redirect URI. Don't change the port/scheme casually — the registered Bungie redirect (`https://localhost:4111/api/auth/callback`) must match.
 

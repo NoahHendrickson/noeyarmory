@@ -113,10 +113,25 @@ export function MoonfangScreensaver() {
       applyTransform();
     };
 
+    const onVisibilityChange = () => {
+      if (document.hidden) {
+        cancelAnimationFrame(raf);
+        raf = 0;
+        return;
+      }
+      if (raf === 0) {
+        lastTime = performance.now();
+        raf = requestAnimationFrame(tick);
+      }
+    };
+
     resetPosition();
-    raf = requestAnimationFrame(tick);
+    if (!document.hidden) {
+      raf = requestAnimationFrame(tick);
+    }
 
     window.addEventListener("resize", onViewportChange);
+    window.addEventListener("visibilitychange", onVisibilityChange);
     window.visualViewport?.addEventListener("resize", onViewportChange);
     window.visualViewport?.addEventListener("scroll", onViewportChange);
 
@@ -124,6 +139,7 @@ export function MoonfangScreensaver() {
       running = false;
       cancelAnimationFrame(raf);
       window.removeEventListener("resize", onViewportChange);
+      window.removeEventListener("visibilitychange", onVisibilityChange);
       window.visualViewport?.removeEventListener("resize", onViewportChange);
       window.visualViewport?.removeEventListener("scroll", onViewportChange);
     };

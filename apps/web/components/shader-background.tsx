@@ -41,13 +41,21 @@ function useDitherPixelSize(): number {
 export function ShaderBackground() {
   const { enabled, webgpuSupported } = useShaderPreference();
   const [mounted, setMounted] = useState(false);
+  const [visible, setVisible] = useState(true);
   const ditherPixelSize = useDitherPixelSize();
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  if (!mounted || !enabled || webgpuSupported !== true) return null;
+  useEffect(() => {
+    const onVisibilityChange = () => setVisible(!document.hidden);
+    onVisibilityChange();
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", onVisibilityChange);
+  }, []);
+
+  if (!mounted || !enabled || webgpuSupported !== true || !visible) return null;
 
   return (
     <div

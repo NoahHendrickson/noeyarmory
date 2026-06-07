@@ -86,7 +86,7 @@ Do **not** set Install Command to `cd ../.. && pnpm install` when Root Directory
 
 ## Verify
 
-1. **Local:** sign in at `https://localhost:4111` → `/vault` shows weapons, **My Armor** shows owned armor
+1. **Local:** sign in at `https://localhost:4111` → switch to **Armor mode** on the home page for owned armor search, equip, and transfer
 2. **Prod:** deploy → sign in on your production URL → same checks
 
 ## Troubleshooting

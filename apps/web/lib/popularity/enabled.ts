@@ -1,10 +1,7 @@
 import "server-only";
 
 import { isPopularWeaponsMockEnabled } from "./mock";
-
-function isPopularityConfigured(): boolean {
-  return Boolean(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
-}
+import { isPopularityConfigured } from "./config";
 
 function isPopularityExplicitlyEnabled(): boolean {
   return process.env.POPULAR_WEAPONS_ENABLED === "true";

@@ -1,4 +1,4 @@
-import { WeaponSearch } from "../../components/weapon-search";
+import { HomeSearch } from "../../components/home-search";
 import { getSession, isSignedIn } from "../../lib/session";
 
 export default async function Home({
@@ -10,5 +10,5 @@ export default async function Home({
   const { mode } = await searchParams;
   const initialMode = mode === "armor" ? "armor" : "weapon";
 
-  return <WeaponSearch signedIn={isSignedIn(session)} initialMode={initialMode} />;
+  return <HomeSearch signedIn={isSignedIn(session)} initialMode={initialMode} />;
 }

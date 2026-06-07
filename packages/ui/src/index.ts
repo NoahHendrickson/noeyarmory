@@ -29,7 +29,12 @@ export {
   type PaletteRecentItem,
   type PaletteResultItem,
   type PalettePanelState,
-} from "./components/command-palette";
+} from "./components/command-palette/command-palette";
+export {
+  availableCategories,
+  categoryIsFull,
+  scanValueSuggestions,
+} from "./lib/palette-suggestions";
 export {
   Dialog,
   DialogTrigger,

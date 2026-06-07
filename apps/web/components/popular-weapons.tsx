@@ -1,10 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import type { WeaponSummary } from "@repo/destiny";
 
 import { bungieIcon } from "../lib/bungie";
+import { useWeaponIconMaps } from "../lib/use-weapon-icon-maps";
 import { useWeapons } from "../lib/weapons-context";
 import { AmmoIcon } from "./ammo-icon";
 import { CraftableBadge } from "./craftable-badge";
@@ -33,7 +34,7 @@ function PopularWeaponCard({
     <button
       type="button"
       onClick={() => onSelect(weapon.hash)}
-      className="group bg-card/35 hover:border-ring/60 w-full rounded-lg border p-3 text-left backdrop-blur-xl transition-colors"
+      className="group bg-card/80 hover:border-ring/60 w-full rounded-lg border p-3 text-left transition-colors"
     >
       <div className="flex gap-3">
         <div className="relative size-14 shrink-0 overflow-hidden rounded">
@@ -77,17 +78,9 @@ function PopularWeaponCard({
 }
 
 export function PopularWeapons({ onSelectWeapon }: { onSelectWeapon: (hash: number) => void }) {
-  const { byHash, damageTypes, ammoTypes } = useWeapons();
+  const { byHash } = useWeapons();
+  const { elementIconMap, ammoIconMap } = useWeaponIconMaps();
   const [weapons, setWeapons] = useState<WeaponSummary[]>([]);
-
-  const elementIconMap = useMemo(
-    () => new Map(damageTypes.map((damageType) => [damageType.name, damageType.icon] as const)),
-    [damageTypes],
-  );
-  const ammoIconMap = useMemo(
-    () => new Map(ammoTypes.map((ammoType) => [ammoType.name, ammoType.icon] as const)),
-    [ammoTypes],
-  );
 
   useEffect(() => {
     let cancelled = false;

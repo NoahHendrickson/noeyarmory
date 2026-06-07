@@ -14,12 +14,10 @@ import {
   type ItemStat,
   type PerkRef,
   type ReusablePlug,
-  type WeaponSummary,
 } from "@repo/destiny";
 
 import { refreshAccessToken, requireEnv } from "./bungie-auth";
 import type { SessionData } from "./session";
-import { getWeaponIndex } from "./weapon-index-server";
 
 const PLATFORM = "https://www.bungie.net/Platform";
 
@@ -136,12 +134,6 @@ interface LocatedProfileItem {
   item: ProfileItem;
   location: ArmorLocation;
   ownerCharacterId?: string;
-}
-
-export interface OwnedWeapon {
-  weapon: WeaponSummary;
-  instanceId: string;
-  rolledPerks: PerkRef[];
 }
 
 export interface OwnedArmor {
@@ -284,27 +276,46 @@ function profileReusablePlugsToRecord(
   return out;
 }
 
-/** Fetch the user's profile and return every owned weapon with its rolled perks. */
-export async function getOwnedWeapons(session: IronSession<SessionData>): Promise<OwnedWeapon[]> {
-  const { items, components } = await fetchProfile(session);
-  const { byHash, perkMap } = getWeaponIndex();
+function buildOwnedArmor(
+  located: LocatedProfileItem,
+  components: ProfileItemComponents,
+  byHash: Map<number, ArmorDoc>,
+  modMap: Map<number, PerkRef>,
+  archetypeMap: Map<number, string>,
+): OwnedArmor | undefined {
+  const item = located.item;
+  if (!item.itemInstanceId) return undefined;
+  const armorDoc = byHash.get(item.itemHash);
+  if (!armorDoc) return undefined;
 
-  const owned: OwnedWeapon[] = [];
-  const seen = new Set<string>();
-  for (const item of items) {
-    if (!item.itemInstanceId || seen.has(item.itemInstanceId)) continue;
-    const weapon = byHash.get(item.itemHash);
-    if (!weapon) continue;
-    seen.add(item.itemInstanceId);
-    owned.push({
-      weapon,
-      instanceId: item.itemInstanceId,
-      rolledPerks: resolveRolledPlugs(item.itemInstanceId, perkMap, components.socketData),
-    });
-  }
+  const instanceId = item.itemInstanceId;
+  const sockets = components.socketData[instanceId]?.sockets ?? [];
+  const isArmor30 = armorDoc.isArmor30 ?? false;
 
-  owned.sort((a, b) => a.weapon.name.localeCompare(b.weapon.name));
-  return owned;
+  return {
+    armor: armorDoc,
+    instanceId,
+    rolledMods: resolveRolledPlugs(instanceId, modMap, components.socketData),
+    isArmor30,
+    setName: isArmor30 ? armorDoc.setName : undefined,
+    archetype: isArmor30
+      ? resolveArchetypeFromPlugMap(sockets, archetypeMap)
+      : undefined,
+    tertiaryStat: isArmor30
+      ? resolveTertiaryStat(profileStatsToItemStats(components.statsData[instanceId]?.stats))
+      : undefined,
+    tunableStat: isArmor30
+      ? resolveTunableStatForInstance(
+          sockets,
+          profileReusablePlugsToRecord(components.reusablePlugData[instanceId]),
+        )
+      : undefined,
+    stats: isArmor30
+      ? resolveArmor30Stats(profileStatsToItemStats(components.statsData[instanceId]?.stats))
+      : undefined,
+    location: located.location,
+    ownerCharacterId: located.ownerCharacterId,
+  };
 }
 
 /** Fetch the user's profile and return every owned armor piece with Armor 3.0 roll data. */
@@ -315,40 +326,12 @@ export async function getOwnedArmor(session: IronSession<SessionData>): Promise<
   const owned: OwnedArmor[] = [];
   const seen = new Set<string>();
   for (const located of locatedItems) {
-    const item = located.item;
-    if (!item.itemInstanceId || seen.has(item.itemInstanceId)) continue;
-    const armor = byHash.get(item.itemHash);
-    if (!armor) continue;
-    seen.add(item.itemInstanceId);
-
-    const instanceId = item.itemInstanceId;
-    const sockets = components.socketData[instanceId]?.sockets ?? [];
-    const isArmor30 = armor.isArmor30 ?? false;
-
-    owned.push({
-      armor,
-      instanceId,
-      rolledMods: resolveRolledPlugs(instanceId, modMap, components.socketData),
-      isArmor30,
-      setName: isArmor30 ? armor.setName : undefined,
-      archetype: isArmor30
-        ? resolveArchetypeFromPlugMap(sockets, archetypeMap)
-        : undefined,
-      tertiaryStat: isArmor30
-        ? resolveTertiaryStat(profileStatsToItemStats(components.statsData[instanceId]?.stats))
-        : undefined,
-      tunableStat: isArmor30
-        ? resolveTunableStatForInstance(
-            sockets,
-            profileReusablePlugsToRecord(components.reusablePlugData[instanceId]),
-          )
-        : undefined,
-      stats: isArmor30
-        ? resolveArmor30Stats(profileStatsToItemStats(components.statsData[instanceId]?.stats))
-        : undefined,
-      location: located.location,
-      ownerCharacterId: located.ownerCharacterId,
-    });
+    const instanceId = located.item.itemInstanceId;
+    if (!instanceId || seen.has(instanceId)) continue;
+    const built = buildOwnedArmor(located, components, byHash, modMap, archetypeMap);
+    if (!built) continue;
+    seen.add(instanceId);
+    owned.push(built);
   }
 
   owned.sort((a, b) => a.armor.name.localeCompare(b.armor.name));
@@ -366,38 +349,8 @@ export async function findOwnedArmorForAction(
   const located = locatedItems.find((entry) => entry.item.itemInstanceId === instanceId);
   if (!located?.item.itemInstanceId) return undefined;
 
-  const armorDoc = byHash.get(located.item.itemHash);
-  if (!armorDoc) return undefined;
+  const armor = buildOwnedArmor(located, components, byHash, modMap, archetypeMap);
+  if (!armor) return undefined;
 
-  const instance = located.item.itemInstanceId;
-  const sockets = components.socketData[instance]?.sockets ?? [];
-  const isArmor30 = armorDoc.isArmor30 ?? false;
-
-  return {
-    characters,
-    armor: {
-      armor: armorDoc,
-      instanceId: instance,
-      rolledMods: resolveRolledPlugs(instance, modMap, components.socketData),
-      isArmor30,
-      setName: isArmor30 ? armorDoc.setName : undefined,
-      archetype: isArmor30
-        ? resolveArchetypeFromPlugMap(sockets, archetypeMap)
-        : undefined,
-      tertiaryStat: isArmor30
-        ? resolveTertiaryStat(profileStatsToItemStats(components.statsData[instance]?.stats))
-        : undefined,
-      tunableStat: isArmor30
-        ? resolveTunableStatForInstance(
-            sockets,
-            profileReusablePlugsToRecord(components.reusablePlugData[instance]),
-          )
-        : undefined,
-      stats: isArmor30
-        ? resolveArmor30Stats(profileStatsToItemStats(components.statsData[instance]?.stats))
-        : undefined,
-      location: located.location,
-      ownerCharacterId: located.ownerCharacterId,
-    },
-  };
+  return { characters, armor };
 }

@@ -91,6 +91,14 @@ export {
   type ArmorFilters,
   type ModOption,
 } from "./armor-search";
+export {
+  collectOwnedArmorFacets,
+  filterOwnedArmor,
+  searchOwnedArmor,
+  sortOwnedArmor,
+  type OwnedArmorFilters,
+  type OwnedArmorSearchItem,
+} from "./owned-armor-search";
 export { sampleWeapons } from "./fixtures/sample-weapons";
 export { sampleDamageTypes } from "./fixtures/sample-damage-types";
 export { sampleWeaponTypes } from "./fixtures/sample-weapon-types";

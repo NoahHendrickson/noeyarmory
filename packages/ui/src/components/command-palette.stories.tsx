@@ -7,7 +7,7 @@ import {
   type PaletteCategory,
   type PaletteChip,
   type PaletteValueOption,
-} from "./command-palette";
+} from "./command-palette/command-palette";
 import { type FilterChipElement, type FilterChipTone } from "./filter-chip";
 import { Badge } from "./badge";
 import { ResultRow } from "./result-row";

@@ -2,6 +2,7 @@ import "server-only";
 
 import { Redis } from "@upstash/redis";
 
+import { isPopularityConfigured as isPopularityEnvConfigured } from "./config";
 import { isPopularityPublishingEnabled } from "./enabled";
 
 export const ROLLING_DAYS = 7;
@@ -27,7 +28,7 @@ function getRedis(): Redis | null {
 }
 
 export function isPopularityConfigured(): boolean {
-  return getRedis() != null;
+  return isPopularityEnvConfigured() && getRedis() != null;
 }
 
 export function dayKeyForDate(date: Date): string {

@@ -1,3 +1,4 @@
+import { memo } from "react";
 import Image from "next/image";
 import { Button, ResultRow } from "@repo/ui";
 
@@ -51,7 +52,7 @@ export type ArmorActionState = {
 };
 
 /** A single armor row in the command-palette results list. */
-export function ArmorResultRow({
+export const ArmorResultRow = memo(function ArmorResultRow({
   armor,
   onSelect,
   onEquip,
@@ -153,4 +154,4 @@ export function ArmorResultRow({
       }
     />
   );
-}
+});

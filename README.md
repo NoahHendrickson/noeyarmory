@@ -27,7 +27,7 @@ modern stack and scoped to the parts that matter:
 ```
 noeyarmory/
 ├── apps/
-│   └── web/            # Next.js 16 App Router — search UI, /vault, OAuth routes
+│   └── web/            # Next.js 16 App Router — search UI, OAuth routes, owned armor on home
 ├── packages/
 │   ├── ui/             # @repo/ui — Base UI + Tailwind v4 components + Storybook
 │   ├── destiny/        # @repo/destiny — Bungie manifest pipeline, indexes, search

@@ -62,4 +62,4 @@ The command palette is keyboard-driven: press **F** to focus search, then type a
 
 ### Bungie OAuth / My Vault
 
-Requires repo-root `.env` with dev Bungie app credentials. Without them, browse/search still works on sample or generated data; `/vault` sign-in will not.
+Requires repo-root `.env` with dev Bungie app credentials. Without them, browse/search still works on sample or generated data; armor mode sign-in will not.
