@@ -1,6 +1,7 @@
 /**
- * Git prepare-commit-msg hook: prepend feat:/fix:/etc. when the message
- * isn't already conventional. Infers type from the subject and staged files.
+ * Git prepare-commit-msg hook: prepend feat:/fix:/chore:/etc. when the message
+ * isn't already conventional. Only feat and fix are intended for the changelog;
+ * everything else defaults to chore unless you prefix manually.
  */
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
@@ -60,6 +61,14 @@ function inferType(message, files) {
     return "fix";
   }
 
+  if (
+    /\b(add|adds|added|new|implement|implements|implemented|introduce|introduces|introduced|support|supports|supported|ship|ships|shipped|enable|enables|enabled|launch|launches|launched)\b/.test(
+      lower,
+    )
+  ) {
+    return "feat";
+  }
+
   if (files.length > 0) {
     if (files.every((f) => f.endsWith(".md") || f.startsWith("docs/"))) {
       return "docs";
@@ -99,16 +108,8 @@ function inferType(message, files) {
     }
   }
 
-  if (/\b(refactor|rename|reorganize|restructure|cleanup|clean up|extract|move)\b/.test(lower)) {
-    return "refactor";
-  }
-
-  if (/\b(perf|performance|faster|speed|optimize|optimise|cache)\b/.test(lower)) {
-    return "perf";
-  }
-
-  // User-facing code changes default to feat so they show in the changelog.
-  return "feat";
+  // Internal work — not user-facing changelog material unless prefixed manually.
+  return "chore";
 }
 
 const type = inferType(subject, stagedFiles());

@@ -46,11 +46,11 @@ function ReleaseBlock({ release, isLatest }: { release: ChangelogRelease; isLate
 
   return (
     <section className="space-y-2">
-      <div className="flex items-baseline gap-2">
+      <div className="flex items-center gap-2">
         <h3 className="text-sm font-medium text-foreground">v{release.version}</h3>
         {formattedDate && <span className="text-muted-foreground text-xs">{formattedDate}</span>}
         {isLatest && (
-          <span className="rounded-pill bg-primary/20 text-primary px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide">
+          <span className="rounded-pill bg-primary/20 text-primary inline-flex h-5 items-center px-2.5 text-[10px] font-medium leading-none">
             Current
           </span>
         )}
@@ -137,7 +137,7 @@ export function ChangelogDialog() {
                 </PopoverClose>
               </div>
               <PopoverDescription className={headerDescriptionClass}>
-                Release notes for noeyarmory. Updates ship when a new version is released.
+                Release notes for user-facing features and fixes. Internal changes are not listed here.
               </PopoverDescription>
             </div>
 
@@ -162,12 +162,6 @@ export function ChangelogDialog() {
                   ))}
                 </div>
               )}
-            </div>
-
-            <div className="flex justify-end p-4">
-              <PopoverClose render={<Button type="button" className={secondaryButtonClass} />}>
-                Close
-              </PopoverClose>
             </div>
           </PopoverPopup>
         </PopoverPositioner>

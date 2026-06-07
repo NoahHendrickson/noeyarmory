@@ -10,13 +10,13 @@ const filterChipBase =
 const filterChipVariants = cva(filterChipBase, {
     variants: {
       tone: {
-        default: "text-card rounded-full bg-white/70 py-1 pr-0.5 pl-2.5",
-        trait: "rounded-full bg-filter-chip-trait py-1 pr-0.5 pl-2.5 text-filter-chip-trait-foreground",
+        default: "text-card rounded-full bg-white/70 pr-0 pl-2.5",
+        trait: "rounded-full bg-filter-chip-trait pr-0 pl-2.5 text-filter-chip-trait-foreground",
         "ammo-special":
-          "rounded-full bg-filter-chip-ammo-special py-1 pr-0.5 pl-2.5 text-filter-chip-ammo-special-foreground",
+          "rounded-full bg-filter-chip-ammo-special pr-0 pl-2.5 text-filter-chip-ammo-special-foreground",
         "ammo-heavy":
-          "rounded-full bg-filter-chip-ammo-heavy py-1 pr-0.5 pl-2.5 text-filter-chip-ammo-heavy-foreground",
-        element: "rounded-full py-1 pr-0.5 pl-2.5 text-filter-chip-element-foreground",
+          "rounded-full bg-filter-chip-ammo-heavy pr-0 pl-2.5 text-filter-chip-ammo-heavy-foreground",
+        element: "rounded-full pr-0 pl-2.5 text-filter-chip-element-foreground",
       },
       element: {
         Solar: "bg-filter-chip-element-solar",
@@ -113,9 +113,9 @@ function FilterChip({
       aria-label={ariaLabel}
       className={cn(
         isDraft
-          ? cn(filterChipBase, "rounded-full bg-white/[0.08] py-1 pl-2.5 pr-2 text-white/70")
+          ? cn(filterChipBase, "rounded-full bg-white/[0.08] pl-2.5 pr-2 text-white/70")
           : filterChipVariants({ tone, element: tone === "element" ? element : undefined }),
-        hasInlineInput && (onRemove ? "pr-0.5" : "pr-2.5"),
+        hasInlineInput && (onRemove ? "pr-0" : "pr-2.5"),
         iconOnly && "px-1.5",
         className,
       )}

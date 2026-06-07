@@ -1,5 +1,5 @@
 import { ResultRow } from "@repo/ui";
-import type { WeaponSummary } from "@repo/destiny";
+import { formatWeaponDpsLabel, type WeaponDpsEntry, type WeaponSummary } from "@repo/destiny";
 
 import { CraftableBadge } from "./craftable-badge";
 import { ElementIcon } from "./element-icon";
@@ -24,11 +24,13 @@ export type WeaponResultData = Pick<
 export function WeaponResultRow({
   weapon,
   elementIconPath,
+  dps,
   onSelect,
 }: {
   weapon: WeaponResultData;
   /** Bungie manifest icon path for the weapon's damage type. */
   elementIconPath?: string;
+  dps?: WeaponDpsEntry;
   onSelect?: () => void;
 }) {
   const icon = bungieIcon(weapon.icon);
@@ -66,12 +68,19 @@ export function WeaponResultRow({
       }
       title={weapon.name}
       subtitle={
-        <span className="inline-flex items-center gap-1">
+        <span className="inline-flex items-center gap-2">
           <ElementIcon element={weapon.element} iconPath={elementIconPath} colored />
+          {weapon.craftable ? <CraftableBadge className="mx-0.5" /> : null}
           {weapon.type}
         </span>
       }
-      trailing={weapon.craftable ? <CraftableBadge compact /> : undefined}
+      trailing={
+        dps != null ? (
+          <span className="text-muted-foreground text-sm tabular-nums tracking-body">
+            {formatWeaponDpsLabel(dps)}
+          </span>
+        ) : undefined
+      }
     />
   );
 }

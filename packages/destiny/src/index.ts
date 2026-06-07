@@ -59,6 +59,7 @@ export {
   collectFacets,
   collectPerks,
   collectColumnPerks,
+  suggestWeaponNames,
   buildPerkMap,
   buildWeaponsByPerkName,
   type WeaponSort,
@@ -87,3 +88,18 @@ export {
 export { sampleWeapons } from "./fixtures/sample-weapons";
 export { sampleDamageTypes } from "./fixtures/sample-damage-types";
 export { sampleArmor } from "./fixtures/sample-armor";
+export {
+  buildWeaponDpsIndex,
+  extractTraitPerksFromRow,
+  formatWeaponDpsLabel,
+  matchSheetRowToWeapon,
+  parseDpsNumber,
+  parseTotalDamage,
+  weaponDpsLookupFromIndex,
+  WEAPON_DPS_SHEET_CSV_URL,
+  WEAPON_DPS_SHEET_NAME,
+  type WeaponDpsCatalogEntry,
+  type WeaponDpsEntry,
+  type WeaponDpsIndex,
+  type WeaponDpsLookup,
+} from "./weapon-dps";

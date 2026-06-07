@@ -1,0 +1,963 @@
+{
+  "source": "https://docs.google.com/spreadsheets/d/1_5wtBjRYHHxuF4oJKDb_iOGZs-wTkzB6RYbnyNLbuz4/edit?gid=1356041045",
+  "sheet": "Sustained",
+  "syncedAt": "2026-06-07T03:09:56.108Z",
+  "byName": {
+    "Crux Termination IV": {
+      "dps": 7476,
+      "totalDamage": 64773,
+      "buildPerks": [
+        "Surrounded",
+        "Slideshot"
+      ]
+    },
+    "Hezen Vengeance": {
+      "dps": 5855,
+      "totalDamage": 61266,
+      "buildPerks": [
+        "Elemental Honing",
+        "Envious Arsenal"
+      ]
+    },
+    "Unvoiced": {
+      "dps": 5108,
+      "totalDamage": 72332,
+      "buildPerks": [
+        "Elemental Honing",
+        "Redirection"
+      ]
+    },
+    "Refurbished A499": {
+      "dps": 4804,
+      "totalDamage": 124765,
+      "buildPerks": [
+        "Aggregate Charge"
+      ]
+    },
+    "Praxic Blade": {
+      "dps": 4648,
+      "totalDamage": 294945,
+      "buildPerks": []
+    },
+    "The When and Where": {
+      "dps": 4619,
+      "totalDamage": 61266,
+      "buildPerks": [
+        "Elemental Honing",
+        "Clown Cartridge"
+      ]
+    },
+    "Outbreak Perfected": {
+      "dps": 4587,
+      "totalDamage": 219868,
+      "buildPerks": []
+    },
+    "Izanagi's Burden": {
+      "dps": 4580,
+      "totalDamage": 39319,
+      "buildPerks": []
+    },
+    "Tomorrow's Answer": {
+      "dps": 4422,
+      "totalDamage": 64114,
+      "buildPerks": [
+        "Envious Arsenal",
+        "Bait and Switch"
+      ]
+    },
+    "Legend of Acrius": {
+      "dps": 4293,
+      "totalDamage": 87291,
+      "buildPerks": []
+    },
+    "Merciless": {
+      "dps": 4268,
+      "totalDamage": 49935,
+      "buildPerks": [
+        "Impetus"
+      ]
+    },
+    "Still Hunt": {
+      "dps": 4243,
+      "totalDamage": 89746,
+      "buildPerks": []
+    },
+    "Conspiracy Honed": {
+      "dps": 4220,
+      "totalDamage": 64782,
+      "buildPerks": [
+        "Bait and Switch"
+      ]
+    },
+    "Wolfsbane": {
+      "dps": 4070,
+      "totalDamage": 195083,
+      "buildPerks": []
+    },
+    "Koraxis's Distress": {
+      "dps": 4051,
+      "totalDamage": 60097,
+      "buildPerks": [
+        "Envious Assassin",
+        "Surrounded"
+      ]
+    },
+    "Submersion": {
+      "dps": 4001,
+      "totalDamage": null,
+      "buildPerks": [
+        "Aggregate Charge",
+        "Charged Bolts"
+      ]
+    },
+    "Relentless": {
+      "dps": 3838,
+      "totalDamage": 115614,
+      "buildPerks": []
+    },
+    "Summum Bonum": {
+      "dps": 3799,
+      "totalDamage": 140041,
+      "buildPerks": [
+        "Relentless Strikes",
+        "Surrounded"
+      ]
+    },
+    "The Fourth Horseman": {
+      "dps": 3746,
+      "totalDamage": 35782,
+      "buildPerks": []
+    },
+    "Lord of Wolves": {
+      "dps": 3686,
+      "totalDamage": 75300,
+      "buildPerks": [
+        "Release the Wolves"
+      ]
+    },
+    "Leviathan's Breath": {
+      "dps": 3646,
+      "totalDamage": 63186,
+      "buildPerks": []
+    },
+    "Deathbringer": {
+      "dps": 3626,
+      "totalDamage": 83393,
+      "buildPerks": []
+    },
+    "Succession": {
+      "dps": 3593,
+      "totalDamage": 63931,
+      "buildPerks": [
+        "Reconstruction",
+        "Redirection"
+      ]
+    },
+    "Duality": {
+      "dps": 3591,
+      "totalDamage": 54001,
+      "buildPerks": [
+        "On Black Wings"
+      ]
+    },
+    "Mint Retrograde": {
+      "dps": 3527,
+      "totalDamage": 48150,
+      "buildPerks": [
+        "Elemental Honing",
+        "Rewind Rounds"
+      ]
+    },
+    "Bitter/Sweet": {
+      "dps": 3475,
+      "totalDamage": 53954,
+      "buildPerks": [
+        "Envious Arsenal",
+        "Bait and Switch"
+      ]
+    },
+    "Until Its Return": {
+      "dps": 3441,
+      "totalDamage": 42874,
+      "buildPerks": [
+        "Surrounded",
+        "Overflow"
+      ]
+    },
+    "Sleeper Simulant": {
+      "dps": 3439,
+      "totalDamage": 77372,
+      "buildPerks": []
+    },
+    "New Land Beyond": {
+      "dps": 3436,
+      "totalDamage": 151814,
+      "buildPerks": []
+    },
+    "Outrageous Fortune": {
+      "dps": 3395,
+      "totalDamage": 53636,
+      "buildPerks": [
+        "Envious Arsenal",
+        "Bait and Switch"
+      ]
+    },
+    "Heartshadow": {
+      "dps": 3366,
+      "totalDamage": 101793,
+      "buildPerks": [
+        "Shot in the Dark"
+      ]
+    },
+    "Praedyth's Revenge": {
+      "dps": 3366,
+      "totalDamage": 93399,
+      "buildPerks": [
+        "Fourth Time's the Charm",
+        "Elemental Honing"
+      ]
+    },
+    "Whisper of the Worm": {
+      "dps": 3329,
+      "totalDamage": 98661,
+      "buildPerks": [
+        "Whispered Breathing"
+      ]
+    },
+    "Hierarchy of Needs": {
+      "dps": 3290,
+      "totalDamage": null,
+      "buildPerks": []
+    },
+    "The Other Half": {
+      "dps": 3255,
+      "totalDamage": 105584,
+      "buildPerks": [
+        "Relentless Strikes",
+        "Whirlwind Blade"
+      ]
+    },
+    "Wilderflight": {
+      "dps": 3243,
+      "totalDamage": 41104,
+      "buildPerks": [
+        "Slideshot",
+        "Frenzy"
+      ]
+    },
+    "Sullen Claw": {
+      "dps": 3238,
+      "totalDamage": 132803,
+      "buildPerks": [
+        "Whirlwind Blade",
+        "Vorpal Weapon"
+      ]
+    },
+    "Briar's Contempt": {
+      "dps": 3225,
+      "totalDamage": 91779,
+      "buildPerks": [
+        "Rewind Rounds",
+        "Surrounded"
+      ]
+    },
+    "Slayer's Fang": {
+      "dps": 3167,
+      "totalDamage": 47169,
+      "buildPerks": []
+    },
+    "Dimensional Hypotrochoid": {
+      "dps": 3160,
+      "totalDamage": 45502,
+      "buildPerks": [
+        "Envious Assassin",
+        "Vorpal Weapon"
+      ]
+    },
+    "The Queenbreaker": {
+      "dps": 3137,
+      "totalDamage": 82380,
+      "buildPerks": []
+    },
+    "Choir of One": {
+      "dps": 3132,
+      "totalDamage": 55583,
+      "buildPerks": []
+    },
+    "Something Something": {
+      "dps": 3090,
+      "totalDamage": 78149,
+      "buildPerks": [
+        "Elemental Honing",
+        "Triple Tap"
+      ]
+    },
+    "Euphony": {
+      "dps": 3030,
+      "totalDamage": 95395,
+      "buildPerks": []
+    },
+    "One Thousand Voices": {
+      "dps": 2969,
+      "totalDamage": 65403,
+      "buildPerks": []
+    },
+    "D.A.R.C.I.": {
+      "dps": 2935,
+      "totalDamage": 60425,
+      "buildPerks": [
+        "Target Acquired"
+      ]
+    },
+    "Thunderlord": {
+      "dps": 2910,
+      "totalDamage": 95337,
+      "buildPerks": []
+    },
+    "The Chaperone": {
+      "dps": 2898,
+      "totalDamage": 31625,
+      "buildPerks": [
+        "The Roadborn"
+      ]
+    },
+    "Two-Tailed Fox": {
+      "dps": 2879,
+      "totalDamage": 57436,
+      "buildPerks": []
+    },
+    "Crown-Splitter": {
+      "dps": 2869,
+      "totalDamage": 158572,
+      "buildPerks": [
+        "Relentless Strikes",
+        "Whirlwind Blade"
+      ]
+    },
+    "New Malpais": {
+      "dps": 2810,
+      "totalDamage": 69278,
+      "buildPerks": []
+    },
+    "The Lament": {
+      "dps": 2778,
+      "totalDamage": 112548,
+      "buildPerks": []
+    },
+    "Critical Anomaly": {
+      "dps": 2771,
+      "totalDamage": 49318,
+      "buildPerks": [
+        "Reconstruction",
+        "Chaos Reshaped"
+      ]
+    },
+    "Scintillation": {
+      "dps": 2721,
+      "totalDamage": 81165,
+      "buildPerks": [
+        "Bait and Switch",
+        "Rewind Rounds"
+      ]
+    },
+    "Lance Ephemeral": {
+      "dps": 2715,
+      "totalDamage": 86049,
+      "buildPerks": [
+        "Fourth Time's the Charm",
+        "Redirection"
+      ]
+    },
+    "The Colony": {
+      "dps": 2705,
+      "totalDamage": 41229,
+      "buildPerks": []
+    },
+    "The Prospector": {
+      "dps": 2702,
+      "totalDamage": 48380,
+      "buildPerks": []
+    },
+    "Black Talon": {
+      "dps": 2678,
+      "totalDamage": 67264,
+      "buildPerks": []
+    },
+    "Ager's Scepter": {
+      "dps": 2664,
+      "totalDamage": 83895,
+      "buildPerks": []
+    },
+    "Cloudstrike": {
+      "dps": 2652,
+      "totalDamage": 66358,
+      "buildPerks": []
+    },
+    "Dead Messenger": {
+      "dps": 2651,
+      "totalDamage": 78078,
+      "buildPerks": [
+        "The Fundamentals"
+      ]
+    },
+    "Grand Overture": {
+      "dps": 2598,
+      "totalDamage": 127537,
+      "buildPerks": []
+    },
+    "Microcosm": {
+      "dps": 2597,
+      "totalDamage": 74989,
+      "buildPerks": [
+        "Paracausal Imbuement"
+      ]
+    },
+    "Found Verdict": {
+      "dps": 2583,
+      "totalDamage": 51863,
+      "buildPerks": [
+        "Rewind Rounds",
+        "Trench Barrel"
+      ]
+    },
+    "Cataclysmic": {
+      "dps": 2572,
+      "totalDamage": 102376,
+      "buildPerks": [
+        "Fourth Time's the Charm",
+        "Bait and Switch"
+      ]
+    },
+    "Prophet of Doom": {
+      "dps": 2568,
+      "totalDamage": 42621,
+      "buildPerks": [
+        "Reconstruction",
+        "Trench Barrel"
+      ]
+    },
+    "Without Remorse": {
+      "dps": 2535,
+      "totalDamage": 30956,
+      "buildPerks": [
+        "Vorpal Weapon"
+      ]
+    },
+    "Trachinus": {
+      "dps": 2531,
+      "totalDamage": 44308,
+      "buildPerks": [
+        "Precision Instrument",
+        "Rapid Hit"
+      ]
+    },
+    "Finality's Auger": {
+      "dps": 2522,
+      "totalDamage": 59370,
+      "buildPerks": []
+    },
+    "Perfect Paradox": {
+      "dps": 2514,
+      "totalDamage": 43749,
+      "buildPerks": [
+        "Trench Barrel"
+      ]
+    },
+    "Pure Recollection": {
+      "dps": 2472,
+      "totalDamage": 46303,
+      "buildPerks": [
+        "High-Impact Reserves",
+        "Bait and Switch"
+      ]
+    },
+    "Riskrunner": {
+      "dps": 2472,
+      "totalDamage": null,
+      "buildPerks": []
+    },
+    "Conditional Finality": {
+      "dps": 2469,
+      "totalDamage": 49589,
+      "buildPerks": []
+    },
+    "Truth": {
+      "dps": 2461,
+      "totalDamage": 49756,
+      "buildPerks": []
+    },
+    "Ex Diris": {
+      "dps": 2443,
+      "totalDamage": 53996,
+      "buildPerks": []
+    },
+    "Winterbite": {
+      "dps": 2432,
+      "totalDamage": 58379,
+      "buildPerks": []
+    },
+    "Fugue-55": {
+      "dps": 2429,
+      "totalDamage": 82401,
+      "buildPerks": [
+        "Fourth Time's the Charm",
+        "Firing Line"
+      ]
+    },
+    "Parasite": {
+      "dps": 2406,
+      "totalDamage": 88619,
+      "buildPerks": []
+    },
+    "Gjallarhorn": {
+      "dps": 2386,
+      "totalDamage": 41160,
+      "buildPerks": []
+    },
+    "Xenophage": {
+      "dps": 2380,
+      "totalDamage": 44341,
+      "buildPerks": []
+    },
+    "Falling Guillotine": {
+      "dps": 2330,
+      "totalDamage": 52929,
+      "buildPerks": [
+        "Whirlwind Blade",
+        "Frenzy"
+      ]
+    },
+    "Bastion": {
+      "dps": 2288,
+      "totalDamage": 90572,
+      "buildPerks": []
+    },
+    "Barrow-Dyad": {
+      "dps": 2220,
+      "totalDamage": null,
+      "buildPerks": [
+        "Taken Ambition"
+      ]
+    },
+    "Retrofuturist": {
+      "dps": 2200,
+      "totalDamage": 40378,
+      "buildPerks": [
+        "Trench Barrel"
+      ]
+    },
+    "Arcane Embrace": {
+      "dps": 2197,
+      "totalDamage": 79522,
+      "buildPerks": [
+        "Fourth Time's the Charm",
+        "Aggregate Charge"
+      ]
+    },
+    "Deadlock": {
+      "dps": 2179,
+      "totalDamage": 32676,
+      "buildPerks": [
+        "Bait and Switch"
+      ]
+    },
+    "Final Warning": {
+      "dps": 2115,
+      "totalDamage": null,
+      "buildPerks": []
+    },
+    "Lionfish-4fr": {
+      "dps": 2112,
+      "totalDamage": 42656,
+      "buildPerks": [
+        "Controlled Burst",
+        "Reconstruction"
+      ]
+    },
+    "Tessellation": {
+      "dps": 2111,
+      "totalDamage": 149401,
+      "buildPerks": [
+        "Property: Irreducible"
+      ]
+    },
+    "Keen Thistle": {
+      "dps": 2097,
+      "totalDamage": 195446,
+      "buildPerks": [
+        "Fourth Time's the Charm",
+        "Triple Tap"
+      ]
+    },
+    "Finite Maybe": {
+      "dps": 2089,
+      "totalDamage": 45670,
+      "buildPerks": [
+        "Bait and Switch",
+        "Reconstruction"
+      ]
+    },
+    "Ice Breaker": {
+      "dps": 2088,
+      "totalDamage": 23168,
+      "buildPerks": [
+        "Ice Breaker"
+      ]
+    },
+    "Retrofit Escapade": {
+      "dps": 2077,
+      "totalDamage": 188803,
+      "buildPerks": [
+        "Fourth Time's the Charm",
+        "Target Lock"
+      ]
+    },
+    "Techeun Force": {
+      "dps": 2056,
+      "totalDamage": 46534,
+      "buildPerks": [
+        "Controlled Burst",
+        "Rewind Rounds"
+      ]
+    },
+    "The Eremite": {
+      "dps": 2050,
+      "totalDamage": 64294,
+      "buildPerks": [
+        "Envious Assassin",
+        "Controlled Burst"
+      ]
+    },
+    "Salvation's Grip": {
+      "dps": 2035,
+      "totalDamage": 39291,
+      "buildPerks": []
+    },
+    "Pro Memoria": {
+      "dps": 2030,
+      "totalDamage": 103189,
+      "buildPerks": [
+        "Envious Assassin",
+        "Target Lock"
+      ]
+    },
+    "Tarrabah": {
+      "dps": 1977,
+      "totalDamage": null,
+      "buildPerks": []
+    },
+    "Whirling Ovation": {
+      "dps": 1949,
+      "totalDamage": 81668,
+      "buildPerks": [
+        "Anticipation"
+      ]
+    },
+    "Antedate": {
+      "dps": 1939,
+      "totalDamage": null,
+      "buildPerks": [
+        "Rewind Rounds",
+        "Target Lock"
+      ]
+    },
+    "Touch of Malice": {
+      "dps": 1922,
+      "totalDamage": null,
+      "buildPerks": []
+    },
+    "Hammerhead": {
+      "dps": 1890,
+      "totalDamage": 212210,
+      "buildPerks": [
+        "Fourth Time's the Charm",
+        "Target Lock"
+      ]
+    },
+    "Axial Lacuna": {
+      "dps": 1856,
+      "totalDamage": 50830,
+      "buildPerks": [
+        "Controlled Burst",
+        "Reconstruction"
+      ]
+    },
+    "Forerunner": {
+      "dps": 1827,
+      "totalDamage": 45264,
+      "buildPerks": []
+    },
+    "The Wardcliff Coil": {
+      "dps": 1820,
+      "totalDamage": 39704,
+      "buildPerks": []
+    },
+    "Acasia's Dejection": {
+      "dps": 1789,
+      "totalDamage": 60533,
+      "buildPerks": [
+        "Rewind Rounds",
+        "Target Lock"
+      ]
+    },
+    "Theodolite": {
+      "dps": 1781,
+      "totalDamage": 49276,
+      "buildPerks": [
+        "Elemental Honing",
+        "Reconstruction"
+      ]
+    },
+    "Archon's Thunder": {
+      "dps": 1778,
+      "totalDamage": 252037,
+      "buildPerks": [
+        "Fourth Time's the Charm",
+        "Target Lock"
+      ]
+    },
+    "Arbalest": {
+      "dps": 1726,
+      "totalDamage": 42515,
+      "buildPerks": []
+    },
+    "Telesto": {
+      "dps": 1674,
+      "totalDamage": 44820,
+      "buildPerks": []
+    },
+    "Wild Style": {
+      "dps": 1672,
+      "totalDamage": 44857,
+      "buildPerks": [
+        "Envious Assassin",
+        "Bait and Switch"
+      ]
+    },
+    "Dragon's Breath": {
+      "dps": 1665,
+      "totalDamage": 84908,
+      "buildPerks": []
+    },
+    "Heirloom": {
+      "dps": 1639,
+      "totalDamage": 51727,
+      "buildPerks": []
+    },
+    "Osteo Striga": {
+      "dps": 1621,
+      "totalDamage": null,
+      "buildPerks": []
+    },
+    "Greasy Luck": {
+      "dps": 1602,
+      "totalDamage": 39598,
+      "buildPerks": [
+        "Redirection"
+      ]
+    },
+    "Ticuu's Divination": {
+      "dps": 1546,
+      "totalDamage": null,
+      "buildPerks": [
+        "Causality Arrows"
+      ]
+    },
+    "Edge of Concurrence": {
+      "dps": 1536,
+      "totalDamage": 43468,
+      "buildPerks": [
+        "Lightning Seeker"
+      ]
+    },
+    "Vexcalibur": {
+      "dps": 1525,
+      "totalDamage": 36002,
+      "buildPerks": []
+    },
+    "Tractor Cannon": {
+      "dps": 1521,
+      "totalDamage": 21532,
+      "buildPerks": []
+    },
+    "Revision Zero": {
+      "dps": 1494,
+      "totalDamage": null,
+      "buildPerks": [
+        "Vorpal Weapon"
+      ]
+    },
+    "Service of Luzaku": {
+      "dps": 1487,
+      "totalDamage": 97665,
+      "buildPerks": []
+    },
+    "Forthcoming Deviance": {
+      "dps": 1486,
+      "totalDamage": 36752,
+      "buildPerks": [
+        "Chaos Reshaped"
+      ]
+    },
+    "Jötunn": {
+      "dps": 1438,
+      "totalDamage": 45546,
+      "buildPerks": []
+    },
+    "Returned Memory": {
+      "dps": 1404,
+      "totalDamage": 38044,
+      "buildPerks": [
+        "Redirection"
+      ]
+    },
+    "Rake Angle": {
+      "dps": 1379,
+      "totalDamage": 47010,
+      "buildPerks": [
+        "Vorpal Weapon"
+      ]
+    },
+    "Heir Apparent": {
+      "dps": 1357,
+      "totalDamage": 51265,
+      "buildPerks": []
+    },
+    "Tinasha's Mastery": {
+      "dps": 1340,
+      "totalDamage": 36303,
+      "buildPerks": [
+        "Bait and Switch"
+      ]
+    },
+    "Refusal of the Call": {
+      "dps": 1304,
+      "totalDamage": 39755,
+      "buildPerks": [
+        "Vorpal Weapon"
+      ]
+    },
+    "Alethonym": {
+      "dps": 1303,
+      "totalDamage": null,
+      "buildPerks": []
+    },
+    "Tommy's Matchbook": {
+      "dps": 1194,
+      "totalDamage": null,
+      "buildPerks": []
+    },
+    "Non-Denouement": {
+      "dps": 1163,
+      "totalDamage": null,
+      "buildPerks": [
+        "Archer's Tempo",
+        "Chaos Reshaped"
+      ]
+    },
+    "Vex Mythoclast": {
+      "dps": 1146,
+      "totalDamage": null,
+      "buildPerks": []
+    },
+    "Rat King": {
+      "dps": 1106,
+      "totalDamage": null,
+      "buildPerks": []
+    },
+    "Pardon Our Dust": {
+      "dps": 1102,
+      "totalDamage": 31413,
+      "buildPerks": [
+        "Vorpal Weapon"
+      ]
+    },
+    "Hawkmoon": {
+      "dps": 1080,
+      "totalDamage": null,
+      "buildPerks": []
+    },
+    "Deterministic Chaos": {
+      "dps": 1075,
+      "totalDamage": 87027,
+      "buildPerks": []
+    },
+    "Polaris Lance": {
+      "dps": 1042,
+      "totalDamage": null,
+      "buildPerks": []
+    },
+    "Cerberus+1": {
+      "dps": 1010,
+      "totalDamage": null,
+      "buildPerks": []
+    },
+    "Third Iteration": {
+      "dps": 987,
+      "totalDamage": null,
+      "buildPerks": []
+    },
+    "Graviton Spike": {
+      "dps": 954,
+      "totalDamage": null,
+      "buildPerks": []
+    },
+    "New Pacific Epitaph": {
+      "dps": 948,
+      "totalDamage": 27027,
+      "buildPerks": [
+        "Elemental Honing"
+      ]
+    },
+    "Trinity Ghoul": {
+      "dps": 925,
+      "totalDamage": null,
+      "buildPerks": []
+    },
+    "Fighting Lion": {
+      "dps": 879,
+      "totalDamage": null,
+      "buildPerks": []
+    },
+    "Sweet Business": {
+      "dps": 842,
+      "totalDamage": null,
+      "buildPerks": []
+    },
+    "Lodestar": {
+      "dps": 813,
+      "totalDamage": null,
+      "buildPerks": []
+    },
+    "Malfeasance": {
+      "dps": 809,
+      "totalDamage": null,
+      "buildPerks": []
+    },
+    "Divinity": {
+      "dps": 802,
+      "totalDamage": 26820,
+      "buildPerks": []
+    },
+    "Quicksilver Storm": {
+      "dps": 780,
+      "totalDamage": null,
+      "buildPerks": []
+    },
+    "The Last Word": {
+      "dps": 688,
+      "totalDamage": null,
+      "buildPerks": []
+    },
+    "Khvostov 7G-0X": {
+      "dps": 684,
+      "totalDamage": null,
+      "buildPerks": []
+    },
+    "MIDA Multi-Tool": {
+      "dps": 593,
+      "totalDamage": null,
+      "buildPerks": []
+    }
+  }
+}

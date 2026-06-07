@@ -40,9 +40,21 @@ export interface PaletteResultItem {
   content: ReactNode;
 }
 
+export interface PaletteAction {
+  id: string;
+  label: string;
+  hint?: ReactNode;
+  icon?: ReactNode;
+  /** When true, omit Tab/Enter keyboard hints on this action row. */
+  hideKeyboardHint?: boolean;
+  onSelect: () => void;
+}
+
 export interface CommandPaletteProps {
   placeholder?: string;
   categories: PaletteCategory[];
+  /** Action rows shown at the bottom of the filter category list. */
+  categoryActions?: PaletteAction[];
   /** Active filter chips (controlled by the consumer). */
   chips: PaletteChip[];
   onAddChip: (categoryId: string, option: PaletteValueOption) => void;
@@ -76,6 +88,8 @@ export interface CommandPaletteProps {
   /** Controlled panel open state — persists across disable/overlay toggles in the parent. */
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  /** Detail overlay covering results (e.g. a modal) — list scroll is restored when this clears. */
+  suspendResults?: boolean;
   /** Optional per-chip styling (tone, icons) based on category/value. */
   getChipAppearance?: (
     chip: PaletteChip,
@@ -123,6 +137,7 @@ function reducer(state: State, action: Action): State {
 
 type Item =
   | { kind: "category"; category: PaletteCategory }
+  | { kind: "action"; action: PaletteAction }
   | { kind: "chipSuggestion"; category: PaletteCategory; option: PaletteValueOption }
   | { kind: "value"; option: PaletteValueOption }
   | { kind: "result"; result: PaletteResultItem };
@@ -173,6 +188,12 @@ function filterCategories(categories: PaletteCategory[], query: string): Palette
   );
 }
 
+function filterActions(actions: PaletteAction[], query: string): PaletteAction[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return actions;
+  return actions.filter((action) => action.label.toLowerCase().includes(q));
+}
+
 /** Match filter values across all categories (e.g. "surr" → Trait 2 · Surrounded). */
 function searchValueSuggestions(
   categories: PaletteCategory[],
@@ -207,6 +228,7 @@ function searchValueSuggestions(
 export function CommandPalette({
   placeholder = "Search…",
   categories,
+  categoryActions = [],
   chips,
   onAddChip,
   onRemoveChip,
@@ -226,6 +248,7 @@ export function CommandPalette({
   renderBarOverlay,
   open: openProp,
   onOpenChange,
+  suspendResults = false,
   getChipAppearance,
   className,
 }: CommandPaletteProps) {
@@ -250,8 +273,23 @@ export function CommandPalette({
   const [browseFilters, setBrowseFilters] = useState(false);
   const [hoverIndex, setHoverIndex] = useState(-1);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const savedResultsScrollRef = useRef(0);
+  const wasResultsSuspendedRef = useRef(false);
   const listScrollingRef = useRef(false);
   const listScrollEndRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  const saveResultsScroll = useCallback(() => {
+    if (scrollRef.current) savedResultsScrollRef.current = scrollRef.current.scrollTop;
+  }, []);
+
+  const restoreResultsScroll = useCallback(() => {
+    const top = savedResultsScrollRef.current;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (scrollRef.current) scrollRef.current.scrollTop = top;
+      });
+    });
+  }, []);
 
   const handleListScroll = useCallback(() => {
     listScrollingRef.current = true;
@@ -262,6 +300,18 @@ export function CommandPalette({
   }, []);
 
   useEffect(() => () => clearTimeout(listScrollEndRef.current), []);
+
+  useEffect(() => {
+    if (suspendResults) {
+      saveResultsScroll();
+      wasResultsSuspendedRef.current = true;
+      return;
+    }
+    if (wasResultsSuspendedRef.current) {
+      wasResultsSuspendedRef.current = false;
+      restoreResultsScroll();
+    }
+  }, [suspendResults, saveResultsScroll, restoreResultsScroll]);
 
   const panelOpen = isControlled ? openProp : state.panel !== "closed";
   const open = !disabled && !renderBarOverlay && panelOpen;
@@ -295,6 +345,11 @@ export function CommandPalette({
     [openCategories, query, mode],
   );
 
+  const visibleActions = useMemo(
+    () => (mode === "categories" ? filterActions(categoryActions, query) : []),
+    [categoryActions, query, mode],
+  );
+
   const valueSuggestions = useMemo(
     () => (mode === "categories" ? searchValueSuggestions(openCategories, query, chips) : []),
     [openCategories, query, chips, mode],
@@ -306,8 +361,12 @@ export function CommandPalette({
         ? [
             ...valueSuggestions,
             ...visibleCategories.map((category) => ({ kind: "category" as const, category })),
+            ...visibleActions.map((action) => ({ kind: "action" as const, action })),
           ]
-        : openCategories.map((category) => ({ kind: "category" as const, category }))
+        : [
+            ...openCategories.map((category) => ({ kind: "category" as const, category })),
+            ...categoryActions.map((action) => ({ kind: "action" as const, action })),
+          ]
       : mode === "values" && activeCategory
         ? activeCategory.getValues(state.valueQuery).map((option) => ({ kind: "value", option }))
         : mode === "results"
@@ -322,12 +381,22 @@ export function CommandPalette({
   const keyboardFocus = hoverIndex < 0 && activeIndex >= 0;
   const resultsOrderKey =
     mode === "results" ? results.map((result) => result.id).join("\u0000") : "";
+  const actionsOrderKey = categoryActions.map((action) => action.id).join("\u0000");
 
   // Reset highlight when list content changes.
   useEffect(() => {
     dispatch({ type: "setActive", index: 0 });
     setHoverIndex(-1);
-  }, [mode, state.categoryId, state.valueQuery, query, results.length, chips.length, resultsOrderKey]);
+  }, [
+    mode,
+    state.categoryId,
+    state.valueQuery,
+    query,
+    results.length,
+    chips.length,
+    resultsOrderKey,
+    actionsOrderKey,
+  ]);
 
   // Sync controlled open prop into internal drill/back state machine.
   useEffect(() => {
@@ -362,7 +431,7 @@ export function CommandPalette({
       if (
         target instanceof Element &&
         target.closest(
-          '[data-palette-ignore-close], [data-pill-select-menu], [role="menuitem"], [role="menuitemradio"]',
+          '[data-palette-ignore-close], [data-pill-select-menu], [role="menuitem"], [role="menuitemradio"], [role="dialog"]',
         )
       ) {
         return;
@@ -376,7 +445,7 @@ export function CommandPalette({
   // Keep keyboard focus on the active input when the panel mode changes.
   useEffect(() => {
     if (disabled || renderBarOverlay || state.panel === "closed") return;
-    inputRef.current?.focus();
+    inputRef.current?.focus({ preventScroll: true });
   }, [state.panel, state.categoryId, disabled, renderBarOverlay]);
 
   function moveActive(delta: number) {
@@ -395,6 +464,11 @@ export function CommandPalette({
     if (item.kind === "category") {
       onQueryChange("");
       dispatch({ type: "drill", categoryId: item.category.id });
+    } else if (item.kind === "action") {
+      onQueryChange("");
+      setBrowseFilters(false);
+      closePanel();
+      item.action.onSelect();
     } else if (item.kind === "chipSuggestion") {
       onAddChip(item.category.id, item.option);
       onQueryChange("");
@@ -405,6 +479,7 @@ export function CommandPalette({
       setBrowseFilters(false);
       dispatch({ type: "back" });
     } else if (item.kind === "result") {
+      saveResultsScroll();
       onSelectResult?.(item.result.id);
     }
   }
@@ -621,11 +696,16 @@ export function CommandPalette({
           <div className="min-h-0 overflow-hidden">
             <div
               ref={scrollRef}
-              className="max-h-[376px] touch-pan-y overscroll-contain overflow-y-auto px-1.5 py-1.5 tracking-body [overflow-anchor:none]"
+              className={cn(
+                "max-h-[560px] touch-pan-y overscroll-contain overflow-y-auto px-1.5 tracking-body [overflow-anchor:none]",
+                mode === "results" && resultsHeader != null ? "pb-1.5" : "py-1.5",
+              )}
               onScroll={handleListScroll}
             >
               {mode === "results" && resultsHeader != null && (
-                <div className="px-1.5 pb-2">{resultsHeader}</div>
+                <div className="bg-card/35 sticky top-0 z-10 -mx-1.5 border-b border-border/40 px-3 py-2 backdrop-blur-xl">
+                  {resultsHeader}
+                </div>
               )}
               {open && mode === "results" && results.length === 0 ? (
                 <div className="text-muted-foreground px-3 py-6 text-center text-base tracking-body">
@@ -656,11 +736,13 @@ export function CommandPalette({
                         key={
                           item.kind === "category"
                             ? item.category.id
-                            : item.kind === "chipSuggestion"
-                              ? `${item.category.id}:${item.option.id}`
-                              : item.kind === "value"
-                                ? item.option.id
-                                : item.result.id
+                            : item.kind === "action"
+                              ? `action:${item.action.id}`
+                              : item.kind === "chipSuggestion"
+                                ? `${item.category.id}:${item.option.id}`
+                                : item.kind === "value"
+                                  ? item.option.id
+                                  : item.result.id
                         }
                         id={optionId(i)}
                         role="option"
@@ -675,6 +757,8 @@ export function CommandPalette({
                         className={cn(
                           "flex cursor-pointer items-center justify-between gap-3 rounded-lg px-3 py-1.5",
                           selected && "bg-white/[0.08]",
+                          item.kind === "action" &&
+                            "mt-1 justify-center bg-white/[0.04] py-2 hover:bg-white/[0.08]",
                           item.kind === "result" &&
                             "p-0 [contain-intrinsic-size:auto_3.5rem] [content-visibility:auto] [&>*]:hover:bg-transparent [&>*]:focus-visible:bg-transparent",
                         )}
@@ -701,6 +785,26 @@ export function CommandPalette({
                               </Kbd>
                             )}
                           </>
+                        ) : item.kind === "action" ? (
+                          <span className="flex items-center gap-2 text-xs font-medium">
+                            {item.action.icon}
+                            <span className="text-white">{item.action.label}</span>
+                            {item.action.hint != null && (
+                              <span className="text-muted-foreground">{item.action.hint}</span>
+                            )}
+                            {!item.action.hideKeyboardHint &&
+                              (showEnterHint ? (
+                                <Kbd>
+                                  Enter
+                                  <CornerDownLeft className="size-3" />
+                                </Kbd>
+                              ) : (
+                                <Kbd>
+                                  Tab
+                                  <ArrowRight className="size-3" />
+                                </Kbd>
+                              ))}
+                          </span>
                         ) : item.kind === "chipSuggestion" ? (
                           <>
                             <span className="flex min-w-0 items-baseline gap-2 text-xs font-medium">

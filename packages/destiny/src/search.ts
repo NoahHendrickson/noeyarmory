@@ -1,8 +1,9 @@
 import Fuse from "fuse.js";
 
 import type { InternedPerkColumn, PerkRef, WeaponSummary } from "./types";
+import type { WeaponDpsLookup } from "./weapon-dps";
 
-export type WeaponSort = "name" | "season-desc" | "season-asc";
+export type WeaponSort = "name" | "season-desc" | "season-asc" | "dps-desc";
 
 /** Composite key for season ordering: season number dominates, release index breaks ties. */
 function seasonSortKey(weapon: WeaponSummary): number {
@@ -10,10 +11,25 @@ function seasonSortKey(weapon: WeaponSummary): number {
 }
 
 /** Sort weapon results — does not mutate the input array. */
-export function sortWeapons(weapons: WeaponSummary[], order: WeaponSort): WeaponSummary[] {
+export function sortWeapons(
+  weapons: WeaponSummary[],
+  order: WeaponSort,
+  dpsByName?: WeaponDpsLookup,
+): WeaponSummary[] {
   const sorted = [...weapons];
   if (order === "name") {
     sorted.sort((a, b) => a.name.localeCompare(b.name));
+    return sorted;
+  }
+  if (order === "dps-desc") {
+    sorted.sort((a, b) => {
+      const aDps = dpsByName?.get(a.name)?.dps;
+      const bDps = dpsByName?.get(b.name)?.dps;
+      if (aDps == null && bDps == null) return a.name.localeCompare(b.name);
+      if (aDps == null) return 1;
+      if (bDps == null) return -1;
+      return bDps - aDps || a.name.localeCompare(b.name);
+    });
     return sorted;
   }
   if (order === "season-desc") {
@@ -41,6 +57,12 @@ export interface WeaponFilters {
   originTrait?: string[];
   /** Weapon must be able to roll ALL of these perks in ANY column (case-insensitive). */
   perks?: string[];
+  /** Each group is OR within; every selected custom group must match at least one perk. */
+  customPerkGroups?: string[][];
+  /** "Yes" = craftable at the engram table; "No" = not craftable (OR within). */
+  craftable?: string[];
+  /** OR within; exact case-insensitive weapon name match. */
+  name?: string[];
 }
 
 const lower = (s: string) => s.toLowerCase();
@@ -48,6 +70,16 @@ const lower = (s: string) => s.toLowerCase();
 function matchesFacet(value: string, selected?: string[]): boolean {
   if (!selected || selected.length === 0) return true;
   return selected.some((s) => lower(s) === lower(value));
+}
+
+function matchesCraftable(craftable: boolean, selected?: string[]): boolean {
+  if (!selected || selected.length === 0) return true;
+  return selected.some((s) => {
+    const v = lower(s);
+    if (v === "yes") return craftable;
+    if (v === "no") return !craftable;
+    return false;
+  });
 }
 
 function traitColumns(columns: InternedPerkColumn[]): InternedPerkColumn[] {
@@ -80,13 +112,18 @@ export function filterWeapons(
   perks: PerkRef[],
 ): WeaponSummary[] {
   const requiredPerks = (filters.perks ?? []).map(lower);
+  const customPerkGroups = (filters.customPerkGroups ?? [])
+    .map((group) => group.map(lower).filter(Boolean))
+    .filter((group) => group.length > 0);
   return weapons.filter((w) => {
+    if (!matchesFacet(w.name, filters.name)) return false;
     if (!matchesFacet(w.element, filters.element)) return false;
     if (!matchesFacet(w.type, filters.type)) return false;
     if (!matchesFacet(w.ammo, filters.ammo)) return false;
     if (!matchesFacet(w.rarity, filters.rarity)) return false;
     if (!matchesFacet(w.slot, filters.slot)) return false;
     if (filters.frame?.length && !matchesFacet(w.frame ?? "", filters.frame)) return false;
+    if (!matchesCraftable(w.craftable, filters.craftable)) return false;
     if (filters.trait1?.length || filters.trait2?.length) {
       const traits = traitColumns(w.columns);
       if (!columnCanRoll(traits[0], filters.trait1, perks)) return false;
@@ -105,6 +142,10 @@ export function filterWeapons(
     if (requiredPerks.length) {
       const owned = new Set(w.perksLower);
       if (!requiredPerks.every((p) => owned.has(p))) return false;
+    }
+    if (customPerkGroups.length) {
+      const owned = new Set(w.perksLower);
+      if (!customPerkGroups.every((group) => group.some((p) => owned.has(p)))) return false;
     }
     return true;
   });
@@ -133,6 +174,40 @@ export function weaponsWithPerk(
   if (typeof perk === "number") return weapons.filter((w) => w.perkHashes.includes(perk));
   const target = lower(perk);
   return weapons.filter((w) => w.perksLower.includes(target));
+}
+
+function nameMatchRank(nameLower: string, queryLower: string): number | null {
+  if (nameLower === queryLower) return 0;
+  if (nameLower.startsWith(queryLower)) return 1;
+  if (nameLower.includes(queryLower)) return 2;
+  return null;
+}
+
+/** Predict weapon names from a partial query — name-only, ranked best-first. */
+export function suggestWeaponNames(
+  weapons: WeaponSummary[],
+  query: string,
+  limit = 20,
+): FacetOption[] {
+  const ql = query.trim().toLowerCase();
+  if (!ql) return [];
+
+  const counts = new Map<string, number>();
+  for (const w of weapons) {
+    counts.set(w.name, (counts.get(w.name) ?? 0) + 1);
+  }
+
+  const ranked: { name: string; rank: number; count: number }[] = [];
+  for (const [name, count] of counts) {
+    const rank = nameMatchRank(name.toLowerCase(), ql);
+    if (rank != null) ranked.push({ name, rank, count });
+  }
+
+  ranked.sort(
+    (a, b) => a.rank - b.rank || a.name.localeCompare(b.name) || b.count - a.count,
+  );
+
+  return ranked.slice(0, limit).map(({ name, count }) => ({ value: name, count }));
 }
 
 /** Build a reusable Fuse index for fuzzy name/type/perk search. */
@@ -180,6 +255,9 @@ export function collectFacets(weapons: WeaponSummary[]): Record<string, FacetOpt
   const slot = new Map<string, number>();
   const frame = new Map<string, number>();
 
+  let craftableYes = 0;
+  let craftableNo = 0;
+
   for (const w of weapons) {
     if (w.element) element.set(w.element, (element.get(w.element) ?? 0) + 1);
     if (w.type) type.set(w.type, (type.get(w.type) ?? 0) + 1);
@@ -187,6 +265,8 @@ export function collectFacets(weapons: WeaponSummary[]): Record<string, FacetOpt
     if (w.rarity) rarity.set(w.rarity, (rarity.get(w.rarity) ?? 0) + 1);
     if (w.slot) slot.set(w.slot, (slot.get(w.slot) ?? 0) + 1);
     if (w.frame) frame.set(w.frame, (frame.get(w.frame) ?? 0) + 1);
+    if (w.craftable) craftableYes++;
+    else craftableNo++;
   }
 
   return {
@@ -196,6 +276,10 @@ export function collectFacets(weapons: WeaponSummary[]): Record<string, FacetOpt
     rarity: sortFacetCounts(rarity),
     slot: sortFacetCounts(slot),
     frame: sortFacetCounts(frame),
+    craftable: [
+      { value: "Yes", count: craftableYes },
+      { value: "No", count: craftableNo },
+    ],
   };
 }
 

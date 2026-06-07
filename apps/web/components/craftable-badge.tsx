@@ -1,32 +1,20 @@
-import Image from "next/image";
-import { Badge, cn } from "@repo/ui";
+import { cn } from "@repo/ui";
 
-import { CRAFTED_ICON_OVERLAY } from "../lib/bungie";
+const CRAFTABLE_ICON = "/craftable.png";
 
-/** Small affordance for weapons that can be crafted at the engram table. */
-export function CraftableBadge({
-  className,
-  compact = false,
-}: {
-  className?: string;
-  compact?: boolean;
-}) {
+/** Craftable affordance — Destiny shaping icon. */
+export function CraftableBadge({ className }: { className?: string }) {
   return (
-    <Badge
-      variant="outline"
-      className={cn("gap-1", className)}
-      title="Can be crafted at the engram table"
-    >
-      <Image
-        src={CRAFTED_ICON_OVERLAY}
+    <span title="Can be crafted at the engram table" className="inline-flex">
+      <img
+        src={CRAFTABLE_ICON}
         alt=""
-        width={12}
-        height={12}
-        className="size-3 shrink-0"
-        unoptimized
+        width={16}
+        height={16}
+        className={cn("size-4 shrink-0", className)}
         aria-hidden
       />
-      {compact ? <span className="sr-only">Craftable</span> : "Craftable"}
-    </Badge>
+      <span className="sr-only">Craftable</span>
+    </span>
   );
 }

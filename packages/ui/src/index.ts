@@ -23,6 +23,7 @@ export {
   CommandPalette,
   type CommandPaletteProps,
   type PaletteCategory,
+  type PaletteAction,
   type PaletteValueOption,
   type PaletteChip,
   type PaletteResultItem,
