@@ -59,7 +59,6 @@ export function FeedbackDialog({
   defaultIssueUrl = null,
   hideTrigger = false,
 }: FeedbackDialogProps = {}) {
-  const [open, setOpen] = useState(defaultOpen);
   const [type, setType] = useState<FeedbackType>(defaultType);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -79,8 +78,9 @@ export function FeedbackDialog({
   }
 
   function handleOpenChange(nextOpen: boolean) {
-    setOpen(nextOpen);
-    if (!nextOpen) {
+    // Reset only when opening — avoids a post-close state flush that re-renders
+    // the backdrop-blur trigger over the shader right as the popover unmounts.
+    if (nextOpen) {
       resetForm();
     }
   }
@@ -135,7 +135,7 @@ export function FeedbackDialog({
   );
 
   return (
-    <Popover open={open} onOpenChange={handleOpenChange} modal={false}>
+    <Popover defaultOpen={defaultOpen} onOpenChange={handleOpenChange} modal={false}>
       {hideTrigger ? (
         <PopoverTrigger
           render={
@@ -190,13 +190,11 @@ export function FeedbackDialog({
                   </PopoverDescription>
                 </div>
                 <div className="flex justify-end p-4">
-                  <Button
-                    type="button"
-                    onClick={() => handleOpenChange(false)}
-                    className={secondaryButtonClass}
+                  <PopoverClose
+                    render={<Button type="button" className={secondaryButtonClass} />}
                   >
                     Close
-                  </Button>
+                  </PopoverClose>
                 </div>
               </>
             ) : (

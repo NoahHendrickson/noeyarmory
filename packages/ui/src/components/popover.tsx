@@ -29,9 +29,10 @@ function PopoverPopup({ className, ...props }: ComponentProps<typeof BasePopover
     <BasePopover.Popup
       className={cn(
         "bg-popover text-popover-foreground pointer-events-auto border outline-none",
-        "origin-[var(--transform-origin)] transition-[transform,opacity] duration-150 ease-out",
-        "data-ending-style:scale-95 data-ending-style:opacity-0",
-        "data-starting-style:scale-95 data-starting-style:opacity-0",
+        // Opacity-only — scale fights Floating UI positioning and reads as a close hitch.
+        "transition-opacity duration-100 ease-in-out",
+        "data-ending-style:opacity-0",
+        "data-starting-style:opacity-0",
         className,
       )}
       {...props}

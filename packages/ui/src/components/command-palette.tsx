@@ -437,14 +437,15 @@ export function CommandPalette({
     <div
       ref={rootRef}
       className={cn(
-        "mx-auto w-max max-w-[calc(100vw-2rem)] transition-[min-width] duration-200",
+        "mx-auto w-max max-w-[calc(100vw-2rem)]",
         open ? "min-w-[600px]" : "min-w-[420px]",
         className,
       )}
     >
       <div
+        data-open={open}
         className={cn(
-          "overflow-hidden border border-border bg-card/35 shadow-lg shadow-black/25 backdrop-blur-xl",
+          "palette-card-grow overflow-hidden border border-border bg-card/35 shadow-lg shadow-black/25 backdrop-blur-xl",
           open ? "rounded-2xl" : "rounded-full",
         )}
       >
@@ -453,7 +454,7 @@ export function CommandPalette({
         <div
           className={cn(
             "flex h-14 items-center justify-between gap-3 px-[18px]",
-            open && "border-b",
+            open && "border-b border-border",
           )}
           onClick={() => !disabled && !renderBarOverlay && inputRef.current?.focus()}
         >
@@ -494,7 +495,7 @@ export function CommandPalette({
                     ref={inputRef}
                     type="text"
                     size={Math.max(12, inputValue.length + 1, effectivePlaceholder.length)}
-                    className="placeholder:text-muted-foreground min-w-[8ch] shrink-0 bg-transparent text-base outline-none disabled:cursor-not-allowed"
+                    className="placeholder:text-muted-foreground min-w-[8ch] shrink-0 bg-transparent text-base tracking-body outline-none disabled:cursor-not-allowed"
                     placeholder={effectivePlaceholder}
                     value={inputValue}
                     disabled={disabled}
@@ -538,16 +539,18 @@ export function CommandPalette({
 
         {/* List — part of the same card */}
         {open && (
-          <div className="max-h-[376px] overflow-y-auto px-1.5 py-1.5">
+          <div className="max-h-[376px] overflow-y-auto px-1.5 py-1.5 tracking-body">
             {mode === "results" && resultsHeader != null && (
               <div className="px-1.5 pb-2">{resultsHeader}</div>
             )}
             {mode === "results" && results.length === 0 ? (
-              <div className="text-muted-foreground px-3 py-6 text-center text-base">
+              <div className="text-muted-foreground px-3 py-6 text-center text-base tracking-body">
                 {resultsEmpty ?? "No matches"}
               </div>
             ) : items.length === 0 ? (
-              <div className="text-muted-foreground px-3 py-6 text-center text-xs">No matches</div>
+              <div className="text-muted-foreground px-3 py-6 text-center text-xs tracking-body">
+                No matches
+              </div>
             ) : (
               <ul
                 role="listbox"
@@ -669,7 +672,7 @@ export function CommandPalette({
                           </span>
                         </>
                       ) : (
-                        <div className="w-full">{item.result.content}</div>
+                        <div className="w-full tracking-body">{item.result.content}</div>
                       )}
                     </li>
                   );
@@ -677,7 +680,7 @@ export function CommandPalette({
               </ul>
             )}
             {mode === "results" && resultsFooter != null && (
-              <div className="text-muted-foreground px-3 py-2 text-center text-base">
+              <div className="text-muted-foreground px-3 py-2 text-center text-base tracking-body">
                 {resultsFooter}
               </div>
             )}

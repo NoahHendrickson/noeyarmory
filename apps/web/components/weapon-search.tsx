@@ -276,7 +276,7 @@ export function WeaponSearch({
       <main className="mx-auto flex w-full flex-1 flex-col px-4 pt-[16vh]">
         <div
           className={cn(
-            "mx-auto flex w-max max-w-[calc(100vw-2rem)] flex-col transition-[min-width,opacity] duration-200",
+            "mx-auto flex w-max max-w-[calc(100vw-2rem)] flex-col transition-opacity duration-200",
             paletteOpen ? "min-w-[600px]" : "min-w-[420px]",
             selected && "pointer-events-none opacity-0",
           )}
@@ -297,7 +297,7 @@ export function WeaponSearch({
             </div>
           </div>
           <CommandPalette
-            className="mx-0 max-w-none"
+            className="mx-0 w-full max-w-none min-w-0 transition-none motion-reduce:transition-none"
             placeholder={placeholder}
             categories={categories}
           chips={chips}
@@ -346,7 +346,7 @@ export function WeaponSearch({
           resultsEmpty={mode === "weapon" ? "No weapons match." : "No armor matches."}
           resultsHeader={
             showResults && mode === "armor" ? (
-              <div className="text-muted-foreground text-base">
+              <div className="text-muted-foreground text-base tracking-body">
                 {resultCount} {resultCount === 1 ? "result" : "results"}
               </div>
             ) : showResults && mode === "weapon" ? (
@@ -356,7 +356,7 @@ export function WeaponSearch({
                 onClick={(e) => e.stopPropagation()}
                 onPointerDown={(e) => e.stopPropagation()}
               >
-                <span className="text-muted-foreground text-base">
+                <span className="text-muted-foreground text-base tracking-body">
                   {resultCount} {resultCount === 1 ? "result" : "results"}
                 </span>
                 <PillSelect
