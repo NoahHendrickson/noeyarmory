@@ -43,6 +43,7 @@ export interface WeaponsState {
   isSample: boolean;
   version?: string;
   getWeaponDoc: (hash: number) => Promise<WeaponDoc | undefined>;
+  preloadWeaponDetails: () => Promise<void>;
 }
 
 const defaultState: WeaponsState = {
@@ -57,6 +58,7 @@ const defaultState: WeaponsState = {
   loading: true,
   isSample: false,
   getWeaponDoc: async () => undefined,
+  preloadWeaponDetails: async () => undefined,
 };
 
 const WeaponsContext = createContext<WeaponsState>(defaultState);
@@ -73,6 +75,15 @@ function seedDetails(index: WeaponDetailIndex): void {
     Object.entries(index.details).map(([hash, detail]) => [Number(hash), detail]),
   );
   statGroupsCache = index.statGroups;
+}
+
+async function seedSampleDetails(): Promise<void> {
+  const { sampleWeapons } = await import("@repo/destiny");
+  seedDetails(
+    buildDetailIndexFromDocs(sampleWeapons, "sample", {
+      [String(sampleStatGroup.hash)]: sampleStatGroup,
+    }),
+  );
 }
 
 async function loadWeaponDetails(): Promise<Map<number, WeaponDetailFields>> {
@@ -103,6 +114,7 @@ function lookupsToState(
   lookups: WeaponIndexLookups,
   isSample: boolean,
   getWeaponDoc: WeaponsState["getWeaponDoc"],
+  preloadWeaponDetails: WeaponsState["preloadWeaponDetails"],
 ): WeaponsState {
   return {
     weapons: lookups.weapons,
@@ -117,6 +129,7 @@ function lookupsToState(
     isSample,
     version: lookups.version,
     getWeaponDoc,
+    preloadWeaponDetails,
   };
 }
 
@@ -160,18 +173,25 @@ async function fetchWeaponIndex(): Promise<{ lookups: WeaponIndexLookups; isSamp
 }
 
 export function WeaponsProvider({ children }: { children: ReactNode }) {
+  const preloadWeaponDetails = useCallback(async (): Promise<void> => {
+    if (!moduleCache) await fetchWeaponIndex();
+    if (detailCache) return;
+
+    if (isSampleCache) {
+      await seedSampleDetails();
+      return;
+    }
+
+    await loadWeaponDetails();
+  }, []);
+
   const getWeaponDoc = useCallback(async (hash: number): Promise<WeaponDoc | undefined> => {
     const lookups = moduleCache ?? (await fetchWeaponIndex()).lookups;
     const summary = lookups.byHash.get(hash);
     if (!summary) return undefined;
 
     if (isSampleCache && !detailCache) {
-      const { sampleWeapons } = await import("@repo/destiny");
-      seedDetails(
-        buildDetailIndexFromDocs(sampleWeapons, "sample", {
-          [String(sampleStatGroup.hash)]: sampleStatGroup,
-        }),
-      );
+      await seedSampleDetails();
     } else if (!detailCache) {
       await loadWeaponDetails();
     }
@@ -181,24 +201,24 @@ export function WeaponsProvider({ children }: { children: ReactNode }) {
 
   const [state, setState] = useState<WeaponsState>(() =>
     moduleCache
-      ? lookupsToState(moduleCache, isSampleCache, getWeaponDoc)
-      : { ...defaultState, getWeaponDoc },
+      ? lookupsToState(moduleCache, isSampleCache, getWeaponDoc, preloadWeaponDetails)
+      : { ...defaultState, getWeaponDoc, preloadWeaponDetails },
   );
 
   useEffect(() => {
     if (moduleCache) {
-      setState(lookupsToState(moduleCache, isSampleCache, getWeaponDoc));
+      setState(lookupsToState(moduleCache, isSampleCache, getWeaponDoc, preloadWeaponDetails));
       return;
     }
 
     let active = true;
     void fetchWeaponIndex().then(({ lookups, isSample }) => {
-      if (active) setState(lookupsToState(lookups, isSample, getWeaponDoc));
+      if (active) setState(lookupsToState(lookups, isSample, getWeaponDoc, preloadWeaponDetails));
     });
     return () => {
       active = false;
     };
-  }, [getWeaponDoc]);
+  }, [getWeaponDoc, preloadWeaponDetails]);
 
   return <WeaponsContext.Provider value={state}>{children}</WeaponsContext.Provider>;
 }
@@ -260,12 +280,7 @@ export function useStatGroups(): Record<string, StatGroupRef> | undefined {
     let active = true;
     void (async () => {
       if (isSample) {
-        const { sampleWeapons } = await import("@repo/destiny");
-        seedDetails(
-          buildDetailIndexFromDocs(sampleWeapons, "sample", {
-            [String(sampleStatGroup.hash)]: sampleStatGroup,
-          }),
-        );
+        await seedSampleDetails();
       } else {
         await loadWeaponDetails();
       }

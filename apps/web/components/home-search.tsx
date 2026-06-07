@@ -46,10 +46,9 @@ import { PopularWeapons } from "./popular-weapons";
 import { WeaponResultRow } from "./weapon-result-row";
 import { trackWeaponView } from "../lib/track-weapon-view";
 
-const WeaponDetailModal = dynamic(
-  () => import("./weapon-detail-modal").then((m) => m.WeaponDetailModal),
-  { ssr: false },
-);
+const loadWeaponDetailModal = () => import("./weapon-detail-modal").then((m) => m.WeaponDetailModal);
+
+const WeaponDetailModal = dynamic(loadWeaponDetailModal, { ssr: false });
 
 type Mode = "weapon" | "armor";
 
@@ -64,6 +63,15 @@ const WEAPON_SORT_OPTIONS: PillSelectOption<WeaponSort>[] = [
   { value: "season-desc", label: "Newest", direction: "desc" },
   { value: "season-asc", label: "Oldest", direction: "asc" },
 ];
+
+function scheduleIdle(callback: () => void): () => void {
+  if (typeof requestIdleCallback !== "undefined") {
+    const id = requestIdleCallback(callback);
+    return () => cancelIdleCallback(id);
+  }
+  const id = window.setTimeout(callback, 250);
+  return () => window.clearTimeout(id);
+}
 
 interface CustomFilterComposer {
   name: string;
@@ -87,7 +95,7 @@ export function HomeSearch({
   signedIn?: boolean;
   initialMode?: Mode;
 }) {
-  const { weapons, perks, isSample, byHash } = useWeapons();
+  const { weapons, perks, isSample, byHash, preloadWeaponDetails } = useWeapons();
   const { elementIconMap, typeIconMap, ammoIconMap } = useWeaponIconMaps();
   const { dpsByName } = useWeaponDps();
   const { filters: customFilters, createFilter } = useCustomWeaponFilters();
@@ -120,6 +128,14 @@ export function HomeSearch({
   );
   const [selectedHash, setSelectedHash] = useState<number | null>(null);
   const { weapon: selected } = useWeaponDetail(selectedHash);
+
+  useEffect(() => {
+    if (mode !== "weapon" || weapons.length === 0) return;
+    return scheduleIdle(() => {
+      void loadWeaponDetailModal();
+      void preloadWeaponDetails();
+    });
+  }, [mode, weapons.length, preloadWeaponDetails]);
 
   const weaponColumnPerks = useMemo(() => collectColumnPerks(weapons, perks), [weapons, perks]);
 
@@ -650,10 +666,11 @@ export function HomeSearch({
         )}
       </main>
 
-      {selected && (
+      {selectedHash != null && (
         <WeaponDetailModal
-          weapon={selected}
-          highlightedBuildPerks={dpsByName.get(selected.name)?.buildPerks}
+          open
+          weapon={selected ?? null}
+          highlightedBuildPerks={selected ? dpsByName.get(selected.name)?.buildPerks : undefined}
           onClose={() => setSelectedHash(null)}
         />
       )}
