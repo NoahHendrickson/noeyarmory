@@ -210,10 +210,26 @@ export function CommandPalette({
     [openCategories, query, chips, mode],
   );
 
-  const recentListItems: PaletteItem[] =
-    hideCategoryList || mode !== "categories"
-      ? []
-      : recentItems.map((recent) => ({ kind: "recent" as const, recent }));
+  const recentListItems = useMemo<PaletteItem[]>(() => {
+    if (hideCategoryList || mode !== "categories") return [];
+    return recentItems.map((recent) => ({
+      kind: "recent" as const,
+      recent,
+      onRemove: onRemoveRecent ? () => onRemoveRecent(recent.id) : undefined,
+    }));
+  }, [hideCategoryList, mode, recentItems, onRemoveRecent]);
+
+  const recentSectionHeaderAction = useMemo(
+    () =>
+      onClearRecent != null
+        ? {
+            label: "Clear all",
+            ariaLabel: "Clear all recent searches",
+            onClick: onClearRecent,
+          }
+        : undefined,
+    [onClearRecent],
+  );
 
   const items = useMemo(
     () =>
@@ -228,6 +244,7 @@ export function CommandPalette({
         valueSuggestions,
         recentListItems,
         recentSectionLabel,
+        recentSectionHeaderAction,
         filtersSectionLabel,
         previewResults,
         previewSectionLabel,
@@ -246,6 +263,7 @@ export function CommandPalette({
       valueSuggestions,
       recentListItems,
       recentSectionLabel,
+      recentSectionHeaderAction,
       filtersSectionLabel,
       previewResults,
       previewSectionLabel,
@@ -563,8 +581,6 @@ export function CommandPalette({
             onClearHover={() => setHoverIndex(-1)}
             onSetActive={(index) => dispatch({ type: "setActive", index })}
             onSelectItem={selectItem}
-            onRemoveRecent={onRemoveRecent}
-            onClearRecent={onClearRecent}
             renderResult={renderResult}
           />
         </div>

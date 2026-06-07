@@ -372,6 +372,8 @@ export function HomeSearch({
     [findById],
   );
 
+  const handleClearRecent = useCallback(() => clearRecentForMode(mode), [clearRecentForMode, mode]);
+
   const categoryActions = useMemo<PaletteAction[]>(() => {
     if (mode !== "weapon") return [];
     if (composingCustomFilter) {
@@ -516,7 +518,7 @@ export function HomeSearch({
             recentItems={recentPaletteItems}
             onSelectRecent={handleSelectRecent}
             onRemoveRecent={removeRecent}
-            onClearRecent={() => clearRecentForMode(mode)}
+            onClearRecent={handleClearRecent}
             onAddChip={handleAddChip}
             onRemoveChip={handleRemoveChip}
             onClearChips={handleClearChips}

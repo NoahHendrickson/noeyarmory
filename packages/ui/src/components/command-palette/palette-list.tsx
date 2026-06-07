@@ -30,8 +30,6 @@ export interface PaletteListProps {
   onClearHover: () => void;
   onSetActive: (index: number) => void;
   onSelectItem: (item: PaletteItem) => void;
-  onRemoveRecent?: (id: string) => void;
-  onClearRecent?: () => void;
 }
 
 export function PaletteList({
@@ -59,8 +57,6 @@ export function PaletteList({
   onClearHover,
   onSetActive,
   onSelectItem,
-  onRemoveRecent,
-  onClearRecent,
 }: PaletteListProps) {
   return (
     <div
@@ -131,8 +127,6 @@ export function PaletteList({
                     if (activeIndex !== i) onSetActive(i);
                   }}
                   onSelect={() => onSelectItem(item)}
-                  onRemoveRecent={onRemoveRecent}
-                  onClearRecent={onClearRecent}
                   renderResult={renderResult}
                 />
               ))}
@@ -163,8 +157,6 @@ interface PaletteListRowProps {
   listScrollingRef: React.MutableRefObject<boolean>;
   onHover: () => void;
   onSelect: () => void;
-  onRemoveRecent?: (id: string) => void;
-  onClearRecent?: () => void;
   renderResult?: (id: string) => React.ReactNode;
 }
 
@@ -176,10 +168,10 @@ function PaletteListRow({
   listScrollingRef,
   onHover,
   onSelect,
-  onRemoveRecent,
-  onClearRecent,
   renderResult,
 }: PaletteListRowProps) {
+  const sectionHasHeaderAction = item.kind === "section" && item.headerAction != null;
+
   return (
     // eslint-disable-next-line jsx-a11y/click-events-have-key-events
     <li
@@ -201,9 +193,7 @@ function PaletteListRow({
         item.kind === "section"
           ? cn(
               "list-none py-0",
-              item.id === "recent-searches" && onClearRecent != null
-                ? "pointer-events-auto"
-                : "pointer-events-none",
+              sectionHasHeaderAction ? "pointer-events-auto" : "pointer-events-none",
             )
           : "flex cursor-pointer items-center justify-between gap-3 rounded-[8px] px-3 py-1.5",
         selected && (item.kind === "result" ? "bg-white/[0.033]" : "bg-white/[0.05]"),
@@ -229,13 +219,7 @@ function PaletteListRow({
           "p-0 [contain-intrinsic-size:auto_3.5rem] [content-visibility:auto] [&_*]:hover:bg-transparent [&_*]:focus-visible:bg-transparent",
       )}
     >
-      <PaletteListRowContent
-        item={item}
-        showEnterHint={showEnterHint}
-        onRemoveRecent={onRemoveRecent}
-        onClearRecent={onClearRecent}
-        renderResult={renderResult}
-      />
+      <PaletteListRowContent item={item} showEnterHint={showEnterHint} renderResult={renderResult} />
     </li>
   );
 }
@@ -243,14 +227,10 @@ function PaletteListRow({
 function PaletteListRowContent({
   item,
   showEnterHint,
-  onRemoveRecent,
-  onClearRecent,
   renderResult,
 }: {
   item: PaletteItem;
   showEnterHint: boolean;
-  onRemoveRecent?: (id: string) => void;
-  onClearRecent?: () => void;
   renderResult?: (id: string) => React.ReactNode;
 }) {
   if (item.kind === "category") {
@@ -325,24 +305,24 @@ function PaletteListRowContent({
           <div
             className={cn(
               "px-3 pt-2 pb-0.5 text-[11px] font-normal tracking-wide",
-              item.id === "recent-searches" && onClearRecent != null
+              item.headerAction != null
                 ? "flex items-center justify-between gap-2"
                 : "text-muted-foreground",
             )}
           >
             <span className="text-muted-foreground">{item.label}</span>
-            {item.id === "recent-searches" && onClearRecent != null && (
+            {item.headerAction != null && (
               <button
                 type="button"
-                aria-label="Clear all recent searches"
+                aria-label={item.headerAction.ariaLabel}
                 onMouseDown={(e) => e.stopPropagation()}
                 onClick={(e) => {
                   e.stopPropagation();
-                  onClearRecent();
+                  item.headerAction!.onClick();
                 }}
                 className="text-muted-foreground hover:text-white cursor-pointer transition-colors"
               >
-                Clear all
+                {item.headerAction.label}
               </button>
             )}
           </div>
@@ -362,14 +342,14 @@ function PaletteListRowContent({
           {item.recent.hint != null && (
             <span className="text-muted-foreground text-xs">{item.recent.hint}</span>
           )}
-          {onRemoveRecent != null && (
+          {item.onRemove != null && (
             <button
               type="button"
               aria-label={`Remove recent search: ${item.recent.label}`}
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => {
                 e.stopPropagation();
-                onRemoveRecent(item.recent.id);
+                item.onRemove!();
               }}
               className="flex size-5 shrink-0 cursor-pointer items-center justify-center rounded-full text-white/60 transition-colors hover:bg-white/10 hover:text-white"
             >
