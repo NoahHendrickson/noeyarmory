@@ -47,6 +47,14 @@ export interface PaletteAction {
   icon?: ReactNode;
   /** When true, omit Tab/Enter keyboard hints on this action row. */
   hideKeyboardHint?: boolean;
+  /** When true, keep the panel open after this action is selected. */
+  keepPanelOpen?: boolean;
+  /** When true, stay visible while the main query filters other list rows. */
+  alwaysShow?: boolean;
+  /** When true, the row is visible but not selectable. */
+  disabled?: boolean;
+  /** Primary actions use the green submit styling. */
+  variant?: "default" | "primary";
   onSelect: () => void;
 }
 
@@ -73,6 +81,14 @@ export interface CommandPaletteProps {
   onSelectResult?: (id: string) => void;
   /** Optional header above result rows (e.g. a sort control). */
   resultsHeader?: ReactNode;
+  /** Optional header above category/value rows (e.g. a composer title). */
+  panelHeader?: ReactNode;
+  /** When true, omit category drill-down rows (value suggestions still work). */
+  hideCategoryList?: boolean;
+  /** When true, render `panelHeader` without the sticky frosted background. */
+  plainPanelHeader?: boolean;
+  /** Optional footer pinned below the scrollable list (e.g. a save form). */
+  panelFooter?: ReactNode;
   /** Optional footer below result rows (e.g. "Showing N of M"). */
   resultsFooter?: ReactNode;
   /** Shown when `showResults` is true but `results` is empty. */
@@ -149,6 +165,12 @@ function whisperForActiveItem(item: Item | undefined): string | undefined {
 }
 
 const MAX_VALUE_SUGGESTIONS = 20;
+const PANEL_TRANSITION_MS = 200;
+
+type ClosingSnapshot = {
+  mode: ListMode;
+  items: Item[];
+};
 
 function listMode(
   panel: PanelKind,
@@ -191,7 +213,12 @@ function filterCategories(categories: PaletteCategory[], query: string): Palette
 function filterActions(actions: PaletteAction[], query: string): PaletteAction[] {
   const q = query.trim().toLowerCase();
   if (!q) return actions;
-  return actions.filter((action) => action.label.toLowerCase().includes(q));
+  return actions.filter(
+    (action) =>
+      action.alwaysShow === true ||
+      action.label.toLowerCase().includes(q) ||
+      (typeof action.hint === "string" && action.hint.toLowerCase().includes(q)),
+  );
 }
 
 /** Match filter values across all categories (e.g. "surr" → Trait 2 · Surrounded). */
@@ -240,6 +267,10 @@ export function CommandPalette({
   results = [],
   onSelectResult,
   resultsHeader,
+  panelHeader,
+  hideCategoryList = false,
+  plainPanelHeader = false,
+  panelFooter,
   resultsFooter,
   resultsEmpty,
   leftAdornment,
@@ -272,7 +303,9 @@ export function CommandPalette({
 
   const [browseFilters, setBrowseFilters] = useState(false);
   const [hoverIndex, setHoverIndex] = useState(-1);
+  const [closingSnapshot, setClosingSnapshot] = useState<ClosingSnapshot | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const closeAnimationTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const savedResultsScrollRef = useRef(0);
   const wasResultsSuspendedRef = useRef(false);
   const listScrollingRef = useRef(false);
@@ -301,6 +334,8 @@ export function CommandPalette({
 
   useEffect(() => () => clearTimeout(listScrollEndRef.current), []);
 
+  useEffect(() => () => clearTimeout(closeAnimationTimerRef.current), []);
+
   useEffect(() => {
     if (suspendResults) {
       saveResultsScroll();
@@ -318,6 +353,12 @@ export function CommandPalette({
   const mode = listMode(state.panel, showResults, query, browseFilters);
 
   useEffect(() => {
+    if (!open) return;
+    clearTimeout(closeAnimationTimerRef.current);
+    setClosingSnapshot(null);
+  }, [open]);
+
+  useEffect(() => {
     if (!open) setBrowseFilters(false);
   }, [open]);
 
@@ -330,7 +371,17 @@ export function CommandPalette({
     onOpenChange?.(true);
   }
 
+  function beginCloseAnimation() {
+    if (!mode) return;
+    setClosingSnapshot({ mode, items: [...items] });
+    clearTimeout(closeAnimationTimerRef.current);
+    closeAnimationTimerRef.current = setTimeout(() => {
+      setClosingSnapshot(null);
+    }, PANEL_TRANSITION_MS);
+  }
+
   function closePanel() {
+    beginCloseAnimation();
     dispatch({ type: "close" });
     onOpenChange?.(false);
   }
@@ -355,16 +406,22 @@ export function CommandPalette({
     [openCategories, query, chips, mode],
   );
 
+  const categoryItems: Item[] = hideCategoryList
+    ? []
+    : visibleCategories.map((category) => ({ kind: "category" as const, category }));
+
   const items: Item[] =
     mode === "categories"
       ? query.trim()
         ? [
             ...valueSuggestions,
-            ...visibleCategories.map((category) => ({ kind: "category" as const, category })),
+            ...categoryItems,
             ...visibleActions.map((action) => ({ kind: "action" as const, action })),
           ]
         : [
-            ...openCategories.map((category) => ({ kind: "category" as const, category })),
+            ...(hideCategoryList
+              ? []
+              : openCategories.map((category) => ({ kind: "category" as const, category }))),
             ...categoryActions.map((action) => ({ kind: "action" as const, action })),
           ]
       : mode === "values" && activeCategory
@@ -402,7 +459,9 @@ export function CommandPalette({
   useEffect(() => {
     if (!isControlled) return;
     if (openProp && state.panel === "closed") dispatch({ type: "open" });
-    else if (!openProp && state.panel !== "closed") dispatch({ type: "close" });
+    else if (!openProp && state.panel !== "closed") closePanel();
+    // closePanel is stable enough here — only runs on controlled openProp transitions.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isControlled, openProp, state.panel]);
 
   // Global F shortcut — focus the palette unless the user is typing elsewhere.
@@ -465,9 +524,10 @@ export function CommandPalette({
       onQueryChange("");
       dispatch({ type: "drill", categoryId: item.category.id });
     } else if (item.kind === "action") {
+      if (item.action.disabled) return;
       onQueryChange("");
       setBrowseFilters(false);
-      closePanel();
+      if (!item.action.keepPanelOpen) closePanel();
       item.action.onSelect();
     } else if (item.kind === "chipSuggestion") {
       onAddChip(item.category.id, item.option);
@@ -540,12 +600,16 @@ export function CommandPalette({
     inputRef.current?.focus();
   }
 
-  const showAddMore = chips.length > 0 && state.panel !== "values";
+  const showAddMore = chips.length > 0 && state.panel !== "values" && !hideCategoryList;
   const drilling = state.panel === "values" && activeCategory != null;
   const effectivePlaceholder = showAddMore ? "Add more filters" : placeholder;
   const valueInputPlaceholder = activeCategory
     ? (whisperForActiveItem(items[displayIndex]) ?? `Filter ${activeCategory.label}…`)
     : undefined;
+
+  const panelClosing = closingSnapshot != null;
+  const renderMode = open ? mode : (closingSnapshot?.mode ?? null);
+  const renderItems = open ? items : (closingSnapshot?.items ?? []);
 
   const comboboxProps = {
     role: "combobox" as const,
@@ -565,6 +629,7 @@ export function CommandPalette({
       <div
         className={cn(
           "relative overflow-hidden border border-border shadow-lg shadow-black/25",
+          "transition-[border-radius] duration-200 ease-out motion-reduce:transition-none",
           open ? "rounded-[16px]" : "rounded-[1.75rem]",
         )}
       >
@@ -693,41 +758,53 @@ export function CommandPalette({
           inert={open ? undefined : true}
           aria-hidden={!open}
         >
-          <div className="min-h-0 overflow-hidden">
+          <div className="flex min-h-0 flex-col overflow-hidden">
             <div
               ref={scrollRef}
               className={cn(
-                "max-h-[560px] touch-pan-y overscroll-contain overflow-y-auto px-1.5 tracking-body [overflow-anchor:none]",
-                mode === "results" && resultsHeader != null ? "pb-1.5" : "py-1.5",
+                "max-h-[560px] min-h-0 touch-pan-y overscroll-contain overflow-y-auto px-1.5 tracking-body [overflow-anchor:none]",
+                renderMode === "results" && resultsHeader != null ? "pb-1.5" : "py-1.5",
+                panelFooter != null && "pb-0",
               )}
               onScroll={handleListScroll}
             >
-              {mode === "results" && resultsHeader != null && (
+              {renderMode === "results" && resultsHeader != null && (
                 <div className="bg-card/35 sticky top-0 z-10 -mx-1.5 border-b border-border/40 px-3 py-2 backdrop-blur-xl">
                   {resultsHeader}
                 </div>
               )}
-              {open && mode === "results" && results.length === 0 ? (
+              {renderMode !== "results" && panelHeader != null && (
+                <div
+                  className={
+                    plainPanelHeader
+                      ? "px-3 pb-2"
+                      : "bg-card/35 sticky top-0 z-10 -mx-1.5 border-b border-border/40 px-3 py-2 backdrop-blur-xl"
+                  }
+                >
+                  {panelHeader}
+                </div>
+              )}
+              {open && renderMode === "results" && results.length === 0 ? (
                 <div className="text-muted-foreground px-3 py-6 text-center text-base tracking-body">
                   {resultsEmpty ?? "No matches"}
                 </div>
-              ) : open && items.length === 0 ? (
+              ) : open && renderItems.length === 0 ? (
                 <div className="text-muted-foreground px-3 py-6 text-center text-xs tracking-body">
                   No matches
                 </div>
-              ) : items.length > 0 ? (
+              ) : renderItems.length > 0 ? (
                 <ul
                   role="listbox"
                   id={listId}
                   key={
-                    mode === "results"
+                    renderMode === "results"
                       ? results.map((result) => result.id).join("\u0000")
-                      : mode
+                      : renderMode
                   }
                   className="flex flex-col gap-0.5"
                   onMouseLeave={() => setHoverIndex(-1)}
                 >
-                  {items.map((item, i) => {
+                  {renderItems.map((item, i) => {
                     const selected = displayIndex >= 0 && i === displayIndex;
                     const showEnterHint = keyboardFocus && i === activeIndex;
                     return (
@@ -754,11 +831,31 @@ export function CommandPalette({
                           if (activeIndex !== i) dispatch({ type: "setActive", index: i });
                         }}
                         onClick={() => selectItem(item)}
+                        aria-disabled={item.kind === "action" && item.action.disabled ? true : undefined}
                         className={cn(
                           "flex cursor-pointer items-center justify-between gap-3 rounded-lg px-3 py-1.5",
                           selected && "bg-white/[0.08]",
                           item.kind === "action" &&
-                            "mt-1 justify-center bg-white/[0.04] py-2 hover:bg-white/[0.08]",
+                            "mt-1 justify-center py-2",
+                          item.kind === "action" &&
+                            (item.action.variant === "primary"
+                              ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                              : "bg-white/[0.04] hover:bg-white/[0.08]"),
+                          item.kind === "action" &&
+                            selected &&
+                            item.action.variant === "primary" &&
+                            "bg-primary/90 ring-1 ring-primary-foreground/20",
+                          item.kind === "action" &&
+                            item.action.disabled &&
+                            "cursor-not-allowed opacity-45",
+                          item.kind === "action" &&
+                            item.action.disabled &&
+                            item.action.variant === "primary" &&
+                            "hover:bg-primary",
+                          item.kind === "action" &&
+                            item.action.disabled &&
+                            item.action.variant !== "primary" &&
+                            "hover:bg-white/[0.04]",
                           item.kind === "result" &&
                             "p-0 [contain-intrinsic-size:auto_3.5rem] [content-visibility:auto] [&>*]:hover:bg-transparent [&>*]:focus-visible:bg-transparent",
                         )}
@@ -788,11 +885,26 @@ export function CommandPalette({
                         ) : item.kind === "action" ? (
                           <span className="flex items-center gap-2 text-xs font-medium">
                             {item.action.icon}
-                            <span className="text-white">{item.action.label}</span>
+                            <span
+                              className={
+                                item.action.variant === "primary" ? undefined : "text-white"
+                              }
+                            >
+                              {item.action.label}
+                            </span>
                             {item.action.hint != null && (
-                              <span className="text-muted-foreground">{item.action.hint}</span>
+                              <span
+                                className={
+                                  item.action.variant === "primary"
+                                    ? "text-primary-foreground/70"
+                                    : "text-muted-foreground"
+                                }
+                              >
+                                {item.action.hint}
+                              </span>
                             )}
-                            {!item.action.hideKeyboardHint &&
+                            {!item.action.disabled &&
+                              !item.action.hideKeyboardHint &&
                               (showEnterHint ? (
                                 <Kbd>
                                   Enter
@@ -872,12 +984,17 @@ export function CommandPalette({
                   })}
                 </ul>
               ) : null}
-              {mode === "results" && resultsFooter != null && (
+              {renderMode === "results" && resultsFooter != null && (
                 <div className="text-muted-foreground px-3 py-2 text-center text-base tracking-body">
                   {resultsFooter}
                 </div>
               )}
             </div>
+            {panelFooter != null && (open || panelClosing) && (
+              <div className="border-t border-border/40 bg-card/35 shrink-0 backdrop-blur-xl">
+                {panelFooter}
+              </div>
+            )}
           </div>
         </div>
         </div>
