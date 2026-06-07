@@ -128,6 +128,12 @@ export interface WeaponTypeRef {
   icon?: string;
 }
 
+export interface AmmoTypeRef {
+  name: string;
+  /** Bungie icon path from DestinyIconDefinition; prefix with https://www.bungie.net to render. */
+  icon?: string;
+}
+
 export interface WeaponIndex {
   /** Bungie manifest version this index was built from. */
   version: string;
@@ -141,6 +147,8 @@ export interface WeaponIndex {
   damageTypes: DamageTypeRef[];
   /** Weapon type catalog from DestinyItemCategoryDefinition (type filter icons). */
   weaponTypes?: WeaponTypeRef[];
+  /** Ammo type catalog from DestinyIconDefinition HUD icons (Primary / Special / Heavy). */
+  ammoTypes?: AmmoTypeRef[];
 }
 
 export interface WeaponDetailIndex {

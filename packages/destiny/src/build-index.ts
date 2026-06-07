@@ -1,9 +1,10 @@
 import type { DestinyInventoryItemDefinition } from "bungie-api-ts/destiny2";
 
-import type { ManifestDefs } from "./manifest";
+import type { DestinyIconDefinitionEntry, ManifestDefs } from "./manifest";
 import { internWeaponCatalog } from "./intern-weapons";
 import { GENERIC_WEAPON_TYPE_ICONS } from "./weapon-type-icon-paths";
 import type {
+  AmmoTypeRef,
   DamageTypeRef,
   PerkColumn,
   PerkRef,
@@ -178,6 +179,26 @@ export function buildWeaponTypeCatalog(defs: ManifestDefs): WeaponTypeRef[] {
   return refs.sort((a, b) => a.name.localeCompare(b.name));
 }
 
+const AMMO_TYPE_ORDER = ["Primary", "Special", "Heavy"] as const;
+
+/** Build the ammo-type catalog from DestinyIconDefinition HUD icons. */
+export function buildAmmoTypeCatalog(
+  icons: Record<string, DestinyIconDefinitionEntry>,
+): AmmoTypeRef[] {
+  const bySlug = new Map<string, string>();
+  for (const icon of Object.values(icons)) {
+    if (icon.redacted) continue;
+    const foreground = icon.foreground ?? "";
+    const match = foreground.match(/order_icon_ammo_(primary|special|heavy)/);
+    if (match) bySlug.set(match[1]!, foreground);
+  }
+
+  return AMMO_TYPE_ORDER.flatMap((name) => {
+    const icon = bySlug.get(name.toLowerCase());
+    return icon ? [{ name, icon }] : [];
+  });
+}
+
 /** Build the damage-type catalog (Solar, Arc, Void, …) for element icons. */
 export function buildDamageTypeCatalog(defs: ManifestDefs): DamageTypeRef[] {
   const damageTypes: DamageTypeRef[] = [];
@@ -224,6 +245,7 @@ export function buildStatGroupCatalog(
 export function buildWeaponIndex(
   defs: ManifestDefs,
   version: string,
+  ammoTypes: AmmoTypeRef[] = [],
 ): { index: WeaponIndex; detailIndex: WeaponDetailIndex } {
   const items = defs.DestinyInventoryItemDefinition;
   const plugSets = defs.DestinyPlugSetDefinition;
@@ -340,6 +362,7 @@ export function buildWeaponIndex(
       ...index,
       damageTypes: buildDamageTypeCatalog(defs),
       weaponTypes: buildWeaponTypeCatalog(defs),
+      ammoTypes,
     },
     detailIndex: {
       ...detailIndex,

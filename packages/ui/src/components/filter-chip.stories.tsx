@@ -45,6 +45,10 @@ export const TraitTone: Story = {
   args: { tone: "trait", label: "Trait 1", value: "Bait and Switch" },
 };
 
+export const AmmoPrimaryTone: Story = {
+  args: { tone: "ammo-primary", label: "Ammo type", value: "Primary" },
+};
+
 export const AmmoSpecialTone: Story = {
   args: { tone: "ammo-special", label: "Ammo type", value: "Special" },
 };

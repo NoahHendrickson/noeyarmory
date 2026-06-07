@@ -11,6 +11,7 @@ export type {
   WeaponDetailIndex,
   DamageTypeRef,
   WeaponTypeRef,
+  AmmoTypeRef,
   ArmorDoc,
   ArmorIndex,
   ArmorArchetypeRef,
@@ -93,6 +94,7 @@ export {
 export { sampleWeapons } from "./fixtures/sample-weapons";
 export { sampleDamageTypes } from "./fixtures/sample-damage-types";
 export { sampleWeaponTypes } from "./fixtures/sample-weapon-types";
+export { sampleAmmoTypes } from "./fixtures/sample-ammo-types";
 export { sampleArmor } from "./fixtures/sample-armor";
 export {
   computeWeaponStats,

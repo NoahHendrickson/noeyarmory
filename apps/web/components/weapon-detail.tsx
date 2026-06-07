@@ -10,6 +10,7 @@ import { useWeaponBuild } from "../lib/use-weapon-build";
 import { useWeaponDps } from "../lib/use-weapon-dps";
 import { useStatGroups, useWeaponDetail, useWeapons } from "../lib/weapons-context";
 import { bungieIcon } from "../lib/bungie";
+import { AmmoIcon } from "./ammo-icon";
 import { CraftableBadge } from "./craftable-badge";
 import { ElementIcon } from "./element-icon";
 import { PerkColumnView } from "./perk-column";
@@ -72,13 +73,17 @@ export function WeaponDetailView({
   /** Enable perk selection for stat preview. */
   interactive?: boolean;
 }) {
-  const { damageTypes } = useWeapons();
+  const { damageTypes, ammoTypes } = useWeapons();
   const statGroups = useStatGroups();
   const build = useWeaponBuild(weapon);
 
   const elementIconPath = useMemo(
     () => damageTypes.find((damageType) => damageType.name === weapon.element)?.icon,
     [damageTypes, weapon.element],
+  );
+  const ammoIconPath = useMemo(
+    () => ammoTypes.find((ammoType) => ammoType.name === weapon.ammo)?.icon,
+    [ammoTypes, weapon.ammo],
   );
   const highlightedPerks = useMemo(
     () =>
@@ -121,8 +126,11 @@ export function WeaponDetailView({
               <span>{weapon.type}</span>
               <span>{weapon.rarity}</span>
             </div>
-            <div className="mt-2 flex flex-wrap gap-1">
-              <Badge variant="outline">{weapon.ammo}</Badge>
+            <div className="mt-2 flex flex-wrap items-center gap-1">
+              <span className="inline-flex items-center" title={`${weapon.ammo} ammo`}>
+                <AmmoIcon ammo={weapon.ammo} iconPath={ammoIconPath} className="size-8" />
+                <span className="sr-only">{weapon.ammo} ammo</span>
+              </span>
               {weapon.frame && <Badge variant="secondary">{weapon.frame}</Badge>}
               {weapon.craftable && <CraftableBadge />}
               {weapon.adept && <Badge>Adept</Badge>}

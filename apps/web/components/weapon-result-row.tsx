@@ -6,6 +6,13 @@ import { ElementIcon } from "./element-icon";
 import { WeaponDpsLabel } from "./weapon-dps-label";
 import { bungieIcon } from "../lib/bungie";
 
+/** e.g. "Pinpoint Slug Shotgun" from frame "Pinpoint Slug Frame" + type "Shotgun". */
+function weaponTypeLabel(type: string, frame?: string): string {
+  if (!frame) return type;
+  const archetype = frame.replace(/ Frame$/, "");
+  return `${archetype} ${type}`;
+}
+
 /** Subset a result row needs (works for browse summaries and owned weapons). */
 export type WeaponResultData = Pick<
   WeaponSummary,
@@ -72,7 +79,7 @@ export function WeaponResultRow({
         <span className="inline-flex items-center gap-2">
           <ElementIcon element={weapon.element} iconPath={elementIconPath} colored />
           {weapon.craftable ? <CraftableBadge className="mx-0.5" /> : null}
-          {weapon.type}
+          {weaponTypeLabel(weapon.type, weapon.frame)}
         </span>
       }
       trailing={dps != null ? <WeaponDpsLabel entry={dps} /> : undefined}

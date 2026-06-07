@@ -60,3 +60,30 @@ export async function downloadManifest(
   });
   return { version: manifest.Response.version, defs };
 }
+
+/** Mobile-manifest icon entry (DestinyIconDefinition). */
+export interface DestinyIconDefinitionEntry {
+  hash: number;
+  foreground?: string;
+  redacted?: boolean;
+}
+
+/** Download DestinyIconDefinition — used for HUD ammo-type icons. */
+export async function downloadDestinyIconDefinitions(
+  apiKey: string,
+): Promise<Record<string, DestinyIconDefinitionEntry>> {
+  const http = createHttpClient(apiKey);
+  const manifest = await getDestinyManifest(http);
+  const path =
+    manifest.Response.jsonWorldComponentContentPaths.en?.DestinyIconDefinition;
+  if (!path) {
+    throw new Error("DestinyIconDefinition missing from manifest paths");
+  }
+  const res = await fetch(`https://www.bungie.net${path}`, {
+    headers: { "X-API-Key": apiKey },
+  });
+  if (!res.ok) {
+    throw new Error(`DestinyIconDefinition fetch → ${res.status} ${res.statusText}`);
+  }
+  return (await res.json()) as Record<string, DestinyIconDefinitionEntry>;
+}

@@ -175,6 +175,7 @@ export function internWeaponCatalog(
       weaponsByPerkName: buildWeaponsByPerkNameRecord(summaries),
       damageTypes: [],
       weaponTypes: [],
+      ammoTypes: [],
     },
     detailIndex: { version, details },
   };
@@ -187,6 +188,7 @@ export function normalizeWeaponIndex(raw: {
   weapons: (WeaponSummary | WeaponDoc)[];
   damageTypes?: WeaponIndex["damageTypes"];
   weaponTypes?: WeaponIndex["weaponTypes"];
+  ammoTypes?: WeaponIndex["ammoTypes"];
   perks?: PerkRef[];
   weaponsByPerkName?: Record<string, number[]>;
 }): WeaponIndex {
@@ -199,6 +201,7 @@ export function normalizeWeaponIndex(raw: {
       weaponsByPerkName: raw.weaponsByPerkName,
       damageTypes: raw.damageTypes ?? [],
       weaponTypes: raw.weaponTypes ?? [],
+      ammoTypes: raw.ammoTypes ?? [],
     };
   }
 
@@ -212,6 +215,7 @@ export function normalizeWeaponIndex(raw: {
       weaponsByPerkName: {},
       damageTypes: raw.damageTypes ?? [],
       weaponTypes: raw.weaponTypes ?? [],
+      ammoTypes: raw.ammoTypes ?? [],
     };
   }
 
@@ -220,6 +224,7 @@ export function normalizeWeaponIndex(raw: {
     ...index,
     damageTypes: raw.damageTypes ?? [],
     weaponTypes: raw.weaponTypes ?? [],
+    ammoTypes: raw.ammoTypes ?? [],
   };
 }
 

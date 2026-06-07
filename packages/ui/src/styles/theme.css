@@ -59,9 +59,11 @@
   /* Filter chip tones (Figma node 131:3244) */
   --filter-chip-trait: rgba(57, 148, 229, 0.7);
   --filter-chip-trait-foreground: #ffffff;
-  --filter-chip-ammo-special: rgba(88, 194, 108, 0.7);
+  --filter-chip-ammo-primary: rgba(255, 255, 255, 0.1);
+  --filter-chip-ammo-primary-foreground: #ffffff;
+  --filter-chip-ammo-special: rgba(88, 194, 108, 0.15);
   --filter-chip-ammo-special-foreground: #ffffff;
-  --filter-chip-ammo-heavy: #7d58c2;
+  --filter-chip-ammo-heavy: rgba(125, 88, 194, 0.15);
   --filter-chip-ammo-heavy-foreground: #ffffff;
 
   /* Element chip backgrounds — in-game damage type hues */
@@ -102,6 +104,8 @@
   --color-chart-5: var(--chart-5);
   --color-filter-chip-trait: var(--filter-chip-trait);
   --color-filter-chip-trait-foreground: var(--filter-chip-trait-foreground);
+  --color-filter-chip-ammo-primary: var(--filter-chip-ammo-primary);
+  --color-filter-chip-ammo-primary-foreground: var(--filter-chip-ammo-primary-foreground);
   --color-filter-chip-ammo-special: var(--filter-chip-ammo-special);
   --color-filter-chip-ammo-special-foreground: var(--filter-chip-ammo-special-foreground);
   --color-filter-chip-ammo-heavy: var(--filter-chip-ammo-heavy);

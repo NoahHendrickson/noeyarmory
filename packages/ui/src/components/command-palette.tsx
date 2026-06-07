@@ -749,7 +749,10 @@ export function CommandPalette({
       : placeholder;
   const inputCharCount =
     inputValue.length > 0 ? inputValue.length : effectivePlaceholder.length;
-  const inputSize = Math.max(12, Math.min(24, inputCharCount + 1));
+  const inputSize =
+    inputValue.length > 0
+      ? Math.max(12, Math.min(24, inputCharCount + 1))
+      : Math.max(12, inputCharCount + 1);
   const valueInputPlaceholder = activeCategory
     ? (whisperForActiveItem(items[displayIndex]) ?? `Filter ${activeCategory.label}…`)
     : undefined;

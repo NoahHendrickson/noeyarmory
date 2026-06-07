@@ -2,6 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 
 import { sampleArmor } from "./fixtures/sample-armor";
+import { sampleAmmoTypes } from "./fixtures/sample-ammo-types";
 import { sampleDamageTypes } from "./fixtures/sample-damage-types";
 import { sampleWeaponTypes } from "./fixtures/sample-weapon-types";
 import { sampleWeapons } from "./fixtures/sample-weapons";
@@ -11,7 +12,12 @@ import { sampleStatGroup } from "./weapon-stats";
 
 export function buildSampleWeaponIndex(): WeaponIndex {
   const { index } = internWeaponCatalog(sampleWeapons, "sample");
-  return { ...index, damageTypes: sampleDamageTypes, weaponTypes: sampleWeaponTypes };
+  return {
+    ...index,
+    damageTypes: sampleDamageTypes,
+    weaponTypes: sampleWeaponTypes,
+    ammoTypes: sampleAmmoTypes,
+  };
 }
 
 export function buildSampleArmorIndex(): ArmorIndex {
@@ -35,6 +41,7 @@ export function writeSampleIndexes(
     ...index,
     damageTypes: sampleDamageTypes,
     weaponTypes: sampleWeaponTypes,
+    ammoTypes: sampleAmmoTypes,
   };
   const detailWithStatGroups = {
     ...detailIndex,

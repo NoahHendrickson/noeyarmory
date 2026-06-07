@@ -24,7 +24,7 @@ function WeaponDpsAttribution() {
         rel="noopener noreferrer"
         className="text-sky-400/90 hover:underline"
       >
-        Aegis Relics DPS sheet
+        TheAegisRelic&apos;s DPS sheet
       </a>
     </p>
   );

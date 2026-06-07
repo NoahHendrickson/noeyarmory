@@ -1,12 +1,14 @@
 import { createElement } from "react";
 import type { FilterChipElement, FilterChipProps, FilterChipTone } from "@repo/ui";
 
+import { AmmoIcon } from "../components/ammo-icon";
 import { ElementIcon, isElementName } from "../components/element-icon";
 import { bungieIcon } from "./bungie";
 
 export interface FilterChipIconMaps {
   elementIcons?: ReadonlyMap<string, string | undefined>;
   weaponTypeIcons?: ReadonlyMap<string, string | undefined>;
+  ammoIcons?: ReadonlyMap<string, string | undefined>;
 }
 
 export function getFilterChipAppearance(
@@ -19,9 +21,22 @@ export function getFilterChipAppearance(
   }
 
   if (categoryId === "ammo") {
-    if (value === "Special") return { tone: "ammo-special" satisfies FilterChipTone };
-    if (value === "Heavy") return { tone: "ammo-heavy" satisfies FilterChipTone };
-    return { tone: "default" satisfies FilterChipTone };
+    const tone =
+      value === "Special"
+        ? ("ammo-special" satisfies FilterChipTone)
+        : value === "Heavy"
+          ? ("ammo-heavy" satisfies FilterChipTone)
+          : ("ammo-primary" satisfies FilterChipTone);
+    return {
+      tone,
+      hideLabel: true,
+      iconOnly: true,
+      valueIcon: createElement(AmmoIcon, {
+        ammo: value,
+        iconPath: iconMaps?.ammoIcons?.get(value),
+        className: "size-6",
+      }),
+    };
   }
 
   if (categoryId === "craftable" && value === "Yes") {

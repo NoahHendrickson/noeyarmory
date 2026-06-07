@@ -1,7 +1,12 @@
 import type { DestinyInventoryItemDefinition } from "bungie-api-ts/destiny2";
 import { describe, expect, it } from "vitest";
 
-import { buildColumnPerks, buildDamageTypeCatalog, buildWeaponTypeCatalog } from "./build-index";
+import {
+  buildAmmoTypeCatalog,
+  buildColumnPerks,
+  buildDamageTypeCatalog,
+  buildWeaponTypeCatalog,
+} from "./build-index";
 import type { ManifestDefs } from "./manifest";
 function traitPlug(
   hash: number,
@@ -16,6 +21,49 @@ function traitPlug(
     plug: { plugCategoryIdentifier: "frames" },
   } as DestinyInventoryItemDefinition;
 }
+
+describe("buildAmmoTypeCatalog", () => {
+  it("maps DestinyIconDefinition HUD ammo icons to Primary / Special / Heavy", () => {
+    const icons = {
+      1: {
+        hash: 1,
+        foreground: "/common/destiny2_content/icons/30436order_icon_ammo_primary.v2.png",
+      },
+      2: {
+        hash: 2,
+        foreground: "/common/destiny2_content/icons/30435order_icon_ammo_special.v2.png",
+      },
+      3: {
+        hash: 3,
+        foreground: "/common/destiny2_content/icons/30434order_icon_ammo_heavy.v2.png",
+      },
+      4: {
+        hash: 4,
+        redacted: true,
+        foreground: "/common/destiny2_content/icons/30434order_icon_ammo_heavy.v2.png",
+      },
+      5: {
+        hash: 5,
+        foreground: "/common/destiny2_content/icons/25544plugs_armor_mods_head_ammo_drop_special_000_000.v2.png",
+      },
+    };
+
+    expect(buildAmmoTypeCatalog(icons)).toEqual([
+      {
+        name: "Primary",
+        icon: "/common/destiny2_content/icons/30436order_icon_ammo_primary.v2.png",
+      },
+      {
+        name: "Special",
+        icon: "/common/destiny2_content/icons/30435order_icon_ammo_special.v2.png",
+      },
+      {
+        name: "Heavy",
+        icon: "/common/destiny2_content/icons/30434order_icon_ammo_heavy.v2.png",
+      },
+    ]);
+  });
+});
 
 describe("buildDamageTypeCatalog", () => {
   it("collects display names and icons from DestinyDamageTypeDefinition", () => {

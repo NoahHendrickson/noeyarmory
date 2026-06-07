@@ -106,6 +106,7 @@ function storyChipAppearance(categoryId: string, value: string) {
   if (categoryId === "ammo") {
     if (value === "Special") return { tone: "ammo-special" as FilterChipTone };
     if (value === "Heavy") return { tone: "ammo-heavy" as FilterChipTone };
+    if (value === "Primary") return { tone: "ammo-primary" as FilterChipTone };
   }
   if (categoryId === "element") {
     return {

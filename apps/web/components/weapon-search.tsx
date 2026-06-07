@@ -265,7 +265,7 @@ export function WeaponSearch({
   signedIn?: boolean;
   initialMode?: Mode;
 }) {
-  const { weapons, perks, damageTypes, weaponTypes, isSample, byHash } = useWeapons();
+  const { weapons, perks, damageTypes, weaponTypes, ammoTypes, isSample, byHash } = useWeapons();
   const { dpsByName } = useWeaponDps();
   const { filters: customFilters, createFilter } = useCustomWeaponFilters();
   const { recordSearch, getRecentForMode, findById } = useRecentSearches();
@@ -305,6 +305,11 @@ export function WeaponSearch({
   const typeIconMap = useMemo(
     () => new Map(weaponTypes.map((t) => [t.name, t.icon] as const)),
     [weaponTypes],
+  );
+
+  const ammoIconMap = useMemo(
+    () => new Map(ammoTypes.map((ammoType) => [ammoType.name, ammoType.icon] as const)),
+    [ammoTypes],
   );
 
   const weaponColumnPerks = useMemo(() => collectColumnPerks(weapons, perks), [weapons, perks]);
@@ -785,6 +790,7 @@ export function WeaponSearch({
               return getFilterChipAppearance(chip.categoryId, chip.value, {
                 elementIcons: elementIconMap,
                 weaponTypeIcons: typeIconMap,
+                ammoIcons: ammoIconMap,
               });
             }}
             hideCategoryList={composingCustomFilter}

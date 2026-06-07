@@ -4,8 +4,8 @@ import { fileURLToPath } from "node:url";
 import { config as loadEnv } from "dotenv";
 
 import { buildArmorIndex } from "./build-armor-index";
-import { buildWeaponIndex } from "./build-index";
-import { downloadManifest } from "./manifest";
+import { buildAmmoTypeCatalog, buildWeaponIndex } from "./build-index";
+import { downloadDestinyIconDefinitions, downloadManifest } from "./manifest";
 import { writeSampleIndexes } from "./write-sample-indexes";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -28,8 +28,11 @@ async function main(): Promise<void> {
   }
   console.log("Downloading Destiny manifest (this can take a moment)…");
   const { version, defs } = await downloadManifest(apiKey);
-  console.log(`Manifest ${version}. Flattening weapons…`);
-  const { index, detailIndex } = buildWeaponIndex(defs, version);
+  console.log(`Manifest ${version}. Loading ammo-type icons…`);
+  const iconDefs = await downloadDestinyIconDefinitions(apiKey);
+  const ammoTypes = buildAmmoTypeCatalog(iconDefs);
+  console.log("Flattening weapons…");
+  const { index, detailIndex } = buildWeaponIndex(defs, version, ammoTypes);
   mkdirSync(dirname(weaponsFile), { recursive: true });
   writeFileSync(weaponsFile, JSON.stringify(index));
   writeFileSync(weaponsDetailFile, JSON.stringify(detailIndex));

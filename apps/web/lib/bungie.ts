@@ -22,6 +22,13 @@ export const RARITY_RING: Record<string, string> = {
   Common: "ring-zinc-400/50",
 };
 
+/** Tint color per ammo type (matches in-game HUD). */
+export const AMMO_COLOR: Record<string, string> = {
+  Primary: "text-white",
+  Special: "text-[#58c26c]",
+  Heavy: "text-[#7d58c2]",
+};
+
 /** Text color per damage element. */
 export const ELEMENT_COLOR: Record<string, string> = {
   Solar: "text-orange-400",

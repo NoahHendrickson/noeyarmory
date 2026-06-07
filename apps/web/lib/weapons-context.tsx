@@ -5,9 +5,11 @@ import {
   buildWeaponIndexLookups,
   expandWeapon,
   internWeaponCatalog,
+  sampleAmmoTypes,
   sampleDamageTypes,
   sampleStatGroup,
   sampleWeaponTypes,
+  type AmmoTypeRef,
   type DamageTypeRef,
   type WeaponTypeRef,
   type PerkRef,
@@ -33,6 +35,7 @@ export interface WeaponsState {
   perks: PerkRef[];
   damageTypes: DamageTypeRef[];
   weaponTypes: WeaponTypeRef[];
+  ammoTypes: AmmoTypeRef[];
   byHash: Map<number, WeaponSummary>;
   perkMap: WeaponIndexLookups["perkMap"];
   weaponsByPerkName: WeaponIndexLookups["weaponsByPerkName"];
@@ -47,6 +50,7 @@ const defaultState: WeaponsState = {
   perks: [],
   damageTypes: sampleDamageTypes,
   weaponTypes: sampleWeaponTypes,
+  ammoTypes: sampleAmmoTypes,
   byHash: new Map(),
   perkMap: new Map(),
   weaponsByPerkName: new Map(),
@@ -105,6 +109,7 @@ function lookupsToState(
     perks: lookups.perks,
     damageTypes: lookups.damageTypes.length > 0 ? lookups.damageTypes : sampleDamageTypes,
     weaponTypes: lookups.weaponTypes.length > 0 ? lookups.weaponTypes : sampleWeaponTypes,
+    ammoTypes: lookups.ammoTypes.length > 0 ? lookups.ammoTypes : sampleAmmoTypes,
     byHash: lookups.byHash,
     perkMap: lookups.perkMap,
     weaponsByPerkName: lookups.weaponsByPerkName,
@@ -139,6 +144,7 @@ async function fetchWeaponIndex(): Promise<{ lookups: WeaponIndexLookups; isSamp
           ...index,
           damageTypes: sampleDamageTypes,
           weaponTypes: sampleWeaponTypes,
+          ammoTypes: sampleAmmoTypes,
         });
         moduleCache = lookups;
         isSampleCache = true;

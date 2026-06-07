@@ -12,6 +12,8 @@ const filterChipVariants = cva(filterChipBase, {
       tone: {
         default: "text-card rounded-full bg-white/70 pr-0 pl-2.5",
         trait: "rounded-full bg-filter-chip-trait pr-0 pl-2.5 text-filter-chip-trait-foreground",
+        "ammo-primary":
+          "rounded-full bg-filter-chip-ammo-primary pr-0 pl-2.5 text-filter-chip-ammo-primary-foreground",
         "ammo-special":
           "rounded-full bg-filter-chip-ammo-special pr-0 pl-2.5 text-filter-chip-ammo-special-foreground",
         "ammo-heavy":
@@ -38,6 +40,7 @@ const removeButtonVariants = cva(
       tone: {
         default: "text-card/60 hover:text-card hover:bg-black/10",
         trait: "text-white/60 hover:bg-white/10 hover:text-white",
+        "ammo-primary": "text-white/60 hover:bg-white/10 hover:text-white",
         "ammo-special": "text-white/60 hover:bg-white/10 hover:text-white",
         "ammo-heavy": "text-white/60 hover:bg-white/10 hover:text-white",
         element: "text-white/60 hover:bg-white/10 hover:text-white",
@@ -119,7 +122,7 @@ function FilterChip({
           ? cn(filterChipBase, "rounded-full bg-white/[0.08] pl-2.5 pr-2 text-white/70")
           : filterChipVariants({ tone, element: tone === "element" ? element : undefined }),
         hasInlineInput && (onRemove ? "pr-0" : "pr-2.5"),
-        showIconOnly && "px-1.5",
+        showIconOnly && "gap-0 pl-1.5 pr-0",
         className,
       )}
       {...props}
@@ -143,7 +146,7 @@ function FilterChip({
           )}
         </>
       ) : showIconOnly ? (
-        <span className="flex size-3.5 items-center justify-center">{valueIcon}</span>
+        <span className="flex shrink-0 items-center">{valueIcon}</span>
       ) : (
         <span>
           {!hideLabel && `${label}: `}
