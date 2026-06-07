@@ -10,8 +10,12 @@ const REFERENCE_VIEWPORT_WIDTH = 1920;
 const BASE_DITHER_PIXEL_SIZE = 7;
 const MIN_DITHER_PIXEL_SIZE = 1;
 const MAX_DITHER_PIXEL_SIZE = 20;
+/** Finer grain on 2560×1440 panels (width-scaled default would be ~9). */
+const QHD_VIEWPORT_WIDTH = 2560;
+const QHD_DITHER_PIXEL_SIZE = 5;
 
 function ditherPixelSizeForWidth(width: number): number {
+  if (Math.abs(width - QHD_VIEWPORT_WIDTH) <= 40) return QHD_DITHER_PIXEL_SIZE;
   const scaled = Math.round((BASE_DITHER_PIXEL_SIZE * width) / REFERENCE_VIEWPORT_WIDTH);
   return Math.min(MAX_DITHER_PIXEL_SIZE, Math.max(MIN_DITHER_PIXEL_SIZE, scaled));
 }
