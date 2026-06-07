@@ -131,7 +131,7 @@ export function HomeSearch({
 
   useEffect(() => {
     if (mode !== "weapon" || weapons.length === 0) return;
-    let detailPreloadTimer: ReturnType<typeof window.setTimeout> | undefined;
+    let detailPreloadTimer: number | undefined;
     const cancelIdle = scheduleIdle(() => {
       void loadWeaponDetailModal();
       detailPreloadTimer = window.setTimeout(() => {
