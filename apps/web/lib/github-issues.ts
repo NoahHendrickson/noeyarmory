@@ -1,5 +1,8 @@
 import "server-only";
 
+/** Default target repo when GITHUB_REPO is unset (public; matches .env.example). */
+export const DEFAULT_GITHUB_REPO = "noahhendrickson/noeyarmory";
+
 export type FeedbackType = "bug" | "feature";
 
 export interface FeedbackMetadata {
@@ -19,16 +22,28 @@ export interface CreateFeedbackIssueResult {
   issueUrl: string;
 }
 
-export function isFeedbackConfigured(): boolean {
-  return Boolean(process.env.GITHUB_TOKEN?.trim() && process.env.GITHUB_REPO?.trim());
+export function getFeedbackRepo(): string {
+  return process.env.GITHUB_REPO?.trim() || DEFAULT_GITHUB_REPO;
 }
 
-function requireFeedbackEnv(name: "GITHUB_TOKEN" | "GITHUB_REPO"): string {
-  const value = process.env[name]?.trim();
+export function isFeedbackConfigured(): boolean {
+  return Boolean(process.env.GITHUB_TOKEN?.trim());
+}
+
+function requireFeedbackToken(): string {
+  const value = process.env.GITHUB_TOKEN?.trim();
   if (!value) {
-    throw new Error(`Missing ${name}. See docs/feedback-setup.md.`);
+    throw new Error("Missing GITHUB_TOKEN. See docs/feedback-setup.md.");
   }
   return value;
+}
+
+function parseFeedbackRepo(repo: string): { owner: string; name: string } {
+  const [owner, name] = repo.split("/");
+  if (!owner || !name) {
+    throw new Error("GITHUB_REPO must be in owner/repo format.");
+  }
+  return { owner, name };
 }
 
 function labelForType(type: FeedbackType): string {
@@ -57,15 +72,22 @@ interface GitHubIssueResponse {
   html_url: string;
 }
 
+/** Pre-filled GitHub "new issue" URL when server-side API submission is unavailable. */
+export function buildGitHubNewIssueUrl(input: CreateFeedbackIssueInput): string {
+  const { owner, name } = parseFeedbackRepo(getFeedbackRepo());
+  const params = new URLSearchParams({
+    title: input.title.trim(),
+    body: buildIssueBody(input.body, input.metadata),
+    labels: labelForType(input.type),
+  });
+  return `https://github.com/${owner}/${name}/issues/new?${params.toString()}`;
+}
+
 export async function createFeedbackIssue(
   input: CreateFeedbackIssueInput,
 ): Promise<CreateFeedbackIssueResult> {
-  const token = requireFeedbackEnv("GITHUB_TOKEN");
-  const repo = requireFeedbackEnv("GITHUB_REPO");
-  const [owner, name] = repo.split("/");
-  if (!owner || !name) {
-    throw new Error("GITHUB_REPO must be in owner/repo format.");
-  }
+  const token = requireFeedbackToken();
+  const { owner, name } = parseFeedbackRepo(getFeedbackRepo());
 
   const response = await fetch(`https://api.github.com/repos/${owner}/${name}/issues`, {
     method: "POST",

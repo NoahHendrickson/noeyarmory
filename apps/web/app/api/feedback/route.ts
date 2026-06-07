@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import {
+  buildGitHubNewIssueUrl,
   createFeedbackIssue,
   isFeedbackConfigured,
   type FeedbackType,
@@ -110,11 +111,17 @@ export async function POST(request: Request) {
     );
   }
 
+  const metadata = {
+    pageUrl: safePagePath(payload.pageUrl),
+    userAgent: asOptionalString(payload.userAgent, 512),
+  };
+
   if (!isFeedbackConfigured()) {
-    return NextResponse.json(
-      { ok: false, error: "Feedback is not configured on this deployment." },
-      { status: 503 },
-    );
+    return NextResponse.json({
+      ok: true,
+      manual: true,
+      issueUrl: buildGitHubNewIssueUrl({ type: payload.type, title, body, metadata }),
+    });
   }
 
   try {
@@ -122,10 +129,7 @@ export async function POST(request: Request) {
       type: payload.type,
       title,
       body,
-      metadata: {
-        pageUrl: safePagePath(payload.pageUrl),
-        userAgent: asOptionalString(payload.userAgent, 512),
-      },
+      metadata,
     });
     return NextResponse.json({ ok: true, issueUrl: issue.issueUrl });
   } catch (e) {

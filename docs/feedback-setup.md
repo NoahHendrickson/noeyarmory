@@ -48,10 +48,16 @@ Use the same repo or a dedicated feedback repo. Redeploy after adding vars.
 2. Submit a test bug and a test feature request.
 3. Confirm issues appear in GitHub with the correct labels and metadata (page URL, timestamp).
 
+## Without `GITHUB_TOKEN` (fallback)
+
+If `GITHUB_TOKEN` is not set, the feedback form still works: submit opens a pre-filled GitHub **new issue** page in a new tab. The user signs in on GitHub and clicks **Create** to finish. Set `GITHUB_TOKEN` on production when you want one-click issue creation without leaving the app.
+
+`GITHUB_REPO` defaults to `noahhendrickson/noeyarmory` when unset.
+
 ## Troubleshooting
 
 | Symptom | Fix |
 |---------|-----|
-| "Feedback is not configured" | Set `GITHUB_TOKEN` and `GITHUB_REPO` in `.env` and restart dev server |
+| Submit opens GitHub instead of creating an issue instantly | Set `GITHUB_TOKEN` in `.env` / Vercel and redeploy |
 | 403 from GitHub | Token lacks Issues write access on the repo, or repo name is wrong |
 | Issues created without labels | Create `bug` / `enhancement` labels on the repo, or set custom label env vars |
