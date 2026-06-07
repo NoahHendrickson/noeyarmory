@@ -21,19 +21,19 @@ const glassPanel =
 
 /** Weapon detail in a modal — the primary in-app path from a search result. */
 export function WeaponDetailModal({
-  open,
   weapon,
+  loading,
   highlightedBuildPerks,
   onClose,
 }: {
-  open: boolean;
   weapon: WeaponDoc | null;
+  loading: boolean;
   highlightedBuildPerks?: readonly string[];
   onClose: () => void;
 }) {
   return (
     <Dialog
-      open={open}
+      open={weapon != null || loading}
       onOpenChange={(open) => {
         if (!open) onClose();
       }}
@@ -60,9 +60,13 @@ export function WeaponDetailModal({
               linkPerks={false}
               highlightedBuildPerks={highlightedBuildPerks}
             />
-          ) : (
+          ) : loading ? (
             <div className="grid min-h-[22rem] place-items-center px-10 py-16">
               <p className="text-muted-foreground text-sm">Loading weapon…</p>
+            </div>
+          ) : (
+            <div className="grid min-h-[22rem] place-items-center px-10 py-16">
+              <p className="text-muted-foreground text-sm">Weapon not found.</p>
             </div>
           )}
         </DialogPopup>

@@ -30,6 +30,8 @@ import {
   type ReactNode,
 } from "react";
 
+import { scheduleIdle } from "./schedule-idle";
+
 export interface WeaponsState {
   weapons: WeaponSummary[];
   perks: PerkRef[];
@@ -43,7 +45,6 @@ export interface WeaponsState {
   isSample: boolean;
   version?: string;
   getWeaponDoc: (hash: number) => Promise<WeaponDoc | undefined>;
-  preloadWeaponDetails: () => Promise<void>;
 }
 
 const defaultState: WeaponsState = {
@@ -58,7 +59,6 @@ const defaultState: WeaponsState = {
   loading: true,
   isSample: false,
   getWeaponDoc: async () => undefined,
-  preloadWeaponDetails: async () => undefined,
 };
 
 const WeaponsContext = createContext<WeaponsState>(defaultState);
@@ -69,6 +69,8 @@ let statGroupsCache: Record<string, StatGroupRef> | undefined;
 let loadPromise: Promise<WeaponIndexLookups> | null = null;
 let detailLoadPromise: Promise<Map<number, WeaponDetailFields>> | null = null;
 let isSampleCache = false;
+
+const DETAIL_PRELOAD_DELAY_MS = 1500;
 
 function seedDetails(index: WeaponDetailIndex): void {
   detailCache = new Map(
@@ -110,11 +112,21 @@ async function loadWeaponDetails(): Promise<Map<number, WeaponDetailFields>> {
   return detailLoadPromise;
 }
 
+async function ensureDetailCache(): Promise<void> {
+  if (detailCache) return;
+
+  if (isSampleCache) {
+    await seedSampleDetails();
+    return;
+  }
+
+  await loadWeaponDetails();
+}
+
 function lookupsToState(
   lookups: WeaponIndexLookups,
   isSample: boolean,
   getWeaponDoc: WeaponsState["getWeaponDoc"],
-  preloadWeaponDetails: WeaponsState["preloadWeaponDetails"],
 ): WeaponsState {
   return {
     weapons: lookups.weapons,
@@ -129,7 +141,6 @@ function lookupsToState(
     isSample,
     version: lookups.version,
     getWeaponDoc,
-    preloadWeaponDetails,
   };
 }
 
@@ -173,52 +184,52 @@ async function fetchWeaponIndex(): Promise<{ lookups: WeaponIndexLookups; isSamp
 }
 
 export function WeaponsProvider({ children }: { children: ReactNode }) {
-  const preloadWeaponDetails = useCallback(async (): Promise<void> => {
-    if (!moduleCache) await fetchWeaponIndex();
-    if (detailCache) return;
-
-    if (isSampleCache) {
-      await seedSampleDetails();
-      return;
-    }
-
-    await loadWeaponDetails();
-  }, []);
-
   const getWeaponDoc = useCallback(async (hash: number): Promise<WeaponDoc | undefined> => {
     const lookups = moduleCache ?? (await fetchWeaponIndex()).lookups;
     const summary = lookups.byHash.get(hash);
     if (!summary) return undefined;
 
-    if (isSampleCache && !detailCache) {
-      await seedSampleDetails();
-    } else if (!detailCache) {
-      await loadWeaponDetails();
-    }
+    await ensureDetailCache();
 
     return expandWeapon(summary, detailCache?.get(hash), lookups.perks);
   }, []);
 
   const [state, setState] = useState<WeaponsState>(() =>
     moduleCache
-      ? lookupsToState(moduleCache, isSampleCache, getWeaponDoc, preloadWeaponDetails)
-      : { ...defaultState, getWeaponDoc, preloadWeaponDetails },
+      ? lookupsToState(moduleCache, isSampleCache, getWeaponDoc)
+      : { ...defaultState, getWeaponDoc },
   );
 
   useEffect(() => {
     if (moduleCache) {
-      setState(lookupsToState(moduleCache, isSampleCache, getWeaponDoc, preloadWeaponDetails));
+      setState(lookupsToState(moduleCache, isSampleCache, getWeaponDoc));
       return;
     }
 
     let active = true;
     void fetchWeaponIndex().then(({ lookups, isSample }) => {
-      if (active) setState(lookupsToState(lookups, isSample, getWeaponDoc, preloadWeaponDetails));
+      if (active) setState(lookupsToState(lookups, isSample, getWeaponDoc));
     });
     return () => {
       active = false;
     };
-  }, [getWeaponDoc, preloadWeaponDetails]);
+  }, [getWeaponDoc]);
+
+  useEffect(() => {
+    if (state.loading || detailCache) return;
+
+    let detailPreloadTimer: number | undefined;
+    const cancelIdle = scheduleIdle(() => {
+      detailPreloadTimer = window.setTimeout(() => {
+        void ensureDetailCache();
+      }, DETAIL_PRELOAD_DELAY_MS);
+    }, 250);
+
+    return () => {
+      cancelIdle();
+      if (detailPreloadTimer !== undefined) window.clearTimeout(detailPreloadTimer);
+    };
+  }, [state.loading, state.version]);
 
   return <WeaponsContext.Provider value={state}>{children}</WeaponsContext.Provider>;
 }
@@ -279,11 +290,7 @@ export function useStatGroups(): Record<string, StatGroupRef> | undefined {
 
     let active = true;
     void (async () => {
-      if (isSample) {
-        await seedSampleDetails();
-      } else {
-        await loadWeaponDetails();
-      }
+      await ensureDetailCache();
       if (active) setStatGroups(statGroupsCache);
     })();
 

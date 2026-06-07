@@ -60,15 +60,6 @@ const WEAPON_SORT_OPTIONS: PillSelectOption<WeaponSort>[] = [
   { value: "season-asc", label: "Oldest", direction: "asc" },
 ];
 
-function scheduleIdle(callback: () => void): () => void {
-  if (typeof requestIdleCallback !== "undefined") {
-    const id = requestIdleCallback(callback);
-    return () => cancelIdleCallback(id);
-  }
-  const id = window.setTimeout(callback, 250);
-  return () => window.clearTimeout(id);
-}
-
 interface CustomFilterComposer {
   name: string;
   perkNames: string[];
@@ -91,7 +82,7 @@ export function HomeSearch({
   signedIn?: boolean;
   initialMode?: Mode;
 }) {
-  const { weapons, perks, isSample, byHash, preloadWeaponDetails } = useWeapons();
+  const { weapons, perks, isSample, byHash } = useWeapons();
   const { elementIconMap, typeIconMap, ammoIconMap } = useWeaponIconMaps();
   const { dpsByName } = useWeaponDps();
   const { filters: customFilters, createFilter } = useCustomWeaponFilters();
@@ -123,21 +114,7 @@ export function HomeSearch({
     null,
   );
   const [selectedHash, setSelectedHash] = useState<number | null>(null);
-  const { weapon: selected } = useWeaponDetail(selectedHash);
-
-  useEffect(() => {
-    if (mode !== "weapon" || weapons.length === 0) return;
-    let detailPreloadTimer: number | undefined;
-    const cancelIdle = scheduleIdle(() => {
-      detailPreloadTimer = window.setTimeout(() => {
-        void preloadWeaponDetails();
-      }, 1500);
-    });
-    return () => {
-      cancelIdle();
-      if (detailPreloadTimer !== undefined) window.clearTimeout(detailPreloadTimer);
-    };
-  }, [mode, weapons.length, preloadWeaponDetails]);
+  const { weapon: selected, loading: selectedLoading } = useWeaponDetail(selectedHash);
 
   const weaponColumnPerks = useMemo(() => collectColumnPerks(weapons, perks), [weapons, perks]);
 
@@ -670,8 +647,8 @@ export function HomeSearch({
 
       {selectedHash != null && (
         <WeaponDetailModal
-          open
           weapon={selected ?? null}
+          loading={selectedLoading}
           highlightedBuildPerks={selected ? dpsByName.get(selected.name)?.buildPerks : undefined}
           onClose={() => setSelectedHash(null)}
         />
