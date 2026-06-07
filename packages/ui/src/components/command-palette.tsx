@@ -627,15 +627,15 @@ export function CommandPalette({
               {mode === "results" && resultsHeader != null && (
                 <div className="px-1.5 pb-2">{resultsHeader}</div>
               )}
-              {mode === "results" && results.length === 0 ? (
+              {open && mode === "results" && results.length === 0 ? (
                 <div className="text-muted-foreground px-3 py-6 text-center text-base tracking-body">
                   {resultsEmpty ?? "No matches"}
                 </div>
-              ) : items.length === 0 ? (
+              ) : open && items.length === 0 ? (
                 <div className="text-muted-foreground px-3 py-6 text-center text-xs tracking-body">
                   No matches
                 </div>
-              ) : (
+              ) : items.length > 0 ? (
                 <ul
                   role="listbox"
                   id={listId}
@@ -767,7 +767,7 @@ export function CommandPalette({
                     );
                   })}
                 </ul>
-              )}
+              ) : null}
               {mode === "results" && resultsFooter != null && (
                 <div className="text-muted-foreground px-3 py-2 text-center text-base tracking-body">
                   {resultsFooter}
