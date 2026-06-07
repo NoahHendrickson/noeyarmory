@@ -116,6 +116,12 @@ export function PopularWeapons({ onSelectWeapon }: { onSelectWeapon: (hash: numb
     <section className="mx-auto mt-14 w-full max-w-3xl sm:mt-16">
       <h2 className="text-muted-foreground mb-3 text-center text-xs font-semibold tracking-wide">
         Popular lately
+        {isMock ? (
+          <span className="text-muted-foreground/80 block font-normal">
+            Mock preview — remove <code className="text-xs">POPULAR_WEAPONS_MOCK</code> from{" "}
+            <code className="text-xs">.env</code> for real rankings
+          </span>
+        ) : null}
       </h2>
       <div className="grid gap-3 sm:grid-cols-2">
         {weapons.map((weapon) => (
