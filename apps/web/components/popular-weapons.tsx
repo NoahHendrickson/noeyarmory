@@ -13,7 +13,6 @@ import { weaponTypeLabel } from "./weapon-result-row";
 
 interface PopularWeaponResponse {
   weapons: { hash: number; views: number }[];
-  mock?: boolean;
 }
 
 function PopularWeaponCard({
@@ -80,7 +79,6 @@ function PopularWeaponCard({
 export function PopularWeapons({ onSelectWeapon }: { onSelectWeapon: (hash: number) => void }) {
   const { byHash, damageTypes, ammoTypes } = useWeapons();
   const [weapons, setWeapons] = useState<WeaponSummary[]>([]);
-  const [isMock, setIsMock] = useState(false);
 
   const elementIconMap = useMemo(
     () => new Map(damageTypes.map((damageType) => [damageType.name, damageType.icon] as const)),
@@ -102,13 +100,9 @@ export function PopularWeapons({ onSelectWeapon }: { onSelectWeapon: (hash: numb
           .map((entry) => byHash.get(entry.hash))
           .filter((weapon): weapon is WeaponSummary => weapon != null);
         setWeapons(resolved);
-        setIsMock(data.mock === true);
       })
       .catch(() => {
-        if (!cancelled) {
-          setWeapons([]);
-          setIsMock(false);
-        }
+        if (!cancelled) setWeapons([]);
       });
 
     return () => {
@@ -122,12 +116,6 @@ export function PopularWeapons({ onSelectWeapon }: { onSelectWeapon: (hash: numb
     <section className="mx-auto mt-14 w-full max-w-3xl sm:mt-16">
       <h2 className="text-muted-foreground mb-3 text-center text-xs font-semibold tracking-wide">
         Popular lately
-        {isMock ? (
-          <span className="text-muted-foreground/80 block font-normal">
-            Mock preview — remove <code className="text-xs">POPULAR_WEAPONS_MOCK</code> from{" "}
-            <code className="text-xs">.env</code> for real rankings
-          </span>
-        ) : null}
       </h2>
       <div className="grid gap-3 sm:grid-cols-2">
         {weapons.map((weapon) => (
