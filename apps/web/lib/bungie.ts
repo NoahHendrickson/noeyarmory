@@ -6,7 +6,14 @@ export const CRAFTED_ICON_OVERLAY = `${BUNGIE_ORIGIN}/img/destiny_content/items/
 /** Resolve a manifest icon path to a full URL. */
 export function bungieIcon(path?: string): string | undefined {
   if (!path) return undefined;
-  return path.startsWith("http") ? path : `${BUNGIE_ORIGIN}${path}`;
+  if (!path.startsWith("http")) return `${BUNGIE_ORIGIN}${path}`;
+
+  try {
+    const url = new URL(path);
+    return url.origin === BUNGIE_ORIGIN ? url.toString() : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /** Ring color per rarity tier (Destiny-ish). */

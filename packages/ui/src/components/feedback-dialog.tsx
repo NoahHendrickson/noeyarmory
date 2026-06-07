@@ -100,7 +100,7 @@ export function FeedbackDialog({
           type,
           title,
           body,
-          pageUrl: window.location.href,
+          pageUrl: `${window.location.pathname}${window.location.search}${window.location.hash}`,
           userAgent: navigator.userAgent,
           website,
         }),
@@ -201,7 +201,7 @@ export function FeedbackDialog({
                 </div>
               </>
             ) : (
-              <form onSubmit={handleSubmit}>
+              <form onSubmit={(event) => void handleSubmit(event)}>
                 <div className={cn(sectionClass, "space-y-0.5")}>
                   <div className="flex items-center justify-between gap-3">
                     <PopoverTitle className={headerTitleClass}>Send feedback</PopoverTitle>
@@ -221,8 +221,8 @@ export function FeedbackDialog({
                     </PopoverClose>
                   </div>
                   <PopoverDescription className={headerDescriptionClass}>
-                    Report a bug or suggest a feature. Submissions create a GitHub issue for
-                    triage.
+                    Report a bug or suggest a feature. Submissions create a GitHub issue and
+                    include this page path plus your browser user agent for triage.
                   </PopoverDescription>
                 </div>
 

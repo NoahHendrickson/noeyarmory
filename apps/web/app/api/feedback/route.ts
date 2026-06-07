@@ -5,12 +5,19 @@ import {
   isFeedbackConfigured,
   type FeedbackType,
 } from "../../../lib/github-issues";
-import { getSession, isSignedIn } from "../../../lib/session";
+import { createRateLimiter } from "../../../lib/rate-limit";
+import { isSameOriginRequest } from "../../../lib/request-guards";
 
 export const dynamic = "force-dynamic";
 
 const TITLE_MAX = 100;
 const BODY_MAX = 4000;
+const FEEDBACK_LIMIT = 5;
+const FEEDBACK_WINDOW_MS = 60 * 60 * 1000;
+const feedbackLimiter = createRateLimiter({
+  limit: FEEDBACK_LIMIT,
+  windowMs: FEEDBACK_WINDOW_MS,
+});
 
 interface FeedbackRequestBody {
   type?: unknown;
@@ -32,8 +39,39 @@ function asOptionalString(value: unknown, maxLength: number): string | undefined
   return trimmed.slice(0, maxLength);
 }
 
+function clientKey(request: Request): string {
+  return (
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip")?.trim() ||
+    "unknown"
+  );
+}
+
+function safePagePath(value: unknown): string | undefined {
+  const pageUrl = asOptionalString(value, 2048);
+  if (!pageUrl) return undefined;
+
+  try {
+    const parsed = new URL(pageUrl);
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+  } catch {
+    return pageUrl.startsWith("/") && !pageUrl.startsWith("//") ? pageUrl : undefined;
+  }
+}
+
 /** Accept in-app feedback and create a GitHub issue. */
 export async function POST(request: Request) {
+  if (!isSameOriginRequest(request)) {
+    return NextResponse.json({ ok: false, error: "Forbidden." }, { status: 403 });
+  }
+
+  if (!feedbackLimiter.check(clientKey(request))) {
+    return NextResponse.json(
+      { ok: false, error: "Too many feedback submissions. Please try again later." },
+      { status: 429 },
+    );
+  }
+
   let payload: FeedbackRequestBody;
   try {
     payload = (await request.json()) as FeedbackRequestBody;
@@ -78,18 +116,14 @@ export async function POST(request: Request) {
     );
   }
 
-  const session = await getSession();
-  const bungieName = isSignedIn(session) ? session.bungieName : undefined;
-
   try {
     const issue = await createFeedbackIssue({
       type: payload.type,
       title,
       body,
       metadata: {
-        pageUrl: asOptionalString(payload.pageUrl, 2048),
+        pageUrl: safePagePath(payload.pageUrl),
         userAgent: asOptionalString(payload.userAgent, 512),
-        bungieName,
       },
     });
     return NextResponse.json({ ok: true, issueUrl: issue.issueUrl });
