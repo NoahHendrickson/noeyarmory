@@ -729,12 +729,12 @@ export function WeaponSearch({
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="relative px-4 py-4 text-center">
+      <header className="flex items-center justify-center gap-3 px-4 pb-4">
         <span className="font-pixel text-base font-bold">moonfang armory</span>
         {signedIn && (
           <Link
             href="/vault"
-            className="text-muted-foreground hover:text-foreground absolute top-1/2 right-4 -translate-y-1/2 text-sm"
+            className="text-muted-foreground hover:text-foreground text-sm"
           >
             Vault
           </Link>
