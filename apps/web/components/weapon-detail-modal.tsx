@@ -22,9 +22,11 @@ const glassPanel =
 /** Weapon detail in a modal — the primary in-app path from a search result. */
 export function WeaponDetailModal({
   weapon,
+  highlightedBuildPerks,
   onClose,
 }: {
   weapon: WeaponDoc | null;
+  highlightedBuildPerks?: readonly string[];
   onClose: () => void;
 }) {
   return (
@@ -52,7 +54,11 @@ export function WeaponDetailModal({
               >
                 <X className="size-4" />
               </DialogClose>
-              <WeaponDetailView weapon={weapon} linkPerks={false} />
+              <WeaponDetailView
+                weapon={weapon}
+                linkPerks={false}
+                highlightedBuildPerks={highlightedBuildPerks}
+              />
             </>
           )}
         </DialogPopup>

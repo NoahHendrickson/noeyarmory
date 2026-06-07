@@ -13,6 +13,7 @@
   },
   "scripts": {
     "generate": "tsx src/generate.ts",
+    "sync:dps": "tsx src/sync-weapon-dps.ts",
     "build": "tsup",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",

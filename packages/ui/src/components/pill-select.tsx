@@ -1,12 +1,14 @@
 import type { ReactNode } from "react";
 import { Menu } from "@base-ui/react/menu";
-import { ChevronDown } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronDown } from "lucide-react";
 
 import { cn } from "../lib/utils";
 
 export interface PillSelectOption<T extends string> {
   value: T;
   label: ReactNode;
+  /** Shown on the trigger to indicate ascending/descending order (e.g. sort). */
+  direction?: "asc" | "desc";
 }
 
 export interface PillSelectProps<T extends string> {
@@ -49,6 +51,12 @@ function PillSelect<T extends string>({
         )}
       >
         <span>{selected?.label}</span>
+        {selected?.direction === "asc" && (
+          <ArrowUp className="size-3 shrink-0 opacity-70" aria-hidden />
+        )}
+        {selected?.direction === "desc" && (
+          <ArrowDown className="size-3 shrink-0 opacity-70" aria-hidden />
+        )}
         <ChevronDown className="size-3 shrink-0 opacity-70" aria-hidden />
       </Menu.Trigger>
       <Menu.Portal>

@@ -8,7 +8,7 @@ export function getFilterChipAppearance(
   value: string,
   elementIcons?: ReadonlyMap<string, string | undefined>,
 ): Pick<FilterChipProps, "tone" | "element" | "valueIcon" | "hideLabel"> {
-  if (categoryId === "trait1" || categoryId === "trait2") {
+  if (categoryId === "trait1" || categoryId === "trait2" || categoryId === "customFilter") {
     return { tone: "trait" satisfies FilterChipTone };
   }
 
@@ -16,6 +16,20 @@ export function getFilterChipAppearance(
     if (value === "Special") return { tone: "ammo-special" satisfies FilterChipTone };
     if (value === "Heavy") return { tone: "ammo-heavy" satisfies FilterChipTone };
     return { tone: "default" satisfies FilterChipTone };
+  }
+
+  if (categoryId === "craftable" && value === "Yes") {
+    return {
+      hideLabel: true,
+      valueIcon: createElement("img", {
+        src: "/craftable.png",
+        alt: "",
+        width: 14,
+        height: 14,
+        className: "size-3.5 shrink-0",
+        "aria-hidden": true,
+      }),
+    };
   }
 
   if (categoryId === "element") {

@@ -80,11 +80,13 @@ function PerkTile({
   perk,
   linkPerks,
   size = "md",
+  highlighted = false,
   clarityDescriptions,
 }: {
   perk: PerkRef;
   linkPerks: boolean;
   size?: "md" | "lg";
+  highlighted?: boolean;
   clarityDescriptions: ClarityDescriptionMap | null;
 }) {
   const tiers = getClarityPerkTiers(clarityDescriptions, perk);
@@ -101,6 +103,7 @@ function PerkTile({
         "relative flex shrink-0 items-center justify-center rounded-md",
         tileDim,
         canRoll ? "bg-[#3b6ea5]" : "bg-white/10 opacity-45",
+        highlighted && "ring-2 ring-amber-400/90 ring-offset-2 ring-offset-background",
       )}
     >
       {icon ? (
@@ -169,11 +172,14 @@ export function PerkColumnView({
   linkPerks = true,
   /** Intrinsic columns use a larger lone icon. */
   compactIntrinsic = false,
+  highlightedPerks,
   clarityDescriptions,
 }: {
   column: PerkColumn;
   linkPerks?: boolean;
   compactIntrinsic?: boolean;
+  /** Lowercase perk names from the community DPS benchmark build. */
+  highlightedPerks?: ReadonlySet<string>;
   clarityDescriptions?: ClarityDescriptionMap | null;
 }) {
   const contextDescriptions = useClarityDescriptions();
@@ -185,6 +191,7 @@ export function PerkColumnView({
         perk={column.perks[0]}
         linkPerks={linkPerks}
         size="lg"
+        highlighted={highlightedPerks?.has(column.perks[0].name.toLowerCase())}
         clarityDescriptions={descriptions}
       />
     );
@@ -197,6 +204,7 @@ export function PerkColumnView({
           key={perk.hash}
           perk={perk}
           linkPerks={linkPerks}
+          highlighted={highlightedPerks?.has(perk.name.toLowerCase())}
           clarityDescriptions={descriptions}
         />
       ))}

@@ -1,8 +1,5 @@
 export const BUNGIE_ORIGIN = "https://www.bungie.net";
 
-/** Shaped-weapon overlay from DestinyInventoryItemConstantsDefinition.craftedOverlayPath. */
-export const CRAFTED_ICON_OVERLAY = `${BUNGIE_ORIGIN}/img/destiny_content/items/crafted-icon-overlay.png`;
-
 /** Resolve a manifest icon path to a full URL. */
 export function bungieIcon(path?: string): string | undefined {
   if (!path) return undefined;

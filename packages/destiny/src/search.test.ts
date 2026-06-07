@@ -10,6 +10,7 @@ import {
   filterWeapons,
   fuzzySearchWeapons,
   sortWeapons,
+  suggestWeaponNames,
   weaponsWithPerk,
 } from "./search";
 
@@ -51,6 +52,47 @@ describe("filterWeapons", () => {
       samplePerks,
     );
     expect(names(result)).toEqual(["Sunlit Fusion"]);
+  });
+
+  test("craftable yes (only weapons with a shaping pattern)", () => {
+    expect(names(filterWeapons(sampleSummaries, { craftable: ["Yes"] }, samplePerks))).toEqual([
+      "Fatebringer",
+      "Stormcharge",
+    ]);
+  });
+
+  test("craftable no", () => {
+    expect(names(filterWeapons(sampleSummaries, { craftable: ["No"] }, samplePerks))).toEqual([
+      "Sunlit Fusion",
+      "Sunshot Scout",
+    ]);
+  });
+
+  test("custom perk groups match any listed perk in the group", () => {
+    const result = filterWeapons(
+      sampleSummaries,
+      { customPerkGroups: [["Firefly", "Chill Clip"]] },
+      samplePerks,
+    );
+    expect(names(result)).toEqual(["Fatebringer", "Stormcharge", "Sunshot Scout"]);
+  });
+
+  test("multiple custom perk groups require one match from each group", () => {
+    const result = filterWeapons(
+      sampleSummaries,
+      { customPerkGroups: [["Firefly", "Chill Clip"], ["Explosive Payload", "Frenzy"]] },
+      samplePerks,
+    );
+    expect(names(result)).toEqual(["Fatebringer", "Sunshot Scout"]);
+  });
+
+  test("custom perk groups combine with facets", () => {
+    const result = filterWeapons(
+      sampleSummaries,
+      { element: ["Solar"], customPerkGroups: [["Firefly", "Chill Clip"]] },
+      samplePerks,
+    );
+    expect(names(result)).toEqual(["Sunshot Scout"]);
   });
 });
 
@@ -139,6 +181,38 @@ describe("position-aware trait, slot + origin filters", () => {
     expect(
       names(filterWeapons(sampleSummaries, { originTrait: ["Vault of Glass"] }, samplePerks)),
     ).toEqual(["Fatebringer"]);
+  });
+
+  test("exact weapon name", () => {
+    expect(names(filterWeapons(sampleSummaries, { name: ["Fatebringer"] }, samplePerks))).toEqual([
+      "Fatebringer",
+    ]);
+  });
+
+  test("name filter AND-composes with trait filters", () => {
+    expect(
+      names(
+        filterWeapons(sampleSummaries, { name: ["Fatebringer"], trait2: ["Frenzy"] }, samplePerks),
+      ),
+    ).toEqual(["Fatebringer"]);
+    expect(
+      filterWeapons(sampleSummaries, { name: ["Fatebringer"], trait2: ["Surrounded"] }, samplePerks),
+    ).toEqual([]);
+  });
+});
+
+describe("suggestWeaponNames", () => {
+  test("ranks partial name matches with Fatebringer first", () => {
+    const suggestions = suggestWeaponNames(sampleSummaries, "fate");
+    expect(suggestions[0]?.value).toBe("Fatebringer");
+  });
+
+  test("returns empty for no matches", () => {
+    expect(suggestWeaponNames(sampleSummaries, "xyz")).toEqual([]);
+  });
+
+  test("returns empty for blank query", () => {
+    expect(suggestWeaponNames(sampleSummaries, "  ")).toEqual([]);
   });
 });
 
@@ -299,6 +373,20 @@ describe("sortWeapons", () => {
       "Sunshot Scout",
       "Fatebringer",
       "Stormcharge",
+    ]);
+  });
+
+  test("highest DPS first, weapons without DPS last", () => {
+    const dpsByName = new Map([
+      ["Fatebringer", { dps: 3000, totalDamage: 30_000, buildPerks: [] }],
+      ["Stormcharge", { dps: 5000, totalDamage: 50_000, buildPerks: [] }],
+    ]);
+
+    expect(orderedNames(sortWeapons(sampleSummaries, "dps-desc", dpsByName))).toEqual([
+      "Stormcharge",
+      "Fatebringer",
+      "Sunlit Fusion",
+      "Sunshot Scout",
     ]);
   });
 });

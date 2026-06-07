@@ -6,6 +6,7 @@ import { useMemo } from "react";
 import { Badge, cn } from "@repo/ui";
 import type { WeaponDoc } from "@repo/destiny";
 
+import { useWeaponDps } from "../lib/use-weapon-dps";
 import { useWeaponDetail, useWeapons } from "../lib/weapons-context";
 import { bungieIcon, RARITY_RING } from "../lib/bungie";
 import { CraftableBadge } from "./craftable-badge";
@@ -18,14 +19,24 @@ import { StatBars } from "./stat-bars";
 export function WeaponDetailView({
   weapon,
   linkPerks = true,
+  highlightedBuildPerks,
 }: {
   weapon: WeaponDoc;
   linkPerks?: boolean;
+  /** Trait perks from the community sustained-DPS benchmark for this weapon. */
+  highlightedBuildPerks?: readonly string[];
 }) {
   const { damageTypes } = useWeapons();
   const elementIconPath = useMemo(
     () => damageTypes.find((damageType) => damageType.name === weapon.element)?.icon,
     [damageTypes, weapon.element],
+  );
+  const highlightedPerks = useMemo(
+    () =>
+      highlightedBuildPerks && highlightedBuildPerks.length > 0
+        ? new Set(highlightedBuildPerks.map((perk) => perk.toLowerCase()))
+        : undefined,
+    [highlightedBuildPerks],
   );
   const icon = bungieIcon(weapon.icon);
   const watermark = bungieIcon(weapon.watermark);
@@ -91,12 +102,18 @@ export function WeaponDetailView({
                   column={column}
                   linkPerks={linkPerks}
                   compactIntrinsic
+                  highlightedPerks={highlightedPerks}
                 />
               ))}
             {weapon.columns
               .filter((c) => c.kind !== "Intrinsic")
               .map((column, i) => (
-                <PerkColumnView key={`${column.kind}-${i}`} column={column} linkPerks={linkPerks} />
+                <PerkColumnView
+                  key={`${column.kind}-${i}`}
+                  column={column}
+                  linkPerks={linkPerks}
+                  highlightedPerks={highlightedPerks}
+                />
               ))}
           </div>
         ) : (
@@ -123,6 +140,7 @@ export function WeaponDetail({
   initialWeapon?: WeaponDoc;
 }) {
   const { weapon, loading } = useWeaponDetail(hash, initialWeapon);
+  const { dpsByName } = useWeaponDps();
 
   if (!weapon && loading) {
     return <div className="text-muted-foreground p-6">Loading…</div>;
@@ -144,7 +162,11 @@ export function WeaponDetail({
       <Link href="/" className="text-muted-foreground hover:text-foreground text-sm">
         ← Back to search
       </Link>
-      <WeaponDetailView weapon={weapon} linkPerks />
+      <WeaponDetailView
+        weapon={weapon}
+        linkPerks
+        highlightedBuildPerks={dpsByName.get(weapon.name)?.buildPerks}
+      />
     </div>
   );
 }
