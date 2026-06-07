@@ -5,7 +5,6 @@ export type FeedbackType = "bug" | "feature";
 export interface FeedbackMetadata {
   pageUrl?: string;
   userAgent?: string;
-  bungieName?: string;
 }
 
 export interface CreateFeedbackIssueInput {
@@ -44,9 +43,6 @@ function buildIssueBody(body: string, metadata?: FeedbackMetadata): string {
 
   if (metadata?.pageUrl) {
     lines.push(`- **Page:** ${metadata.pageUrl}`);
-  }
-  if (metadata?.bungieName) {
-    lines.push(`- **Signed in as:** ${metadata.bungieName}`);
   }
   if (metadata?.userAgent) {
     lines.push(`- **User agent:** ${metadata.userAgent}`);

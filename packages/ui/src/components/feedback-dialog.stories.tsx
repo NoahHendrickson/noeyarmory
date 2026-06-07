@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
-import { FeedbackDialog } from "./feedback-dialog";
+import { FeedbackDialog, type FeedbackDialogProps } from "./feedback-dialog";
 
 const meta = {
   title: "Components/FeedbackDialog",
@@ -17,7 +17,7 @@ const meta = {
 } satisfies Meta<typeof FeedbackDialog>;
 
 export default meta;
-type Story = StoryObj<typeof meta>;
+type Story = StoryObj<FeedbackDialogProps>;
 
 export const Trigger: Story = {
   args: {},

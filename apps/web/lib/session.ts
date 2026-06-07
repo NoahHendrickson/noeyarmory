@@ -2,6 +2,8 @@ import "server-only";
 import { getIronSession, type SessionOptions } from "iron-session";
 import { cookies } from "next/headers";
 
+import { getSessionPassword } from "./session-secret";
+
 export interface SessionData {
   accessToken?: string;
   refreshToken?: string;
@@ -18,19 +20,21 @@ export interface SessionData {
   oauthReturnTo?: string;
 }
 
-export const sessionOptions: SessionOptions = {
-  password: process.env.SESSION_SECRET ?? "noeyarmory-dev-insecure-session-secret-change-me",
-  cookieName: "noeyarmory_session",
-  cookieOptions: {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-  },
-};
+function getSessionOptions(): SessionOptions {
+  return {
+    password: getSessionPassword(),
+    cookieName: "noeyarmory_session",
+    cookieOptions: {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+    },
+  };
+}
 
 export async function getSession() {
-  return getIronSession<SessionData>(await cookies(), sessionOptions);
+  return getIronSession<SessionData>(await cookies(), getSessionOptions());
 }
 
 export function isSignedIn(session: SessionData): boolean {
