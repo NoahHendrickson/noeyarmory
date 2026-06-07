@@ -68,6 +68,8 @@ openssl rand -hex 32
 
 Do **not** reuse your local `SESSION_SECRET` in production.
 
+Optional: for **Popular lately** on the home screen, also add `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` — see [popularity-setup.md](./popularity-setup.md).
+
 ### Vercel project settings (monorepo)
 
 Use **one** Vercel project for this app. In **Settings → Build and Deployment**:

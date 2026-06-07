@@ -7,7 +7,7 @@ import { WeaponDpsLabel } from "./weapon-dps-label";
 import { bungieIcon } from "../lib/bungie";
 
 /** e.g. "Pinpoint Slug Shotgun" from frame "Pinpoint Slug Frame" + type "Shotgun". */
-function weaponTypeLabel(type: string, frame?: string): string {
+export function weaponTypeLabel(type: string, frame?: string): string {
   if (!frame) return type;
   const archetype = frame.replace(/ Frame$/, "");
   return `${archetype} ${type}`;
