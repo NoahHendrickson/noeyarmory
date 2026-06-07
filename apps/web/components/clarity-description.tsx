@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { cn } from "@repo/ui";
 
 import type { ClarityLine, ClarityLineClass, ClarityLinesContent } from "../lib/clarity-types";
+import { safeHttpsUrl } from "../lib/safe-url";
 
 const LINE_CLASS: Partial<Record<ClarityLineClass, string>> = {
   bold: "font-semibold",
@@ -70,10 +71,15 @@ function formatSegment(text: string): ReactNode[] {
 function renderContent(content: ClarityLinesContent, key: string): ReactNode {
   if (content.classNames?.includes("enhancedArrow")) return null;
   if (content.link && content.text) {
+    const href = safeHttpsUrl(content.link);
+    if (!href) {
+      return <span key={key}>{formatSegment(content.text)}</span>;
+    }
+
     return (
       <a
         key={key}
-        href={content.link}
+        href={href}
         target="_blank"
         rel="noopener noreferrer"
         className="text-sky-400 underline-offset-2 hover:underline"

@@ -2,12 +2,17 @@ import { NextResponse } from "next/server";
 
 import { equipArmor } from "../../../../lib/bungie-actions";
 import { findOwnedArmorForAction, resolveCharacterForArmor } from "../../../../lib/bungie-profile";
+import { isSameOriginRequest } from "../../../../lib/request-guards";
 import { getSession, isSignedIn } from "../../../../lib/session";
 
 export const dynamic = "force-dynamic";
 
 /** Equip an armor piece from the matching class character's inventory. */
 export async function POST(req: Request) {
+  if (!isSameOriginRequest(req)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   const session = await getSession();
   if (!isSignedIn(session)) {
     return NextResponse.json({ error: "Not signed in" }, { status: 401 });
@@ -52,7 +57,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ ok: true });
   } catch (e) {
-    const message = e instanceof Error ? e.message : "Failed to equip armor";
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("[armor:equip] failed:", e);
+    return NextResponse.json({ error: "Failed to equip armor" }, { status: 500 });
   }
 }
