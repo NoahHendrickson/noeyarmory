@@ -804,7 +804,7 @@ export function CommandPalette({
         className={cn(
           "relative overflow-hidden border border-border shadow-lg shadow-black/25",
           "transition-[border-radius] duration-200 ease-out motion-reduce:transition-none",
-          open ? "rounded-[16px]" : "rounded-[1.75rem]",
+          open ? "rounded-[12px]" : "rounded-[1.75rem]",
         )}
       >
         {/* Blur on a fixed layer — not on the scroll ancestor (avoids scroll jank). */}
@@ -1025,7 +1025,7 @@ export function CommandPalette({
                         className={cn(
                           item.kind === "section"
                             ? "pointer-events-none list-none py-0"
-                            : "flex cursor-pointer items-center justify-between gap-3 rounded-lg px-3 py-1.5",
+                            : "flex cursor-pointer items-center justify-between gap-3 rounded-[8px] px-3 py-1.5",
                           selected &&
                             (item.kind === "result" ? "bg-white/[0.033]" : "bg-white/[0.05]"),
                           item.kind === "action" &&

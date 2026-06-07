@@ -51,7 +51,9 @@ import {
   type OwnedArmorFilters,
 } from "../lib/owned-armor-search";
 import { ArmorResultRow, type ArmorActionState } from "./armor-result-row";
+import { PopularWeapons } from "./popular-weapons";
 import { WeaponResultRow } from "./weapon-result-row";
+import { trackWeaponView } from "../lib/track-weapon-view";
 
 const WeaponDetailModal = dynamic(
   () => import("./weapon-detail-modal").then((m) => m.WeaponDetailModal),
@@ -836,7 +838,10 @@ export function WeaponSearch({
             recordCurrentSearch();
             if (mode === "weapon") {
               const weapon = byHash.get(Number(id));
-              if (weapon) setSelectedHash(weapon.hash);
+              if (weapon) {
+                trackWeaponView(weapon.hash, "search");
+                setSelectedHash(weapon.hash);
+              }
             }
           }}
           resultsEmpty={mode === "weapon" ? "No weapons match." : "Go farm!"}
@@ -884,6 +889,15 @@ export function WeaponSearch({
           renderBarOverlay={mode === "armor" ? armorOverlay : undefined}
           />
         </div>
+
+        {mode === "weapon" && !hasFilters && !isFiltering && selectedHash == null && (
+          <PopularWeapons
+            onSelectWeapon={(hash) => {
+              trackWeaponView(hash, "popular");
+              setSelectedHash(hash);
+            }}
+          />
+        )}
 
         {mode === "weapon" && !hasFilters && !isFiltering && isSample && (
           <p className="text-muted-foreground mt-3 text-center text-xs">

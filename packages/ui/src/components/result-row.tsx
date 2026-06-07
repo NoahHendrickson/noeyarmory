@@ -31,7 +31,7 @@ function ResultRow({ render, icon, title, subtitle, trailing, className, ...prop
         children: (
           <>
             {icon != null && (
-              <span className="bg-muted relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-md">
+              <span className="bg-muted relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-[4px]">
                 {icon}
               </span>
             )}

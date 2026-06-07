@@ -15,11 +15,11 @@ const nextConfig: NextConfig = {
   async headers() {
     const csp = [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://mcp.figma.com",
+      "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://mcp.figma.com https://www.clarity.ms https://scripts.clarity.ms",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: https://www.bungie.net",
       "font-src 'self'",
-      "connect-src 'self' https://www.bungie.net https://database-clarity.github.io",
+      "connect-src 'self' https://www.bungie.net https://database-clarity.github.io https://*.clarity.ms https://c.bing.com",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
