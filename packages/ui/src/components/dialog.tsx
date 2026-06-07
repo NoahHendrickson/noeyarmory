@@ -40,7 +40,7 @@ function DialogPopup({ className, ...props }: ComponentProps<typeof BaseDialog.P
     <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-4">
       <BaseDialog.Popup
         className={cn(
-          "bg-popover text-popover-foreground pointer-events-auto max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-xl border p-6 shadow-2xl outline-none",
+          "bg-popover text-popover-foreground pointer-events-auto max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-xl border p-4 shadow-2xl outline-none sm:p-6",
           "transition-opacity duration-150 data-[starting-style]:opacity-0 data-[ending-style]:opacity-0",
           className,
         )}

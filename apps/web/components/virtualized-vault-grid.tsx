@@ -4,9 +4,10 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { useRef, type ReactNode } from "react";
 import { cn } from "@repo/ui";
 
+import { useVaultGridColumns } from "../lib/use-grid-columns";
+
 const VIRTUALIZE_THRESHOLD = 60;
 const ROW_HEIGHT = 148;
-const COLUMNS = 3;
 const GRID_CLASS = "grid gap-3 sm:grid-cols-2 xl:grid-cols-3";
 
 export function VirtualizedVaultGrid<T>({
@@ -39,7 +40,8 @@ function VirtualizedVaultGridInner<T>({
   className?: string;
 }) {
   const parentRef = useRef<HTMLDivElement>(null);
-  const rowCount = Math.ceil(items.length / COLUMNS);
+  const columns = useVaultGridColumns();
+  const rowCount = Math.ceil(items.length / columns);
 
   const rowVirtualizer = useVirtualizer({
     count: rowCount,
@@ -49,11 +51,11 @@ function VirtualizedVaultGridInner<T>({
   });
 
   return (
-    <div ref={parentRef} className={cn("max-h-[calc(100vh-8rem)] overflow-auto", className)}>
+    <div ref={parentRef} className={cn("max-h-[calc(100dvh-8rem)] overflow-auto sm:max-h-[calc(100vh-8rem)]", className)}>
       <div className="relative w-full" style={{ height: `${rowVirtualizer.getTotalSize()}px` }}>
         {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-          const start = virtualRow.index * COLUMNS;
-          const rowItems = items.slice(start, start + COLUMNS);
+          const start = virtualRow.index * columns;
+          const rowItems = items.slice(start, start + columns);
           return (
             <div
               key={virtualRow.key}

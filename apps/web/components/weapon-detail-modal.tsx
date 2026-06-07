@@ -38,7 +38,7 @@ export function WeaponDetailModal({
     >
       <DialogPortal>
         <DialogBackdrop className="bg-black/10 backdrop-blur-none" />
-        <DialogPopup className={cn("relative max-w-3xl", glassPanel)}>
+        <DialogPopup className={cn("relative max-w-3xl p-4 sm:p-6", glassPanel)}>
           {weapon && (
             <>
               <DialogTitle className="sr-only">{weapon.name}</DialogTitle>

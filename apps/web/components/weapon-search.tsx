@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { ListFilterPlus } from "lucide-react";
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import {
@@ -520,39 +521,32 @@ export function WeaponSearch({
       ? "Add more perks…"
       : "Search trait perks"
     : mode === "weapon"
-      ? "Press F to search weapons, perks, or names"
+      ? "Search weapons, perks, or names"
       : armorLoading
         ? "Loading your armor…"
-        : "Press F to search armor by class, set, archetype, or stats";
+        : "Search armor by class, set, or stats";
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="py-4 text-center">
+      <header className="relative px-4 py-4 text-center">
         <span className="text-base font-semibold tracking-tight">moonfang armory</span>
+        {signedIn && (
+          <Link
+            href="/vault"
+            className="text-muted-foreground hover:text-foreground absolute top-1/2 right-4 -translate-y-1/2 text-sm"
+          >
+            Vault
+          </Link>
+        )}
       </header>
 
-      <main className="mx-auto flex w-full flex-1 flex-col px-4 pt-[16vh]">
+      <main className="mx-auto flex w-full flex-1 flex-col px-4 pt-6 sm:pt-[16vh]">
         <div
           className={cn(
-            "mx-auto flex w-fit max-w-[calc(100vw-2rem)] flex-col transition-opacity duration-200 ease-out motion-reduce:transition-none",
+            "mx-auto flex w-full max-w-[calc(100vw-2rem)] flex-col transition-opacity duration-200 ease-out motion-reduce:transition-none sm:w-fit",
             selected && "pointer-events-none opacity-0",
           )}
         >
-          <div className="mb-4 flex justify-end">
-            <div
-              data-palette-ignore-close
-              className="mr-6 flex shrink-0 cursor-pointer items-center"
-              onClick={(e) => e.stopPropagation()}
-              onPointerDown={(e) => e.stopPropagation()}
-            >
-              <PillSelect
-                aria-label="Search mode"
-                options={MODES}
-                value={mode}
-                onValueChange={handleModeChange}
-              />
-            </div>
-          </div>
           <CommandPalette
             className="mx-0"
             placeholder={placeholder}
@@ -576,6 +570,14 @@ export function WeaponSearch({
             }}
             hideCategoryList={composingCustomFilter}
             plainPanelHeader={composingCustomFilter}
+            rightAdornment={
+              <PillSelect
+                aria-label="Search mode"
+                options={MODES}
+                value={mode}
+                onValueChange={handleModeChange}
+              />
+            }
             panelHeader={
               composingCustomFilter ? (
                 <div
@@ -624,7 +626,7 @@ export function WeaponSearch({
             ) : showResults && mode === "weapon" ? (
               <div
                 data-palette-ignore-close
-                className="flex items-center justify-between gap-3"
+                className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3"
                 onClick={(e) => e.stopPropagation()}
                 onPointerDown={(e) => e.stopPropagation()}
               >

@@ -157,7 +157,7 @@ function PerkTile({
         {tile}
       </TooltipTrigger>
       <TooltipPortal>
-        <TooltipPositioner side="right" align="start">
+        <TooltipPositioner side="top" align="center" sideOffset={6}>
           <TooltipPopup className="max-w-sm">
             <PerkTooltipContent perk={perk} clarityLines={clarityLines} />
           </TooltipPopup>
