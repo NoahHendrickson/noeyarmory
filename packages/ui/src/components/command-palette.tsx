@@ -688,7 +688,7 @@ export function CommandPalette({
                         type="button"
                         variant="ghost"
                         size="iconRound"
-                        className="bg-white text-card hover:bg-white/90 shrink-0"
+                        className="bg-white text-card hover:bg-white/90 hover:text-card shrink-0"
                         aria-label="Browse filter categories"
                         disabled={disabled}
                         onClick={(e) => {
