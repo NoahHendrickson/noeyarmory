@@ -15,11 +15,12 @@ The home screen can show **Popular lately** — up to four weapons ranked by ano
 Add to repo-root `.env`:
 
 ```env
+POPULAR_WEAPONS_ENABLED=true
 UPSTASH_REDIS_REST_URL=https://…
 UPSTASH_REDIS_REST_TOKEN=…
 ```
 
-Without these vars, weapon view tracking is a no-op and the home section never appears. Browse/search still works normally.
+Without `POPULAR_WEAPONS_ENABLED=true`, weapon view tracking is a no-op and the home section never appears — even if Upstash creds are set. Browse/search still works normally.
 
 ### Dev-only: skip Redis (optional)
 
@@ -35,7 +36,9 @@ Only works when `NODE_ENV=development`. **Do not set this on Vercel.** Mock mode
 
 In **Vercel → Project → Settings → Environment Variables**, add both Upstash vars for **Production** (and **Preview** if you want popularity in PR previews). Redeploy after saving.
 
-**Popular lately** stays hidden until Redis has enough real traffic (see threshold below). No separate enable flag — if the data is not ready, the section does not render.
+**Do not set `POPULAR_WEAPONS_ENABLED` on Vercel until you want the section live.** Without it, view tracking and the home section stay off even when Redis is configured — this avoids QA/dev traffic on a shared Upstash database from surfacing on production.
+
+When you are ready to ship **Popular lately**, add `POPULAR_WEAPONS_ENABLED=true` for Production and redeploy. The section still stays hidden until Redis has enough real traffic (see threshold below).
 
 ## How it works
 
@@ -62,7 +65,8 @@ Use real weapon hashes from your generated index. Repeat across at least four we
 
 | Symptom | Check |
 |--------|--------|
-| Section never appears | Redis env vars set on Vercel? Enough distinct weapons viewed in the last 7 days? |
-| Views not counting locally | `.env` has Upstash creds and dev server was restarted |
+| Section never appears | `POPULAR_WEAPONS_ENABLED=true` set? Redis env vars set? Enough distinct weapons viewed in the last 7 days? |
+| Section appears on production too early | Unset `POPULAR_WEAPONS_ENABLED` on Vercel until launch; use a separate Upstash DB for dev QA |
+| Views not counting locally | `.env` has `POPULAR_WEAPONS_ENABLED=true`, Upstash creds, and dev server was restarted |
 | 503 on POST in Network tab | Redis not configured — expected locally without `.env` |
 | Stale rankings | GET is cached ~1 hour; wait or hard-refresh after CDN TTL |
