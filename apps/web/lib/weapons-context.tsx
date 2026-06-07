@@ -30,6 +30,8 @@ import {
   type ReactNode,
 } from "react";
 
+import { scheduleIdle } from "./schedule-idle";
+
 export interface WeaponsState {
   weapons: WeaponSummary[];
   perks: PerkRef[];
@@ -68,11 +70,22 @@ let loadPromise: Promise<WeaponIndexLookups> | null = null;
 let detailLoadPromise: Promise<Map<number, WeaponDetailFields>> | null = null;
 let isSampleCache = false;
 
+const DETAIL_PRELOAD_DELAY_MS = 1500;
+
 function seedDetails(index: WeaponDetailIndex): void {
   detailCache = new Map(
     Object.entries(index.details).map(([hash, detail]) => [Number(hash), detail]),
   );
   statGroupsCache = index.statGroups;
+}
+
+async function seedSampleDetails(): Promise<void> {
+  const { sampleWeapons } = await import("@repo/destiny");
+  seedDetails(
+    buildDetailIndexFromDocs(sampleWeapons, "sample", {
+      [String(sampleStatGroup.hash)]: sampleStatGroup,
+    }),
+  );
 }
 
 async function loadWeaponDetails(): Promise<Map<number, WeaponDetailFields>> {
@@ -97,6 +110,17 @@ async function loadWeaponDetails(): Promise<Map<number, WeaponDetailFields>> {
   }
 
   return detailLoadPromise;
+}
+
+async function ensureDetailCache(): Promise<void> {
+  if (detailCache) return;
+
+  if (isSampleCache) {
+    await seedSampleDetails();
+    return;
+  }
+
+  await loadWeaponDetails();
 }
 
 function lookupsToState(
@@ -165,16 +189,7 @@ export function WeaponsProvider({ children }: { children: ReactNode }) {
     const summary = lookups.byHash.get(hash);
     if (!summary) return undefined;
 
-    if (isSampleCache && !detailCache) {
-      const { sampleWeapons } = await import("@repo/destiny");
-      seedDetails(
-        buildDetailIndexFromDocs(sampleWeapons, "sample", {
-          [String(sampleStatGroup.hash)]: sampleStatGroup,
-        }),
-      );
-    } else if (!detailCache) {
-      await loadWeaponDetails();
-    }
+    await ensureDetailCache();
 
     return expandWeapon(summary, detailCache?.get(hash), lookups.perks);
   }, []);
@@ -199,6 +214,22 @@ export function WeaponsProvider({ children }: { children: ReactNode }) {
       active = false;
     };
   }, [getWeaponDoc]);
+
+  useEffect(() => {
+    if (state.loading || detailCache) return;
+
+    let detailPreloadTimer: number | undefined;
+    const cancelIdle = scheduleIdle(() => {
+      detailPreloadTimer = window.setTimeout(() => {
+        void ensureDetailCache();
+      }, DETAIL_PRELOAD_DELAY_MS);
+    }, 250);
+
+    return () => {
+      cancelIdle();
+      if (detailPreloadTimer !== undefined) window.clearTimeout(detailPreloadTimer);
+    };
+  }, [state.loading, state.version]);
 
   return <WeaponsContext.Provider value={state}>{children}</WeaponsContext.Provider>;
 }
@@ -259,16 +290,7 @@ export function useStatGroups(): Record<string, StatGroupRef> | undefined {
 
     let active = true;
     void (async () => {
-      if (isSample) {
-        const { sampleWeapons } = await import("@repo/destiny");
-        seedDetails(
-          buildDetailIndexFromDocs(sampleWeapons, "sample", {
-            [String(sampleStatGroup.hash)]: sampleStatGroup,
-          }),
-        );
-      } else {
-        await loadWeaponDetails();
-      }
+      await ensureDetailCache();
       if (active) setStatGroups(statGroupsCache);
     })();
 

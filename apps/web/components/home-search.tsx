@@ -1,6 +1,5 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { ListFilterPlus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -43,13 +42,9 @@ import { useWeaponDetail, useWeapons } from "../lib/weapons-context";
 import { getFilterChipAppearance } from "../lib/filter-chip-appearance";
 import { ArmorResultRow } from "./armor-result-row";
 import { PopularWeapons } from "./popular-weapons";
+import { WeaponDetailModal } from "./weapon-detail-modal";
 import { WeaponResultRow } from "./weapon-result-row";
 import { trackWeaponView } from "../lib/track-weapon-view";
-
-const WeaponDetailModal = dynamic(
-  () => import("./weapon-detail-modal").then((m) => m.WeaponDetailModal),
-  { ssr: false },
-);
 
 type Mode = "weapon" | "armor";
 
@@ -119,7 +114,7 @@ export function HomeSearch({
     null,
   );
   const [selectedHash, setSelectedHash] = useState<number | null>(null);
-  const { weapon: selected } = useWeaponDetail(selectedHash);
+  const { weapon: selected, loading: selectedLoading } = useWeaponDetail(selectedHash);
 
   const weaponColumnPerks = useMemo(() => collectColumnPerks(weapons, perks), [weapons, perks]);
 
@@ -650,10 +645,11 @@ export function HomeSearch({
         )}
       </main>
 
-      {selected && (
+      {selectedHash != null && (
         <WeaponDetailModal
-          weapon={selected}
-          highlightedBuildPerks={dpsByName.get(selected.name)?.buildPerks}
+          weapon={selected ?? null}
+          loading={selectedLoading}
+          highlightedBuildPerks={selected ? dpsByName.get(selected.name)?.buildPerks : undefined}
           onClose={() => setSelectedHash(null)}
         />
       )}

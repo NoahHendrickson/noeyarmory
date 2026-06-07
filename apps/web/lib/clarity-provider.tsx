@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 
 import { loadClarityDescriptions } from "./clarity-descriptions";
 import type { ClarityDescriptionMap } from "./clarity-types";
+import { scheduleIdle } from "./schedule-idle";
 
 export type { ClarityPerkLookup, ClarityPerkTiers } from "./clarity-perk-tiers";
 export {
@@ -14,15 +15,6 @@ export {
 } from "./clarity-perk-tiers";
 
 const ClarityContext = createContext<ClarityDescriptionMap | null>(null);
-
-function scheduleIdle(callback: () => void): () => void {
-  if (typeof requestIdleCallback !== "undefined") {
-    const id = requestIdleCallback(callback);
-    return () => cancelIdleCallback(id);
-  }
-  const id = window.setTimeout(callback, 1);
-  return () => window.clearTimeout(id);
-}
 
 export function ClarityProvider({ children }: { children: ReactNode }) {
   const [descriptions, setDescriptions] = useState<ClarityDescriptionMap | null>(null);
