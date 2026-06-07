@@ -3,6 +3,7 @@ export const WEAPON_DPS_SHEET_GID = "1356041045";
 export const WEAPON_DPS_SHEET_NAME = "Sustained";
 
 export const WEAPON_DPS_SHEET_CSV_URL = `https://docs.google.com/spreadsheets/d/${WEAPON_DPS_SHEET_ID}/export?format=csv&gid=${WEAPON_DPS_SHEET_GID}`;
+export const WEAPON_DPS_SHEET_URL = `https://docs.google.com/spreadsheets/d/${WEAPON_DPS_SHEET_ID}/edit?gid=${WEAPON_DPS_SHEET_GID}`;
 
 const WEAPON_ROW_TYPES = new Set(["primary", "special", "power", "heavy"]);
 
@@ -187,9 +188,14 @@ export function weaponDpsLookupFromIndex(index: WeaponDpsIndex): WeaponDpsLookup
   return new Map(Object.entries(index.byName));
 }
 
+export function formatWeaponDpsParts(entry: WeaponDpsEntry): { total: string; dps: string } {
+  return {
+    total: entry.totalDamage == null ? "INF" : entry.totalDamage.toLocaleString("en-US"),
+    dps: entry.dps.toLocaleString("en-US"),
+  };
+}
+
 export function formatWeaponDpsLabel(entry: WeaponDpsEntry): string {
-  const total =
-    entry.totalDamage == null ? "INF" : entry.totalDamage.toLocaleString("en-US");
-  const dps = entry.dps.toLocaleString("en-US");
+  const { total, dps } = formatWeaponDpsParts(entry);
   return `${total} / ${dps}`;
 }

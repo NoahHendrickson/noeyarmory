@@ -4,6 +4,7 @@ import {
   buildWeaponDpsIndex,
   extractTraitPerksFromRow,
   formatWeaponDpsLabel,
+  formatWeaponDpsParts,
   matchSheetRowToWeapon,
   parseDpsNumber,
   parseTotalDamage,
@@ -96,12 +97,32 @@ describe("buildWeaponDpsIndex", () => {
   });
 });
 
-describe("formatWeaponDpsLabel", () => {
-  test("formats total and DPS with a slash", () => {
-    expect(formatWeaponDpsLabel({ totalDamage: 64_773, dps: 7476 })).toBe("64,773 / 7,476");
+describe("formatWeaponDpsParts", () => {
+  test("formats total and DPS separately", () => {
+    expect(formatWeaponDpsParts({ totalDamage: 64_773, dps: 7476, buildPerks: [] })).toEqual({
+      total: "64,773",
+      dps: "7,476",
+    });
   });
 
   test("uses INF when total damage is unknown", () => {
-    expect(formatWeaponDpsLabel({ totalDamage: null, dps: 5000 })).toBe("INF / 5,000");
+    expect(formatWeaponDpsParts({ totalDamage: null, dps: 5000, buildPerks: [] })).toEqual({
+      total: "INF",
+      dps: "5,000",
+    });
+  });
+});
+
+describe("formatWeaponDpsLabel", () => {
+  test("formats total and DPS with a slash", () => {
+    expect(formatWeaponDpsLabel({ totalDamage: 64_773, dps: 7476, buildPerks: [] })).toBe(
+      "64,773 / 7,476",
+    );
+  });
+
+  test("uses INF when total damage is unknown", () => {
+    expect(formatWeaponDpsLabel({ totalDamage: null, dps: 5000, buildPerks: [] })).toBe(
+      "INF / 5,000",
+    );
   });
 });

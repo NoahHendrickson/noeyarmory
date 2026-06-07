@@ -1,8 +1,9 @@
 import { ResultRow } from "@repo/ui";
-import { formatWeaponDpsLabel, type WeaponDpsEntry, type WeaponSummary } from "@repo/destiny";
+import type { WeaponDpsEntry, WeaponSummary } from "@repo/destiny";
 
 import { CraftableBadge } from "./craftable-badge";
 import { ElementIcon } from "./element-icon";
+import { WeaponDpsLabel } from "./weapon-dps-label";
 import { bungieIcon } from "../lib/bungie";
 
 /** Subset a result row needs (works for browse summaries and owned weapons). */
@@ -74,13 +75,7 @@ export function WeaponResultRow({
           {weapon.type}
         </span>
       }
-      trailing={
-        dps != null ? (
-          <span className="text-muted-foreground text-sm tabular-nums tracking-body">
-            {formatWeaponDpsLabel(dps)}
-          </span>
-        ) : undefined
-      }
+      trailing={dps != null ? <WeaponDpsLabel entry={dps} /> : undefined}
     />
   );
 }
