@@ -11,12 +11,17 @@ const BASE_DITHER_PIXEL_SIZE = 7;
 const MIN_DITHER_PIXEL_SIZE = 1;
 const MAX_DITHER_PIXEL_SIZE = 20;
 /** Finer grain on 2560×1440 panels (width-scaled default would be ~9). */
-const QHD_VIEWPORT_WIDTH = 2560;
-const QHD_DITHER_PIXEL_SIZE = 5;
+const QHD_DITHER_PIXEL_SIZE = 3;
 
-function ditherPixelSizeForWidth(width: number): number {
-  if (Math.abs(width - QHD_VIEWPORT_WIDTH) <= 40) return QHD_DITHER_PIXEL_SIZE;
-  const scaled = Math.round((BASE_DITHER_PIXEL_SIZE * width) / REFERENCE_VIEWPORT_WIDTH);
+function isQhdMonitor(): boolean {
+  const { width, height } = window.screen;
+  // Native 2560×1440 (and close variants); use screen size so OS scaling still matches.
+  return width >= 2400 && width <= 2800 && height >= 1300 && height <= 1600;
+}
+
+function ditherPixelSizeForViewport(innerWidth: number): number {
+  if (isQhdMonitor()) return QHD_DITHER_PIXEL_SIZE;
+  const scaled = Math.round((BASE_DITHER_PIXEL_SIZE * innerWidth) / REFERENCE_VIEWPORT_WIDTH);
   return Math.min(MAX_DITHER_PIXEL_SIZE, Math.max(MIN_DITHER_PIXEL_SIZE, scaled));
 }
 
@@ -24,7 +29,7 @@ function useDitherPixelSize(): number {
   const [pixelSize, setPixelSize] = useState(BASE_DITHER_PIXEL_SIZE);
 
   useEffect(() => {
-    const update = () => setPixelSize(ditherPixelSizeForWidth(window.innerWidth));
+    const update = () => setPixelSize(ditherPixelSizeForViewport(window.innerWidth));
     update();
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
