@@ -21,15 +21,15 @@ UPSTASH_REDIS_REST_TOKEN=…
 
 Without these vars, weapon view tracking is a no-op and the home section never appears. Browse/search still works normally.
 
-### Dev preview (no Redis writes)
+### Dev-only: skip Redis (optional)
 
-To preview the **Popular lately** UI locally without seeding Redis (and without affecting production data if you share the same Upstash database):
+If you point local dev at a shared production Upstash database and want to avoid reading or writing popularity counters:
 
 ```env
 POPULAR_WEAPONS_MOCK=true
 ```
 
-Only works when `NODE_ENV=development`. **Do not set this on Vercel.** Mock mode skips all Redis reads/writes and returns four weapons from your local index with fake view counts.
+Only works when `NODE_ENV=development`. **Do not set this on Vercel.** Mock mode skips all Redis reads/writes; **Popular lately** stays hidden until real rankings are available from Redis.
 
 ## Step 3 — Vercel (production)
 

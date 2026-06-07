@@ -1,13 +1,21 @@
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
+vi.mock("./mock", () => ({
+  isPopularWeaponsMockEnabled: vi.fn(() => false),
+}));
+
+import { isPopularWeaponsMockEnabled } from "./mock";
 import {
   applyPopularThreshold,
   dayKeyForDate,
+  getPopularWeapons,
   isPopularityConfigured,
   resetPopularityRedisForTests,
   rollingDayKeys,
   ROLLING_DAYS,
 } from "./redis";
+
+const mockedIsPopularWeaponsMockEnabled = vi.mocked(isPopularWeaponsMockEnabled);
 
 describe("dayKeyForDate", () => {
   test("uses UTC YYYY-MM-DD", () => {
@@ -88,11 +96,29 @@ describe("applyPopularThreshold", () => {
   });
 });
 
+describe("getPopularWeapons", () => {
+  afterEach(() => {
+    mockedIsPopularWeaponsMockEnabled.mockReset();
+    mockedIsPopularWeaponsMockEnabled.mockReturnValue(false);
+  });
+
+  test("returns empty rankings when mock mode is enabled", async () => {
+    mockedIsPopularWeaponsMockEnabled.mockReturnValue(true);
+    await expect(getPopularWeapons()).resolves.toEqual({
+      weapons: [],
+      totalViews: 0,
+      distinctWeapons: 0,
+    });
+  });
+});
+
 describe("isPopularityConfigured", () => {
   afterEach(() => {
     delete process.env.UPSTASH_REDIS_REST_URL;
     delete process.env.UPSTASH_REDIS_REST_TOKEN;
     resetPopularityRedisForTests();
+    mockedIsPopularWeaponsMockEnabled.mockReset();
+    mockedIsPopularWeaponsMockEnabled.mockReturnValue(false);
   });
 
   test("is false when env vars are missing", () => {

@@ -2,7 +2,7 @@ import "server-only";
 
 import { Redis } from "@upstash/redis";
 
-import { getMockPopularWeapons, isPopularWeaponsMockEnabled } from "./mock";
+import { isPopularWeaponsMockEnabled } from "./mock";
 
 export const ROLLING_DAYS = 7;
 export const MIN_TOTAL_VIEWS = 20;
@@ -120,7 +120,7 @@ export async function recordWeaponView(weaponHash: number): Promise<void> {
 
 export async function getPopularWeapons(): Promise<PopularWeaponsResult> {
   if (isPopularWeaponsMockEnabled()) {
-    return getMockPopularWeapons();
+    return { weapons: [], totalViews: 0, distinctWeapons: 0 };
   }
 
   const client = getRedis();
