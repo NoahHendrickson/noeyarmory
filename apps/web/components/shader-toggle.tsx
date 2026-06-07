@@ -22,14 +22,12 @@ export function ShaderToggle() {
   const disabled = webgpuSupported === false;
 
   return (
-    <div className="bg-background/80 inline-flex rounded-md p-1.5 backdrop-blur-sm">
-      <Switch
-        checked={disabled ? false : enabled}
-        onCheckedChange={setEnabled}
-        disabled={disabled}
-        aria-label="Background animation"
-        title={toggleTitle(enabled, webgpuSupported)}
-      />
-    </div>
+    <Switch
+      checked={disabled ? false : enabled}
+      onCheckedChange={setEnabled}
+      disabled={disabled}
+      aria-label="Background animation"
+      title={toggleTitle(enabled, webgpuSupported)}
+    />
   );
 }

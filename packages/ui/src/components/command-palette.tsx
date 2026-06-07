@@ -437,15 +437,14 @@ export function CommandPalette({
     <div
       ref={rootRef}
       className={cn(
-        "mx-auto w-max max-w-[calc(100vw-2rem)]",
+        "mx-auto w-max max-w-[calc(100vw-2rem)] transition-[min-width] duration-200 ease-out motion-reduce:transition-none",
         open ? "min-w-[600px]" : "min-w-[420px]",
         className,
       )}
     >
       <div
-        data-open={open}
         className={cn(
-          "palette-card-grow overflow-hidden border border-border bg-card/35 shadow-lg shadow-black/25 backdrop-blur-xl",
+          "overflow-hidden border border-border bg-card/35 shadow-lg shadow-black/25 backdrop-blur-xl",
           open ? "rounded-2xl" : "rounded-full",
         )}
       >
@@ -537,155 +536,164 @@ export function CommandPalette({
           )}
         </div>
 
-        {/* List — part of the same card */}
-        {open && (
-          <div className="max-h-[376px] overflow-y-auto px-1.5 py-1.5 tracking-body">
-            {mode === "results" && resultsHeader != null && (
-              <div className="px-1.5 pb-2">{resultsHeader}</div>
-            )}
-            {mode === "results" && results.length === 0 ? (
-              <div className="text-muted-foreground px-3 py-6 text-center text-base tracking-body">
-                {resultsEmpty ?? "No matches"}
-              </div>
-            ) : items.length === 0 ? (
-              <div className="text-muted-foreground px-3 py-6 text-center text-xs tracking-body">
-                No matches
-              </div>
-            ) : (
-              <ul
-                role="listbox"
-                id={listId}
-                key={
-                  mode === "results"
-                    ? results.map((result) => result.id).join("\u0000")
-                    : mode
-                }
-                className="flex flex-col gap-0.5"
-              >
-                {items.map((item, i) => {
-                  const selected = i === activeIndex;
-                  return (
-                    // eslint-disable-next-line jsx-a11y/click-events-have-key-events
-                    <li
-                      key={
-                        item.kind === "category"
-                          ? item.category.id
-                          : item.kind === "chipSuggestion"
-                            ? `${item.category.id}:${item.option.id}`
-                            : item.kind === "value"
-                              ? item.option.id
-                              : item.result.id
-                      }
-                      id={optionId(i)}
-                      role="option"
-                      aria-selected={selected}
-                      onMouseDown={(e) => e.preventDefault()}
-                      onMouseMove={() => {
-                        if (!selected) dispatch({ type: "setActive", index: i });
-                      }}
-                      onClick={() => selectItem(item)}
-                      className={cn(
-                        "flex cursor-pointer items-center justify-between gap-3 rounded-lg px-3 py-1.5",
-                        selected && "bg-white/[0.08]",
-                        item.kind === "result" && "p-0",
-                      )}
-                    >
-                      {item.kind === "category" ? (
-                        <>
-                          <span className="flex min-w-0 items-baseline gap-2 text-xs font-medium">
-                            <span className="text-white">{item.category.label}:</span>
-                            {item.category.examples && (
-                              <span className="text-muted-foreground truncate">
-                                {item.category.examples}
-                              </span>
+        {/* List — height animates via grid row collapse */}
+        <div
+          className={cn(
+            "grid transition-[grid-template-rows] duration-200 ease-out motion-reduce:transition-none",
+            open ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+          )}
+          inert={open ? undefined : true}
+          aria-hidden={!open}
+        >
+          <div className="min-h-0 overflow-hidden">
+            <div className="max-h-[376px] overflow-y-auto px-1.5 py-1.5 tracking-body">
+              {mode === "results" && resultsHeader != null && (
+                <div className="px-1.5 pb-2">{resultsHeader}</div>
+              )}
+              {mode === "results" && results.length === 0 ? (
+                <div className="text-muted-foreground px-3 py-6 text-center text-base tracking-body">
+                  {resultsEmpty ?? "No matches"}
+                </div>
+              ) : items.length === 0 ? (
+                <div className="text-muted-foreground px-3 py-6 text-center text-xs tracking-body">
+                  No matches
+                </div>
+              ) : (
+                <ul
+                  role="listbox"
+                  id={listId}
+                  key={
+                    mode === "results"
+                      ? results.map((result) => result.id).join("\u0000")
+                      : mode
+                  }
+                  className="flex flex-col gap-0.5"
+                >
+                  {items.map((item, i) => {
+                    const selected = i === activeIndex;
+                    return (
+                      // eslint-disable-next-line jsx-a11y/click-events-have-key-events
+                      <li
+                        key={
+                          item.kind === "category"
+                            ? item.category.id
+                            : item.kind === "chipSuggestion"
+                              ? `${item.category.id}:${item.option.id}`
+                              : item.kind === "value"
+                                ? item.option.id
+                                : item.result.id
+                        }
+                        id={optionId(i)}
+                        role="option"
+                        aria-selected={selected}
+                        onMouseDown={(e) => e.preventDefault()}
+                        onMouseMove={() => {
+                          if (!selected) dispatch({ type: "setActive", index: i });
+                        }}
+                        onClick={() => selectItem(item)}
+                        className={cn(
+                          "flex cursor-pointer items-center justify-between gap-3 rounded-lg px-3 py-1.5",
+                          selected && "bg-white/[0.08]",
+                          item.kind === "result" && "p-0",
+                        )}
+                      >
+                        {item.kind === "category" ? (
+                          <>
+                            <span className="flex min-w-0 items-baseline gap-2 text-xs font-medium">
+                              <span className="text-white">{item.category.label}:</span>
+                              {item.category.examples && (
+                                <span className="text-muted-foreground truncate">
+                                  {item.category.examples}
+                                </span>
+                              )}
+                            </span>
+                            {selected ? (
+                              <Kbd>
+                                Enter
+                                <CornerDownLeft className="size-3" />
+                              </Kbd>
+                            ) : (
+                              <Kbd>
+                                Tab
+                                <ArrowRight className="size-3" />
+                              </Kbd>
                             )}
-                          </span>
-                          {selected ? (
-                            <Kbd>
-                              Enter
-                              <CornerDownLeft className="size-3" />
-                            </Kbd>
-                          ) : (
-                            <Kbd>
-                              Tab
-                              <ArrowRight className="size-3" />
-                            </Kbd>
-                          )}
-                        </>
-                      ) : item.kind === "chipSuggestion" ? (
-                        <>
-                          <span className="flex min-w-0 items-baseline gap-2 text-xs font-medium">
-                            <span className="text-white">{item.category.label}:</span>
+                          </>
+                        ) : item.kind === "chipSuggestion" ? (
+                          <>
+                            <span className="flex min-w-0 items-baseline gap-2 text-xs font-medium">
+                              <span className="text-white">{item.category.label}:</span>
+                              <span
+                                className={cn(
+                                  "truncate",
+                                  item.option.dimmed ? "text-muted-foreground/45" : "text-muted-foreground",
+                                )}
+                              >
+                                &ldquo;{item.option.label}&rdquo;
+                              </span>
+                            </span>
+                            <span className="flex shrink-0 items-center gap-2">
+                              {item.option.hint != null && (
+                                <span className="text-muted-foreground text-xs">{item.option.hint}</span>
+                              )}
+                              {selected ? (
+                                <Kbd>
+                                  Enter
+                                  <CornerDownLeft className="size-3" />
+                                </Kbd>
+                              ) : (
+                                <Kbd>
+                                  Tab
+                                  <ArrowRight className="size-3" />
+                                </Kbd>
+                              )}
+                            </span>
+                          </>
+                        ) : item.kind === "value" ? (
+                          <>
                             <span
                               className={cn(
-                                "truncate",
-                                item.option.dimmed ? "text-muted-foreground/45" : "text-muted-foreground",
+                                "truncate text-xs font-medium",
+                                item.option.dimmed && "opacity-45",
                               )}
                             >
-                              &ldquo;{item.option.label}&rdquo;
+                              {item.option.label}
                             </span>
-                          </span>
-                          <span className="flex shrink-0 items-center gap-2">
-                            {item.option.hint != null && (
-                              <span className="text-muted-foreground text-xs">{item.option.hint}</span>
-                            )}
-                            {selected ? (
-                              <Kbd>
-                                Enter
-                                <CornerDownLeft className="size-3" />
-                              </Kbd>
-                            ) : (
-                              <Kbd>
-                                Tab
-                                <ArrowRight className="size-3" />
-                              </Kbd>
-                            )}
-                          </span>
-                        </>
-                      ) : item.kind === "value" ? (
-                        <>
-                          <span
-                            className={cn(
-                              "truncate text-xs font-medium",
-                              item.option.dimmed && "opacity-45",
-                            )}
-                          >
-                            {item.option.label}
-                          </span>
-                          <span className="flex shrink-0 items-center gap-2">
-                            {item.option.hint != null && (
-                              <span className="text-muted-foreground text-xs">
-                                {item.option.hint}
-                              </span>
-                            )}
-                            {selected ? (
-                              <Kbd>
-                                Enter
-                                <CornerDownLeft className="size-3" />
-                              </Kbd>
-                            ) : (
-                              <Kbd>
-                                Tab
-                                <ArrowRight className="size-3" />
-                              </Kbd>
-                            )}
-                          </span>
-                        </>
-                      ) : (
-                        <div className="w-full tracking-body">{item.result.content}</div>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-            {mode === "results" && resultsFooter != null && (
-              <div className="text-muted-foreground px-3 py-2 text-center text-base tracking-body">
-                {resultsFooter}
-              </div>
-            )}
+                            <span className="flex shrink-0 items-center gap-2">
+                              {item.option.hint != null && (
+                                <span className="text-muted-foreground text-xs">
+                                  {item.option.hint}
+                                </span>
+                              )}
+                              {selected ? (
+                                <Kbd>
+                                  Enter
+                                  <CornerDownLeft className="size-3" />
+                                </Kbd>
+                              ) : (
+                                <Kbd>
+                                  Tab
+                                  <ArrowRight className="size-3" />
+                                </Kbd>
+                              )}
+                            </span>
+                          </>
+                        ) : (
+                          <div className="w-full tracking-body">{item.result.content}</div>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+              {mode === "results" && resultsFooter != null && (
+                <div className="text-muted-foreground px-3 py-2 text-center text-base tracking-body">
+                  {resultsFooter}
+                </div>
+              )}
+            </div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

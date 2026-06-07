@@ -270,13 +270,13 @@ export function WeaponSearch({
   return (
     <div className="flex min-h-screen flex-col">
       <header className="py-4 text-center">
-        <span className="text-base font-semibold tracking-tight">noeyarmory</span>
+        <span className="text-base font-semibold tracking-tight">moonfang armory</span>
       </header>
 
       <main className="mx-auto flex w-full flex-1 flex-col px-4 pt-[16vh]">
         <div
           className={cn(
-            "mx-auto flex w-max max-w-[calc(100vw-2rem)] flex-col transition-opacity duration-200",
+            "mx-auto flex w-max max-w-[calc(100vw-2rem)] flex-col transition-[min-width,opacity] duration-200 ease-out motion-reduce:transition-none",
             paletteOpen ? "min-w-[600px]" : "min-w-[420px]",
             selected && "pointer-events-none opacity-0",
           )}
@@ -297,7 +297,7 @@ export function WeaponSearch({
             </div>
           </div>
           <CommandPalette
-            className="mx-0 w-full max-w-none min-w-0 transition-none motion-reduce:transition-none"
+            className="mx-0 w-full max-w-none min-w-0"
             placeholder={placeholder}
             categories={categories}
           chips={chips}

@@ -59,9 +59,10 @@ function PillSelect<T extends string>({
             className={cn(
               // Match CommandPalette bar shell — subtle see-through over the shader
               "border-border bg-card/35 text-foreground shadow-lg shadow-black/25 backdrop-blur-xl min-w-[var(--anchor-width)] rounded-lg border p-1 outline-none",
-              "origin-[var(--transform-origin)] transition-[transform,opacity] duration-100 ease-out",
-              "data-ending-style:scale-95 data-ending-style:opacity-0",
-              "data-starting-style:scale-95 data-starting-style:opacity-0",
+              // Opacity-only — scale fights Floating UI positioning and reads as a close hitch.
+              "transition-opacity duration-150 ease-in-out motion-reduce:transition-none",
+              "data-ending-style:opacity-0",
+              "data-starting-style:opacity-0",
             )}
           >
             {options.map((option) => {

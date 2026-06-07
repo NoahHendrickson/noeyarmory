@@ -204,26 +204,3 @@
   }
 }
 
-@layer utilities {
-  /* Subtle grow on open — transform only, avoids blur jank from width animation. */
-  .palette-card-grow {
-    transform-origin: top center;
-  }
-
-  .palette-card-grow[data-open="true"] {
-    transform: scale(1);
-    transition: transform 160ms cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  @starting-style {
-    .palette-card-grow[data-open="true"] {
-      transform: scale(0.975);
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .palette-card-grow[data-open="true"] {
-      transition: none;
-    }
-  }
-}
