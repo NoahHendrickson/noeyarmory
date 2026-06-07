@@ -6,15 +6,21 @@ vi.mock("../../../../lib/weapon-index-server", () => ({
   getWeaponSummary: vi.fn(),
 }));
 
+vi.mock("../../../../lib/popularity/enabled", () => ({
+  isPopularityPublishingEnabled: vi.fn(),
+}));
+
 vi.mock("../../../../lib/popularity/redis", () => ({
   isPopularityConfigured: vi.fn(),
   recordWeaponView: vi.fn(),
 }));
 
+import { isPopularityPublishingEnabled } from "../../../../lib/popularity/enabled";
 import { isPopularityConfigured, recordWeaponView } from "../../../../lib/popularity/redis";
 import { getWeaponSummary } from "../../../../lib/weapon-index-server";
 
 const mockedGetWeaponSummary = vi.mocked(getWeaponSummary);
+const mockedIsPopularityPublishingEnabled = vi.mocked(isPopularityPublishingEnabled);
 const mockedIsPopularityConfigured = vi.mocked(isPopularityConfigured);
 const mockedRecordWeaponView = vi.mocked(recordWeaponView);
 
@@ -34,6 +40,7 @@ function post(body: unknown, origin = "https://localhost:4111") {
 describe("POST /api/events/weapon-view", () => {
   beforeEach(() => {
     mockedGetWeaponSummary.mockReturnValue({ hash: 1, name: "Fatebringer" } as never);
+    mockedIsPopularityPublishingEnabled.mockReturnValue(true);
     mockedIsPopularityConfigured.mockReturnValue(true);
     mockedRecordWeaponView.mockResolvedValue(undefined);
   });
@@ -52,6 +59,13 @@ describe("POST /api/events/weapon-view", () => {
     mockedGetWeaponSummary.mockReturnValue(undefined);
     const response = await post({ weaponHash: 999 });
     expect(response.status).toBe(400);
+    expect(mockedRecordWeaponView).not.toHaveBeenCalled();
+  });
+
+  test("returns 204 when publishing is disabled", async () => {
+    mockedIsPopularityPublishingEnabled.mockReturnValue(false);
+    const response = await post({ weaponHash: 1 });
+    expect(response.status).toBe(204);
     expect(mockedRecordWeaponView).not.toHaveBeenCalled();
   });
 
