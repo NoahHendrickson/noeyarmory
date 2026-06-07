@@ -45,7 +45,7 @@ function PerkTooltipContent({
       {clarityLines && clarityLines.length > 0 ? (
         <>
           <div className="text-muted-foreground space-y-0.5 text-xs">
-            <div className="text-muted-foreground/80 mb-1 text-[10px] font-semibold tracking-wide uppercase">
+            <div className="text-muted-foreground/80 mb-1 text-sm font-semibold tracking-wide uppercase">
               Community research
             </div>
             <ClarityDescription lines={clarityLines} />
@@ -61,7 +61,7 @@ function PerkTooltipContent({
           )}
           {perk.enhancedDescription && (
             <div className="space-y-1 border-t border-white/10 pt-2">
-              <div className="text-[#eade8b] text-[10px] font-semibold tracking-wide uppercase">
+              <div className="text-[#eade8b] text-sm font-semibold tracking-wide uppercase">
                 Enhanced
               </div>
               <p className="text-muted-foreground text-xs leading-relaxed whitespace-pre-line">

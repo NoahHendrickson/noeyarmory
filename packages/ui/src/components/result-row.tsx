@@ -36,9 +36,9 @@ function ResultRow({ render, icon, title, subtitle, trailing, className, ...prop
               </span>
             )}
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-medium">{title}</span>
+              <span className="block truncate text-base font-medium">{title}</span>
               {subtitle != null && (
-                <span className="text-muted-foreground block min-w-0 text-xs">{subtitle}</span>
+                <span className="text-muted-foreground block min-w-0 text-base">{subtitle}</span>
               )}
             </span>
             {trailing != null && <span className="shrink-0">{trailing}</span>}

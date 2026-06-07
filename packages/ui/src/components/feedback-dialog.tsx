@@ -26,7 +26,7 @@ const TYPE_OPTIONS = [
 ];
 
 const sectionClass = "border-b border-white/16 p-4";
-const headerTitleClass = "text-sm font-normal";
+const headerTitleClass = "text-base font-normal";
 const headerDescriptionClass = "text-xs leading-snug text-white/60";
 const fieldLabelClass = "text-xs font-medium text-foreground";
 const fieldInputClass =

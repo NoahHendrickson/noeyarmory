@@ -10,7 +10,7 @@ function Kbd({ className, ...props }: ComponentProps<"kbd">) {
   return (
     <kbd
       className={cn(
-        "text-muted-foreground inline-flex items-center gap-1 font-sans text-[11px] leading-none",
+        "text-muted-foreground inline-flex items-center gap-1 font-sans text-sm leading-none",
         className,
       )}
       {...props}

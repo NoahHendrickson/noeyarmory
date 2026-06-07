@@ -116,7 +116,7 @@ export function ClarityDescription({ lines }: { lines: ClarityLine[] }) {
 
 export function ClarityAttribution() {
   return (
-    <p className="text-muted-foreground mt-2 border-t border-white/10 pt-2 text-[10px]">
+    <p className="text-muted-foreground mt-2 border-t border-white/10 pt-2 text-sm">
       Community research via{" "}
       <a
         href="https://d2clarity.com/discord"

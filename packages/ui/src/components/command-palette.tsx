@@ -494,7 +494,7 @@ export function CommandPalette({
                     ref={inputRef}
                     type="text"
                     size={Math.max(12, inputValue.length + 1, effectivePlaceholder.length)}
-                    className="placeholder:text-muted-foreground min-w-[8ch] shrink-0 bg-transparent text-sm outline-none disabled:cursor-not-allowed"
+                    className="placeholder:text-muted-foreground min-w-[8ch] shrink-0 bg-transparent text-base outline-none disabled:cursor-not-allowed"
                     placeholder={effectivePlaceholder}
                     value={inputValue}
                     disabled={disabled}
@@ -543,7 +543,7 @@ export function CommandPalette({
               <div className="px-1.5 pb-2">{resultsHeader}</div>
             )}
             {mode === "results" && results.length === 0 ? (
-              <div className="text-muted-foreground px-3 py-6 text-center text-xs">
+              <div className="text-muted-foreground px-3 py-6 text-center text-base">
                 {resultsEmpty ?? "No matches"}
               </div>
             ) : items.length === 0 ? (
@@ -677,7 +677,7 @@ export function CommandPalette({
               </ul>
             )}
             {mode === "results" && resultsFooter != null && (
-              <div className="text-muted-foreground px-3 py-2 text-center text-xs">
+              <div className="text-muted-foreground px-3 py-2 text-center text-base">
                 {resultsFooter}
               </div>
             )}

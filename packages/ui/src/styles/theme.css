@@ -110,6 +110,22 @@
   --font-sans: var(--font-geist-sans, "Geist Variable"), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono, "Geist Mono Variable"), ui-monospace, monospace;
 
+  /* Two-tier type scale — 16px primary, 14px secondary/meta. */
+  --text-xs: 0.875rem;
+  --text-xs--line-height: 1.25rem;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.25rem;
+  --text-base: 1rem;
+  --text-base--line-height: 1.5rem;
+  --text-lg: 1rem;
+  --text-lg--line-height: 1.5rem;
+  --text-xl: 1rem;
+  --text-xl--line-height: 1.5rem;
+  --text-2xl: 1rem;
+  --text-2xl--line-height: 1.5rem;
+  --text-3xl: 1rem;
+  --text-3xl--line-height: 1.5rem;
+
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -118,6 +134,12 @@
 }
 
 @layer base {
+  html {
+    @apply antialiased;
+    text-rendering: optimizeLegibility;
+    font-optical-sizing: auto;
+  }
+
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]),
   [role="radio"],

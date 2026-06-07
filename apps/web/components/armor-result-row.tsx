@@ -138,7 +138,7 @@ export function ArmorResultRow({
             </Button>
           </div>
           {showError ? (
-            <span className="text-destructive max-w-[14rem] truncate text-xs">
+            <span className="text-destructive max-w-[14rem] truncate text-base">
               {actionState.error}
             </span>
           ) : null}

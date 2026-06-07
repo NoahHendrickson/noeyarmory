@@ -270,7 +270,7 @@ export function WeaponSearch({
   return (
     <div className="flex min-h-screen flex-col">
       <header className="py-4 text-center">
-        <span className="text-sm font-semibold tracking-tight">noeyarmory</span>
+        <span className="text-base font-semibold tracking-tight">noeyarmory</span>
       </header>
 
       <main className="mx-auto flex w-full flex-1 flex-col px-4 pt-[16vh]">
@@ -346,7 +346,7 @@ export function WeaponSearch({
           resultsEmpty={mode === "weapon" ? "No weapons match." : "No armor matches."}
           resultsHeader={
             showResults && mode === "armor" ? (
-              <div className="text-muted-foreground text-xs">
+              <div className="text-muted-foreground text-base">
                 {resultCount} {resultCount === 1 ? "result" : "results"}
               </div>
             ) : showResults && mode === "weapon" ? (
@@ -356,7 +356,7 @@ export function WeaponSearch({
                 onClick={(e) => e.stopPropagation()}
                 onPointerDown={(e) => e.stopPropagation()}
               >
-                <span className="text-muted-foreground text-xs">
+                <span className="text-muted-foreground text-base">
                   {resultCount} {resultCount === 1 ? "result" : "results"}
                 </span>
                 <PillSelect
