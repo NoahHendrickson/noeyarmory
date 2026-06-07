@@ -17,3 +17,10 @@
     @apply bg-background text-foreground font-sans text-base tracking-body;
   }
 }
+
+@layer components {
+  .moonfang-screensaver {
+    transform: translate3d(var(--moonfang-x, 0px), var(--moonfang-y, 0px), 0);
+    will-change: transform;
+  }
+}

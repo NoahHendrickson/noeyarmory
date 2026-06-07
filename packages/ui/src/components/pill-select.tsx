@@ -38,7 +38,7 @@ function PillSelect<T extends string>({
         onPointerDown={(e) => e.stopPropagation()}
         className={cn(
           // Match CommandPalette bar shell: border-border bg-card/35 + blur
-          "border-border bg-card/35 backdrop-blur-xl inline-flex h-7 cursor-pointer items-center gap-1 rounded-pill border px-2 py-1 text-xs font-normal text-foreground outline-none",
+          "border-border bg-card/35 backdrop-blur-xl inline-flex h-8 cursor-pointer items-center gap-1 rounded-pill border px-2 py-1 text-xs font-normal text-foreground outline-none",
           "focus-visible:ring-ring focus-visible:ring-2",
           className,
         )}

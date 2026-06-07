@@ -1,86 +1,138 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 
 /** Native SVG viewBox — display size is scaled down for the background. */
-const LOGO_WIDTH = 90;
-const LOGO_HEIGHT = Math.round((90 * 252) / 264);
-const SPEED = 0.9;
+const LOGO_WIDTH = 72;
+const LOGO_HEIGHT = Math.round((72 * 252) / 264);
+/** Pixels per second — time-based so speed is consistent across refresh rates. */
+const SPEED_PX_PER_SEC = 110;
+const REDUCED_MOTION_FACTOR = 0.75;
+
+function motionSpeedPxPerSec(): number {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ? SPEED_PX_PER_SEC * REDUCED_MOTION_FACTOR
+    : SPEED_PX_PER_SEC;
+}
+
+function viewportBounds() {
+  const vv = window.visualViewport;
+  if (vv) {
+    return {
+      width: vv.width,
+      height: vv.height,
+      offsetX: vv.offsetLeft,
+      offsetY: vv.offsetTop,
+    };
+  }
+
+  return {
+    width: document.documentElement.clientWidth,
+    height: document.documentElement.clientHeight,
+    offsetX: 0,
+    offsetY: 0,
+  };
+}
 
 export function MoonfangScreensaver() {
   const ref = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
 
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-    if (reducedMotion.matches) {
-      el.style.transform = `translate(${Math.max(0, window.innerWidth - LOGO_WIDTH - 24)}px, 24px)`;
-      return;
-    }
-
-    let x = Math.random() * Math.max(0, window.innerWidth - LOGO_WIDTH);
-    let y = Math.random() * Math.max(0, window.innerHeight - LOGO_HEIGHT);
-    let vx = SPEED * (Math.random() > 0.5 ? 1 : -1);
-    let vy = SPEED * (Math.random() > 0.5 ? 1 : -1);
+    let x = 0;
+    let y = 0;
+    let dirX = 1;
+    let dirY = 1;
     let raf = 0;
+    let running = true;
+    let lastTime = performance.now();
 
-    const clampPosition = () => {
-      const maxX = Math.max(0, window.innerWidth - LOGO_WIDTH);
-      const maxY = Math.max(0, window.innerHeight - LOGO_HEIGHT);
-      x = Math.min(Math.max(0, x), maxX);
-      y = Math.min(Math.max(0, y), maxY);
+    const applyTransform = () => {
+      const { offsetX, offsetY } = viewportBounds();
+      el.style.setProperty("--moonfang-x", `${offsetX + x}px`);
+      el.style.setProperty("--moonfang-y", `${offsetY + y}px`);
     };
 
-    const tick = () => {
-      x += vx;
-      y += vy;
+    const resetPosition = () => {
+      const { width, height } = viewportBounds();
+      const maxX = Math.max(0, width - LOGO_WIDTH);
+      const maxY = Math.max(0, height - LOGO_HEIGHT);
+      x = Math.random() * maxX;
+      y = Math.random() * maxY;
+      dirX = Math.random() > 0.5 ? 1 : -1;
+      dirY = Math.random() > 0.5 ? 1 : -1;
+      lastTime = performance.now();
+      applyTransform();
+    };
 
-      if (x <= 0) {
-        x = 0;
-        vx = Math.abs(vx);
-      } else if (x + LOGO_WIDTH >= window.innerWidth) {
-        x = window.innerWidth - LOGO_WIDTH;
-        vx = -Math.abs(vx);
+    const tick = (now: number) => {
+      if (!running) return;
+
+      if (!document.hidden) {
+        const dt = Math.min((now - lastTime) / 1000, 0.05);
+        lastTime = now;
+
+        const speed = motionSpeedPxPerSec();
+        const { width, height } = viewportBounds();
+        const maxX = Math.max(0, width - LOGO_WIDTH);
+        const maxY = Math.max(0, height - LOGO_HEIGHT);
+
+        x += dirX * speed * dt;
+        y += dirY * speed * dt;
+
+        if (x <= 0) {
+          x = 0;
+          dirX = 1;
+        } else if (x >= maxX) {
+          x = maxX;
+          dirX = -1;
+        }
+
+        if (y <= 0) {
+          y = 0;
+          dirY = 1;
+        } else if (y >= maxY) {
+          y = maxY;
+          dirY = -1;
+        }
+
+        applyTransform();
+      } else {
+        lastTime = now;
       }
 
-      if (y <= 0) {
-        y = 0;
-        vy = Math.abs(vy);
-      } else if (y + LOGO_HEIGHT >= window.innerHeight) {
-        y = window.innerHeight - LOGO_HEIGHT;
-        vy = -Math.abs(vy);
-      }
-
-      el.style.transform = `translate3d(${x}px, ${y}px, 0)`;
       raf = requestAnimationFrame(tick);
     };
 
-    const onResize = () => clampPosition();
-    const onMotionChange = () => {
-      if (reducedMotion.matches) {
-        cancelAnimationFrame(raf);
-        el.style.transform = `translate3d(${Math.max(0, window.innerWidth - LOGO_WIDTH - 24)}px, 24px, 0)`;
-      }
+    const onViewportChange = () => {
+      const { width, height } = viewportBounds();
+      x = Math.min(x, Math.max(0, width - LOGO_WIDTH));
+      y = Math.min(y, Math.max(0, height - LOGO_HEIGHT));
+      applyTransform();
     };
 
-    clampPosition();
+    resetPosition();
     raf = requestAnimationFrame(tick);
-    window.addEventListener("resize", onResize);
-    reducedMotion.addEventListener("change", onMotionChange);
+
+    window.addEventListener("resize", onViewportChange);
+    window.visualViewport?.addEventListener("resize", onViewportChange);
+    window.visualViewport?.addEventListener("scroll", onViewportChange);
 
     return () => {
+      running = false;
       cancelAnimationFrame(raf);
-      window.removeEventListener("resize", onResize);
-      reducedMotion.removeEventListener("change", onMotionChange);
+      window.removeEventListener("resize", onViewportChange);
+      window.visualViewport?.removeEventListener("resize", onViewportChange);
+      window.visualViewport?.removeEventListener("scroll", onViewportChange);
     };
   }, []);
 
   return (
     <div
       ref={ref}
-      className="pointer-events-none fixed top-0 left-0 z-[1] will-change-transform"
+      className="moonfang-screensaver pointer-events-none fixed top-0 left-0 z-[1]"
       aria-hidden
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}

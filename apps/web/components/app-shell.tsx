@@ -20,7 +20,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <MoonfangScreensaver />
             <div className="relative z-10">
               <div className="pointer-events-none fixed top-4 right-4 z-50">
-                <div className="pointer-events-auto flex items-center gap-1">
+                <div className="pointer-events-auto flex items-center gap-3">
                   <ShaderToggle />
                   <FeedbackDialog />
                 </div>
