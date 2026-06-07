@@ -13,6 +13,7 @@ import { weaponTypeLabel } from "./weapon-result-row";
 
 interface PopularWeaponResponse {
   weapons: { hash: number; views: number }[];
+  mock?: boolean;
 }
 
 function PopularWeaponCard({
@@ -79,6 +80,7 @@ function PopularWeaponCard({
 export function PopularWeapons({ onSelectWeapon }: { onSelectWeapon: (hash: number) => void }) {
   const { byHash, damageTypes, ammoTypes } = useWeapons();
   const [weapons, setWeapons] = useState<WeaponSummary[]>([]);
+  const [isMock, setIsMock] = useState(false);
 
   const elementIconMap = useMemo(
     () => new Map(damageTypes.map((damageType) => [damageType.name, damageType.icon] as const)),
@@ -100,9 +102,13 @@ export function PopularWeapons({ onSelectWeapon }: { onSelectWeapon: (hash: numb
           .map((entry) => byHash.get(entry.hash))
           .filter((weapon): weapon is WeaponSummary => weapon != null);
         setWeapons(resolved);
+        setIsMock(data.mock === true);
       })
       .catch(() => {
-        if (!cancelled) setWeapons([]);
+        if (!cancelled) {
+          setWeapons([]);
+          setIsMock(false);
+        }
       });
 
     return () => {
