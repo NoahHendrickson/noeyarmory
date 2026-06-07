@@ -7,11 +7,11 @@ import { useShaderPreference } from "../lib/shader-preference";
 
 /** Dither pixel size tuned for ~1920px-wide viewports; scales with screen width. */
 const REFERENCE_VIEWPORT_WIDTH = 1920;
-const BASE_DITHER_PIXEL_SIZE = 7;
+const BASE_DITHER_PIXEL_SIZE = 6;
 const MIN_DITHER_PIXEL_SIZE = 1;
 const MAX_DITHER_PIXEL_SIZE = 20;
-/** Finer grain on 2560×1440 panels (width-scaled default would be ~9). */
-const QHD_DITHER_PIXEL_SIZE = 3;
+/** Finer grain on 2560×1440 panels (width-scaled default would be ~8). */
+const QHD_DITHER_PIXEL_SIZE = 2;
 
 function isQhdMonitor(): boolean {
   const { width, height } = window.screen;
