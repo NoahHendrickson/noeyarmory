@@ -1,6 +1,6 @@
 "use client";
 
-import { MessageSquare, X } from "lucide-react";
+import { X } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "./button";
@@ -146,10 +146,7 @@ export function FeedbackDialog({
           }
         />
       ) : (
-        <PopoverTrigger render={triggerButton}>
-          <MessageSquare className="size-4" />
-          Feedback
-        </PopoverTrigger>
+        <PopoverTrigger render={triggerButton}>Feedback</PopoverTrigger>
       )}
       <PopoverPortal>
         <PopoverPositioner side="bottom" align="end" sideOffset={8}>

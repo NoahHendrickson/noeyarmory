@@ -11,7 +11,7 @@ import {
   PopoverTitle,
   PopoverTrigger,
 } from "@repo/ui/components/popover";
-import { ScrollText, X } from "lucide-react";
+import { X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import {
@@ -100,7 +100,6 @@ export function ChangelogDialog() {
           />
         }
       >
-        <ScrollText className="size-4" />
         What&apos;s new
         {showBadge && (
           <span
