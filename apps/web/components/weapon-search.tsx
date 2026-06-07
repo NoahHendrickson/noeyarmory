@@ -547,6 +547,21 @@ export function WeaponSearch({
             selected && "pointer-events-none opacity-0",
           )}
         >
+          <div className="mb-4 flex justify-end">
+            <div
+              data-palette-ignore-close
+              className="mr-6 flex shrink-0 cursor-pointer items-center"
+              onClick={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <PillSelect
+                aria-label="Search mode"
+                options={MODES}
+                value={mode}
+                onValueChange={handleModeChange}
+              />
+            </div>
+          </div>
           <CommandPalette
             className="mx-0"
             placeholder={placeholder}
@@ -570,14 +585,6 @@ export function WeaponSearch({
             }}
             hideCategoryList={composingCustomFilter}
             plainPanelHeader={composingCustomFilter}
-            rightAdornment={
-              <PillSelect
-                aria-label="Search mode"
-                options={MODES}
-                value={mode}
-                onValueChange={handleModeChange}
-              />
-            }
             panelHeader={
               composingCustomFilter ? (
                 <div
