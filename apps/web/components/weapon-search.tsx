@@ -504,14 +504,25 @@ export function WeaponSearch({
     const category = categories.find((c) => c.id === categoryId);
     if (!category) return;
     const id = `${categoryId}:${option.id}`;
-    setChips((prev) =>
-      prev.some((c) => c.id === id)
-        ? prev
-        : [
-            ...prev,
-            { id, categoryId, categoryLabel: category.label, value: option.label, valueId: option.id },
-          ],
-    );
+    let added = false;
+    setChips((prev) => {
+      if (prev.some((c) => c.id === id)) return prev;
+      added = true;
+      return [
+        ...prev,
+        { id, categoryId, categoryLabel: category.label, value: option.label, valueId: option.id },
+      ];
+    });
+    if (added) {
+      recordSearch(mode, "", [
+        {
+          categoryId,
+          categoryLabel: category.label,
+          value: option.label,
+          valueId: option.id,
+        },
+      ]);
+    }
   }
 
   function addComposerPerk(categoryId: string, option: PaletteValueOption) {
