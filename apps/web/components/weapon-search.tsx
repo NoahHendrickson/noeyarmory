@@ -7,6 +7,7 @@ import {
   Badge,
   cn,
   CommandPalette,
+  Input,
   PillSelect,
   type PaletteAction,
   type PaletteCategory,
@@ -30,10 +31,7 @@ import {
 } from "@repo/destiny";
 
 import { useOwnedArmor } from "../lib/use-owned-armor";
-import {
-  useCustomWeaponFilters,
-  type CustomWeaponFilterInput,
-} from "../lib/use-custom-weapon-filters";
+import { useCustomWeaponFilters } from "../lib/use-custom-weapon-filters";
 import { useWeaponDps } from "../lib/use-weapon-dps";
 import { useWeaponDetail, useWeapons } from "../lib/weapons-context";
 import { getFilterChipAppearance } from "../lib/filter-chip-appearance";
@@ -45,7 +43,6 @@ import {
   type OwnedArmorFilters,
 } from "../lib/owned-armor-search";
 import { ArmorResultRow, type ArmorActionState } from "./armor-result-row";
-import { CustomFilterDialog } from "./custom-filter-dialog";
 import { WeaponResultRow } from "./weapon-result-row";
 
 const WeaponDetailModal = dynamic(
@@ -73,6 +70,23 @@ const WEAPON_SORT_OPTIONS: PillSelectOption<WeaponSort>[] = [
 
 const ARMOR_LOGIN_URL = "/api/auth/login?returnTo=%2F%3Fmode%3Darmor";
 const CUSTOM_FILTER_CATEGORY_ID = "customFilter";
+const CUSTOM_FILTER_DRAFT_CATEGORY_ID = "customFilterDraft";
+const CUSTOM_FILTER_TRAIT_CATEGORY_IDS = new Set(["trait"]);
+
+interface CustomFilterComposer {
+  name: string;
+  perkNames: string[];
+}
+
+function draftPerkChips(perkNames: string[]): PaletteChip[] {
+  return perkNames.map((name) => ({
+    id: `draft:${name.toLowerCase()}`,
+    categoryId: CUSTOM_FILTER_DRAFT_CATEGORY_ID,
+    categoryLabel: "Perk",
+    value: name,
+    valueId: name.toLowerCase(),
+  }));
+}
 
 function weaponNameCategory(weapons: WeaponSummary[]): PaletteCategory {
   const examples = weapons
@@ -133,6 +147,21 @@ function perkCategory(id: string, label: string, options: PerkOption[] | ModOpti
   };
 }
 
+function mergeTraitPerkOptions(cols: ReturnType<typeof collectColumnPerks>): PerkOption[] {
+  const byName = new Map<string, PerkOption>();
+  for (const perk of [...cols.trait1, ...cols.trait2]) {
+    const key = perk.name.toLowerCase();
+    const existing = byName.get(key);
+    if (existing) {
+      existing.count += perk.count;
+      existing.currentlyCanRoll = existing.currentlyCanRoll || perk.currentlyCanRoll;
+    } else {
+      byName.set(key, { ...perk });
+    }
+  }
+  return [...byName.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+}
+
 function customFilterCategory(
   filters: ReturnType<typeof useCustomWeaponFilters>["filters"],
 ): PaletteCategory {
@@ -156,21 +185,6 @@ function customFilterCategory(
   };
 }
 
-function mergeTraitPerkOptions(cols: ReturnType<typeof collectColumnPerks>): PerkOption[] {
-  const byName = new Map<string, PerkOption>();
-  for (const perk of [...cols.trait1, ...cols.trait2]) {
-    const key = perk.name.toLowerCase();
-    const existing = byName.get(key);
-    if (existing) {
-      existing.count += perk.count;
-      existing.currentlyCanRoll = existing.currentlyCanRoll || perk.currentlyCanRoll;
-    } else {
-      byName.set(key, { ...perk });
-    }
-  }
-  return [...byName.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
-}
-
 export function WeaponSearch({
   signedIn = false,
   initialMode = "weapon",
@@ -180,7 +194,7 @@ export function WeaponSearch({
 }) {
   const { weapons, perks, damageTypes, isSample, byHash } = useWeapons();
   const { dpsByName } = useWeaponDps();
-  const { filters: customFilters, createFilter, updateFilter, deleteFilter } = useCustomWeaponFilters();
+  const { filters: customFilters, createFilter } = useCustomWeaponFilters();
   const [mode, setMode] = useState<Mode>(initialMode);
   const {
     armor: owned,
@@ -195,8 +209,9 @@ export function WeaponSearch({
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [sort, setSort] = useState<WeaponSort>("season-desc");
   const [showAllResults, setShowAllResults] = useState(false);
-  const [customFilterDialogOpen, setCustomFilterDialogOpen] = useState(false);
-  const [editingCustomFilterId, setEditingCustomFilterId] = useState<string | null>(null);
+  const [customFilterComposer, setCustomFilterComposer] = useState<CustomFilterComposer | null>(
+    null,
+  );
   const [selectedHash, setSelectedHash] = useState<number | null>(null);
   const { weapon: selected } = useWeaponDetail(selectedHash);
 
@@ -207,15 +222,9 @@ export function WeaponSearch({
 
   const weaponColumnPerks = useMemo(() => collectColumnPerks(weapons, perks), [weapons, perks]);
 
-  const customFilterPerks = useMemo(
-    () => mergeTraitPerkOptions(weaponColumnPerks),
-    [weaponColumnPerks],
-  );
-
   const weaponCategories = useMemo<PaletteCategory[]>(() => {
     const facets = collectFacets(weapons);
     return [
-      weaponNameCategory(weapons),
       perkCategory("trait1", "Trait 1", weaponColumnPerks.trait1),
       perkCategory("trait2", "Trait 2", weaponColumnPerks.trait2),
       ...(customFilters.length > 0 ? [customFilterCategory(customFilters)] : []),
@@ -227,6 +236,7 @@ export function WeaponSearch({
       facetCategory("craftable", "Craftable", facets.craftable ?? []),
       facetCategory("rarity", "Rarity", facets.rarity ?? []),
       perkCategory("originTrait", "Origin Trait", weaponColumnPerks.originTrait),
+      weaponNameCategory(weapons),
     ];
   }, [weapons, weaponColumnPerks, customFilters]);
 
@@ -241,27 +251,18 @@ export function WeaponSearch({
     ];
   }, [owned]);
 
-  const categories = mode === "weapon" ? weaponCategories : armorCategories;
+  const composingCustomFilter = customFilterComposer != null && mode === "weapon";
 
-  const categoryActions = useMemo<PaletteAction[]>(
-    () =>
-      mode === "weapon"
-        ? [
-            {
-              id: "create-custom-filter",
-              label: "Create custom filter",
-              hint: "Group perks into a reusable filter",
-              icon: <ListFilterPlus className="text-muted-foreground size-3.5 shrink-0" aria-hidden />,
-              hideKeyboardHint: true,
-              onSelect: () => {
-                setEditingCustomFilterId(null);
-                setCustomFilterDialogOpen(true);
-              },
-            },
-          ]
-        : [],
-    [mode],
+  const composerCategories = useMemo<PaletteCategory[]>(
+    () => [perkCategory("trait", "Trait", mergeTraitPerkOptions(weaponColumnPerks))],
+    [weaponColumnPerks],
   );
+
+  const categories = composingCustomFilter
+    ? composerCategories
+    : mode === "weapon"
+      ? weaponCategories
+      : armorCategories;
 
   const weaponFilters = useMemo<WeaponFilters>(() => {
     const f: Record<string, string[]> = {};
@@ -352,26 +353,108 @@ export function WeaponSearch({
     );
   }
 
-  function deleteCustomFilter(id: string) {
-    deleteFilter(id);
-    setChips((prev) =>
-      prev.filter((chip) => chip.categoryId !== CUSTOM_FILTER_CATEGORY_ID || chip.valueId !== id),
-    );
+  function addComposerPerk(categoryId: string, option: PaletteValueOption) {
+    if (!CUSTOM_FILTER_TRAIT_CATEGORY_IDS.has(categoryId)) return;
+    setCustomFilterComposer((prev) => {
+      if (!prev) return prev;
+      if (prev.perkNames.some((perk) => perk.toLowerCase() === option.id)) return prev;
+      return { ...prev, perkNames: [...prev.perkNames, option.label] };
+    });
   }
 
-  function updateCustomFilter(id: string, input: CustomWeaponFilterInput) {
-    const updated = updateFilter(id, input);
-    if (updated) {
-      setChips((prev) =>
-        prev.map((chip) =>
-          chip.categoryId === CUSTOM_FILTER_CATEGORY_ID && chip.valueId === id
-            ? { ...chip, value: updated.name }
-            : chip,
-        ),
-      );
+  function handleAddChip(categoryId: string, option: PaletteValueOption) {
+    if (composingCustomFilter) {
+      addComposerPerk(categoryId, option);
+      return;
     }
-    return updated;
+    addChip(categoryId, option);
   }
+
+  function handleRemoveChip(chipId: string) {
+    if (composingCustomFilter) {
+      setCustomFilterComposer((prev) => {
+        if (!prev) return prev;
+        const perkKey = chipId.replace(/^draft:/, "");
+        return {
+          ...prev,
+          perkNames: prev.perkNames.filter((perk) => perk.toLowerCase() !== perkKey),
+        };
+      });
+      return;
+    }
+    setChips((prev) => prev.filter((c) => c.id !== chipId));
+  }
+
+  function handleClearChips() {
+    if (composingCustomFilter) {
+      setCustomFilterComposer((prev) => (prev ? { ...prev, perkNames: [] } : null));
+      return;
+    }
+    setChips([]);
+  }
+
+  function handleCreateCustomFilter() {
+    if (!customFilterComposer) return;
+    const name = customFilterComposer.name.trim();
+    if (!name || customFilterComposer.perkNames.length === 0) return;
+
+    const created = createFilter({ name, perkNames: customFilterComposer.perkNames });
+    if (!created) return;
+
+    const category = weaponCategories.find((c) => c.id === CUSTOM_FILTER_CATEGORY_ID);
+    if (category) {
+      addChip(CUSTOM_FILTER_CATEGORY_ID, {
+        id: created.id,
+        label: created.name,
+      });
+    }
+    setCustomFilterComposer(null);
+    setQuery("");
+  }
+
+  const canCreateCustomFilter =
+    customFilterComposer != null &&
+    customFilterComposer.name.trim().length > 0 &&
+    customFilterComposer.perkNames.length > 0;
+
+  const categoryActions = useMemo<PaletteAction[]>(() => {
+    if (mode !== "weapon") return [];
+    if (composingCustomFilter) {
+      return [
+        {
+          id: "create-custom-filter-save",
+          label: "Create filter",
+          hint: canCreateCustomFilter ? undefined : "Add a name and at least one perk",
+          variant: "primary",
+          alwaysShow: true,
+          keepPanelOpen: true,
+          disabled: !canCreateCustomFilter,
+          hideKeyboardHint: true,
+          onSelect: handleCreateCustomFilter,
+        },
+        {
+          id: "cancel-custom-filter",
+          label: "Cancel",
+          hint: "Discard this filter",
+          alwaysShow: true,
+          keepPanelOpen: true,
+          hideKeyboardHint: true,
+          onSelect: () => setCustomFilterComposer(null),
+        },
+      ];
+    }
+    return [
+      {
+        id: "create-custom-filter",
+        label: "Create custom filter",
+        hint: "Group perks into a reusable filter",
+        icon: <ListFilterPlus className="text-muted-foreground size-3.5 shrink-0" aria-hidden />,
+        hideKeyboardHint: true,
+        keepPanelOpen: true,
+        onSelect: () => setCustomFilterComposer({ name: "", perkNames: [] }),
+      },
+    ];
+  }, [mode, composingCustomFilter, canCreateCustomFilter]);
 
   useEffect(() => {
     setShowAllResults(false);
@@ -424,12 +507,19 @@ export function WeaponSearch({
     <span className="text-destructive text-sm">{armorLoadError}</span>
   ) : undefined;
 
-  const hasFilters = chips.length > 0;
-  const isFiltering = query.trim().length > 0;
-  const showResults = hasFilters && !isFiltering;
+  const paletteChips = composingCustomFilter
+    ? draftPerkChips(customFilterComposer.perkNames)
+    : chips;
 
-  const placeholder =
-    mode === "weapon"
+  const hasFilters = paletteChips.length > 0;
+  const isFiltering = query.trim().length > 0;
+  const showResults = hasFilters && !isFiltering && !composingCustomFilter;
+
+  const placeholder = composingCustomFilter
+    ? customFilterComposer.perkNames.length > 0
+      ? "Add more perks…"
+      : "Search trait perks"
+    : mode === "weapon"
       ? "Press F to search weapons, perks, or names"
       : armorLoading
         ? "Loading your armor…"
@@ -469,18 +559,55 @@ export function WeaponSearch({
             categories={categories}
             categoryActions={categoryActions}
             suspendResults={selectedHash != null}
-          chips={chips}
-          open={paletteOpen}
-          onOpenChange={setPaletteOpen}
-          onAddChip={addChip}
-          onRemoveChip={(id) => setChips((prev) => prev.filter((c) => c.id !== id))}
-          onClearChips={() => setChips([])}
-          getChipAppearance={(chip) =>
-            getFilterChipAppearance(chip.categoryId, chip.value, elementIconMap)
-          }
-          query={query}
-          onQueryChange={setQuery}
-          showResults={showResults}
+            chips={paletteChips}
+            open={paletteOpen}
+            onOpenChange={(open) => {
+              setPaletteOpen(open);
+              if (!open) setCustomFilterComposer(null);
+            }}
+            onAddChip={handleAddChip}
+            onRemoveChip={handleRemoveChip}
+            onClearChips={handleClearChips}
+            getChipAppearance={(chip) => {
+              if (chip.categoryId === CUSTOM_FILTER_DRAFT_CATEGORY_ID) {
+                return { tone: "trait", hideLabel: true };
+              }
+              return getFilterChipAppearance(chip.categoryId, chip.value, elementIconMap);
+            }}
+            hideCategoryList={composingCustomFilter}
+            plainPanelHeader={composingCustomFilter}
+            panelHeader={
+              composingCustomFilter ? (
+                <div
+                  className="space-y-3 py-3"
+                  data-palette-ignore-close
+                  onClick={(e) => e.stopPropagation()}
+                  onPointerDown={(e) => e.stopPropagation()}
+                >
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-white">New custom filter</p>
+                    <p className="text-muted-foreground text-xs">
+                      Combine different perks to create a custom filter.
+                    </p>
+                  </div>
+                  <Input
+                    id="custom-filter-name"
+                    value={customFilterComposer.name}
+                    onChange={(event) =>
+                      setCustomFilterComposer((prev) =>
+                        prev ? { ...prev, name: event.target.value } : prev,
+                      )
+                    }
+                    placeholder="Name your custom filter, e.g. reload perks"
+                    className="h-8 rounded-[8px] text-xs"
+                    aria-label="Filter name"
+                  />
+                </div>
+              ) : undefined
+            }
+            query={query}
+            onQueryChange={setQuery}
+            showResults={showResults}
           results={mode === "weapon" ? weaponPaletteResults : armorPaletteResults}
           onSelectResult={(id) => {
             if (mode === "weapon") {
@@ -558,16 +685,6 @@ export function WeaponSearch({
           onClose={() => setSelectedHash(null)}
         />
       )}
-      <CustomFilterDialog
-        open={customFilterDialogOpen}
-        filters={customFilters}
-        perkOptions={customFilterPerks}
-        editingFilterId={editingCustomFilterId}
-        onOpenChange={setCustomFilterDialogOpen}
-        onCreate={createFilter}
-        onUpdate={updateCustomFilter}
-        onDelete={deleteCustomFilter}
-      />
     </div>
   );
 }
