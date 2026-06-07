@@ -11,7 +11,7 @@ import {
   PopoverTitle,
   PopoverTrigger,
 } from "@repo/ui/components/popover";
-import { Sparkles, X } from "lucide-react";
+import { X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import {
@@ -100,8 +100,7 @@ export function ChangelogDialog() {
           />
         }
       >
-        <Sparkles className="size-3.5 shrink-0 sm:hidden" aria-hidden />
-        <span className="hidden sm:inline">What&apos;s new</span>
+        What&apos;s new
         {showBadge && (
           <span
             className="bg-primary absolute -top-0.5 -right-0.5 size-2 rounded-full"
