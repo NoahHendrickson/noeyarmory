@@ -131,10 +131,17 @@ export function HomeSearch({
 
   useEffect(() => {
     if (mode !== "weapon" || weapons.length === 0) return;
-    return scheduleIdle(() => {
+    let detailPreloadTimer: ReturnType<typeof window.setTimeout> | undefined;
+    const cancelIdle = scheduleIdle(() => {
       void loadWeaponDetailModal();
-      void preloadWeaponDetails();
+      detailPreloadTimer = window.setTimeout(() => {
+        void preloadWeaponDetails();
+      }, 1500);
     });
+    return () => {
+      cancelIdle();
+      if (detailPreloadTimer !== undefined) window.clearTimeout(detailPreloadTimer);
+    };
   }, [mode, weapons.length, preloadWeaponDetails]);
 
   const weaponColumnPerks = useMemo(() => collectColumnPerks(weapons, perks), [weapons, perks]);
