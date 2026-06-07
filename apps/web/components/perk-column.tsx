@@ -142,6 +142,7 @@ function PerkTile({
   return (
     <Tooltip>
       <TooltipTrigger
+        delay={0}
         render={
           linkPerks ? (
             <Link
