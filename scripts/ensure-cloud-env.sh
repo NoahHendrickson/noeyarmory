@@ -1,48 +1,30 @@
 #!/usr/bin/env bash
-# Idempotent cloud-agent bootstrap: Node 24 + canonical git remote casing.
+# Idempotent cloud-agent bootstrap: Node 24 + canonical git remote owner casing.
 set -eo pipefail
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-CANONICAL_ORIGIN="https://github.com/NoahHendrickson/noeyarmory"
+_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd "$_SCRIPT_DIR/.." && pwd)"
 BASHRC_MARKER="# noeyarmory-cloud-node24"
 
-# --- Node 24 (repo requires >=24; VM default is Node 22 at /exec-daemon/node) ---
-export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
-if [ -s "$NVM_DIR/nvm.sh" ]; then
-  # shellcheck source=/dev/null
-  . "$NVM_DIR/nvm.sh"
-  (cd "$ROOT" && nvm install && nvm use)
-  export PATH="$NVM_DIR/versions/node/$(nvm version)/bin:$PATH"
-  echo "Node $(node -v) active"
-else
-  echo "warn: nvm not found; Node may still be $(node -v 2>/dev/null || echo unknown)" >&2
-fi
+# shellcheck source=scripts/lib/cloud-env.sh
+. "$ROOT/scripts/lib/cloud-env.sh"
 
-# --- Git remote: canonical owner casing for PR tooling ---
-if git -C "$ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-  current="$(git -C "$ROOT" remote get-url origin 2>/dev/null || true)"
-  if [ -n "$current" ]; then
-    stripped="$(printf '%s' "$current" | sed -E 's#^https://[^@]+@#https://#; s#^git@github.com:#https://github.com/#')"
-    if [ "${stripped,,}" != "${CANONICAL_ORIGIN,,}" ] || [ "$stripped" != "$CANONICAL_ORIGIN" ]; then
-      git -C "$ROOT" remote set-url origin "$CANONICAL_ORIGIN"
-      echo "Normalized origin remote to $CANONICAL_ORIGIN"
-    fi
-  fi
-fi
+activate_node_from_nvmrc "$ROOT"
+assert_node_major_ge 24
+echo "Node $(node -v) active"
 
-# --- Persist Node 24 for interactive shells under /workspace ---
+normalize_origin_owner_casing "$ROOT"
+
 if [ -f "$HOME/.bashrc" ] && ! grep -qF "$BASHRC_MARKER" "$HOME/.bashrc"; then
-  cat >>"$HOME/.bashrc" <<'EOF'
+  cat >>"$HOME/.bashrc" <<EOF
 
-# noeyarmory-cloud-node24 — auto-use Node from .nvmrc in /workspace
-if [[ -f /workspace/.nvmrc && -s "$HOME/.nvm/nvm.sh" ]]; then
-  case "$PWD" in
-    /workspace|/workspace/*)
-      export NVM_DIR="$HOME/.nvm"
+$BASHRC_MARKER — auto-use Node from .nvmrc in $ROOT
+if [[ -f "$ROOT/.nvmrc" && -s "\$HOME/.nvm/nvm.sh" ]]; then
+  case "\$PWD" in
+    $ROOT|$ROOT/*)
       # shellcheck source=/dev/null
-      . "$NVM_DIR/nvm.sh"
-      nvm use /workspace >/dev/null 2>&1 || nvm install
-      export PATH="$NVM_DIR/versions/node/$(nvm version)/bin:$PATH"
+      . "$ROOT/scripts/lib/cloud-env.sh"
+      activate_node_from_nvmrc "$ROOT" >/dev/null 2>&1 || true
       ;;
   esac
 fi

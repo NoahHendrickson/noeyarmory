@@ -9,13 +9,13 @@ Guidance for cloud agents working in this repository.
 Cloud agents load `.cursor/environment.json`, which runs `scripts/ensure-cloud-env.sh` before `pnpm install`. That script:
 
 - Activates **Node 24** from `.nvmrc` (the VM default at `/exec-daemon/node` is Node 22)
-- Normalizes `origin` to `https://github.com/NoahHendrickson/noeyarmory` (canonical owner casing — lowercase `noahhendrickson` breaks PR tooling)
+- Normalizes `origin` owner casing to `NoahHendrickson` when the remote already points at this repo (preserves HTTPS auth tokens and SSH URLs)
 - Appends a `~/.bashrc` hook so interactive shells under `/workspace` also use Node 24
 
 Re-run manually after a fresh clone or if `pnpm` warns about `Unsupported engine`:
 
 ```bash
-bash scripts/ensure-cloud-env.sh
+source scripts/ensure-cloud-env.sh
 node -v   # should print v24.x
 ```
 
