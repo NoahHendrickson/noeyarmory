@@ -9,7 +9,7 @@ import { ShaderPreferenceProvider } from "../lib/shader-preference";
 import { WeaponsProvider } from "../lib/weapons-context";
 import { ChangelogDialog } from "./changelog-dialog";
 import { MoonfangScreensaver } from "./moonfang-screensaver";
-import { ShaderBackground } from "./shader-background";
+import { ShaderBackgroundLoader } from "./shader-background-loader";
 import { ShaderToggle } from "./shader-toggle";
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -21,7 +21,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <WeaponsProvider>
         <ClarityProvider>
           <ShaderPreferenceProvider>
-            <ShaderBackground />
+            <ShaderBackgroundLoader />
             <MoonfangScreensaver />
             <div className="relative z-10">
               <header className="pointer-events-none sticky top-0 z-50 grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-[max(0.75rem,env(safe-area-inset-right))] pt-[max(0.75rem,env(safe-area-inset-top))] pb-2 pl-[max(0.75rem,env(safe-area-inset-left))]">

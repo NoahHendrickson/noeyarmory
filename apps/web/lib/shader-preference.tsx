@@ -33,10 +33,19 @@ function readStoredPreference(): boolean | null {
 function readDefaultEnabled(): boolean {
   const stored = readStoredPreference();
   if (stored !== null) return stored;
+  if (typeof window === "undefined") return true;
+
   // Respect reduced motion until the user explicitly opts in via the toggle.
-  if (typeof window !== "undefined") {
-    return !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  }
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return false;
+
+  // Avoid defaulting on when the user asked the browser to save data.
+  const connection = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
+  if (connection?.saveData) return false;
+
+  // Low-memory devices struggle with full-viewport WebGPU rendering.
+  const deviceMemory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory;
+  if (deviceMemory !== undefined && deviceMemory <= 4) return false;
+
   return true;
 }
 
