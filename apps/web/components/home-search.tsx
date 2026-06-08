@@ -148,7 +148,7 @@ export function HomeSearch({
     paletteOpen,
     setPaletteOpen,
     setPreviewsReady,
-    previewsEnabled,
+    previewsReady,
     handlePanelStateChange,
     chipSuggestions,
     ghostCompletion,
@@ -582,7 +582,7 @@ export function HomeSearch({
             recentValues={recentValues}
             chipSuggestions={chipSuggestions}
             previewResults={
-              previewsEnabled && !showResults
+              previewsReady && !showResults
                 ? mode === "weapon"
                   ? weaponPreviewResults
                   : armorPreviewResults

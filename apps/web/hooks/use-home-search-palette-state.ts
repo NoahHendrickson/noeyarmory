@@ -16,6 +16,10 @@ import type { OwnedArmorItem } from "../lib/armor-types";
 import type { CustomWeaponFilter } from "../lib/use-custom-weapon-filters";
 import { CUSTOM_FILTER_DRAFT_CATEGORY_ID } from "../lib/palette/constants";
 import { useArmorSearchResults } from "./use-armor-search-results";
+import { usePaletteGhostCompletion } from "./use-palette-ghost-completion";
+import { usePaletteInlineSuggestions } from "./use-palette-inline-suggestions";
+import { usePaletteSubmit } from "./use-palette-submit";
+import { useWeaponSearchResults } from "./use-weapon-search-results";
 
 function draftPerkChips(perkNames: string[]): PaletteChip[] {
   return perkNames.map((name) => ({
@@ -26,10 +30,6 @@ function draftPerkChips(perkNames: string[]): PaletteChip[] {
     valueId: name.toLowerCase(),
   }));
 }
-import { usePaletteGhostCompletion } from "./use-palette-ghost-completion";
-import { usePaletteInlineSuggestions } from "./use-palette-inline-suggestions";
-import { usePaletteSubmit } from "./use-palette-submit";
-import { useWeaponSearchResults } from "./use-weapon-search-results";
 
 export interface UseHomeSearchPaletteStateParams {
   mode: "weapon" | "armor";
@@ -126,7 +126,6 @@ export function useHomeSearchPaletteState({
   );
 
   const paletteChips = composingCustomFilter ? draftPerkChips(draftPerkNames) : chips;
-  const previewsEnabled = previewsReady;
   const suggestionScanEnabled = paletteOpen && !composingCustomFilter;
 
   const inlineSuggestions = usePaletteInlineSuggestions({
@@ -162,7 +161,7 @@ export function useHomeSearchPaletteState({
     mode,
     resultsMode,
     paletteOpen,
-    previewsEnabled,
+    previewsEnabled: previewsReady,
     inlineSuggestions,
   });
 
@@ -177,7 +176,7 @@ export function useHomeSearchPaletteState({
     query,
     showAllResults,
     paletteOpen,
-    previewsEnabled,
+    previewsEnabled: previewsReady,
     inlineSuggestions,
   });
 
@@ -209,12 +208,8 @@ export function useHomeSearchPaletteState({
     setPaletteOpen,
     previewsReady,
     setPreviewsReady,
-    previewsEnabled,
-    panelState,
     handlePanelStateChange,
-    inlineSuggestions,
     chipSuggestions,
-    suggestionScanEnabled,
     ghostCompletion,
     ghostSuffixText,
     handleSubmit,
