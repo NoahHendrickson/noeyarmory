@@ -1,3 +1,4 @@
+import { memo } from "react";
 import Image from "next/image";
 
 import { cn } from "@repo/ui";
@@ -25,7 +26,7 @@ const MASK_STYLE = (src: string) =>
   }) as const;
 
 /** Destiny damage-type icon — Bungie manifest image when available, inline SVG fallback. */
-export function ElementIcon({
+export const ElementIcon = memo(function ElementIcon({
   element,
   iconPath,
   className,
@@ -107,6 +108,6 @@ export function ElementIcon({
       )}
     </svg>
   );
-}
+});
 
 export { isElementName };

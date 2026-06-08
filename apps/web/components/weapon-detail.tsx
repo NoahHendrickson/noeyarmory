@@ -122,6 +122,19 @@ export function WeaponDetailView({
 
   const clearHoverPreview = useCallback(() => setHoverPreview(null), []);
 
+  // Stable across renders (deps are stable) so PerkColumnView can forward them to
+  // memo(PerkTile) without busting the memo on every hover/selection re-render.
+  const handleHoverPerk = useCallback(
+    (columnIndex: number, perk: PerkRef) => {
+      if (perk.statMods?.length) {
+        setHoverPreview({ columnIndex, perk });
+      } else {
+        clearHoverPreview();
+      }
+    },
+    [clearHoverPreview],
+  );
+
   useEffect(() => {
     setHoverPreview(null);
   }, [weapon.hash]);
@@ -221,29 +234,14 @@ export function WeaponDetailView({
                     <PerkColumnView
                       key={`${column.kind}-${columnIndex}`}
                       column={column}
+                      columnIndex={columnIndex}
                       linkPerks={canSelect ? false : linkPerks}
                       highlightedPerks={highlightedPerks}
                       selectedPerkHash={
                         canSelect ? build.selectedByColumn.get(columnIndex) : undefined
                       }
-                      onSelectPerk={
-                        canSelect
-                          ? (perk) => {
-                              build.togglePerk(columnIndex, perk);
-                            }
-                          : undefined
-                      }
-                      onHoverPerk={
-                        canSelect
-                          ? (perk) => {
-                              if (perk.statMods?.length) {
-                                setHoverPreview({ columnIndex, perk });
-                              } else {
-                                clearHoverPreview();
-                              }
-                            }
-                          : undefined
-                      }
+                      onSelectPerk={canSelect ? build.togglePerk : undefined}
+                      onHoverPerk={canSelect ? handleHoverPerk : undefined}
                       onHoverEnd={canSelect ? clearHoverPreview : undefined}
                     />
                   );

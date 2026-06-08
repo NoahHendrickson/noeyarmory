@@ -16,7 +16,12 @@ import {
   type PaletteValueOption,
   type PillSelectOption,
 } from "@repo/ui";
-import { collectColumnPerks, type WeaponSort } from "@repo/destiny";
+import {
+  collectColumnPerks,
+  collectFacets,
+  createPerkNameFuse,
+  type WeaponSort,
+} from "@repo/destiny";
 
 import { useArmorActions } from "../hooks/use-armor-actions";
 import { useHomeSearchPaletteState } from "../hooks/use-home-search-palette-state";
@@ -27,7 +32,11 @@ import {
   CUSTOM_FILTER_DRAFT_CATEGORY_ID,
   CUSTOM_FILTER_TRAIT_CATEGORY_IDS,
 } from "../lib/palette/constants";
-import { buildComposerCategories, buildWeaponCategories } from "../lib/palette/weapon-categories";
+import {
+  allPerkNames,
+  buildComposerCategories,
+  buildWeaponCategories,
+} from "../lib/palette/weapon-categories";
 import type { PaletteResultsMode } from "../lib/palette/results-mode";
 import { useOwnedArmor } from "../lib/use-owned-armor";
 import { useCustomWeaponFilters } from "../lib/use-custom-weapon-filters";
@@ -108,9 +117,18 @@ export function HomeSearch({
 
   const weaponColumnPerks = useMemo(() => collectColumnPerks(weapons, perks), [weapons, perks]);
 
+  // Facets depend only on weapons; the perk fuse only on the column perks. Memoizing
+  // them apart from customFilters avoids rebuilding the fuzzy index when a custom
+  // filter is edited (buildWeaponCategories would otherwise recompute both every call).
+  const facets = useMemo(() => collectFacets(weapons), [weapons]);
+  const perkFuse = useMemo(
+    () => createPerkNameFuse(allPerkNames(weaponColumnPerks)),
+    [weaponColumnPerks],
+  );
+
   const weaponCategories = useMemo(
-    () => buildWeaponCategories(weapons, weaponColumnPerks, customFilters),
-    [weapons, weaponColumnPerks, customFilters],
+    () => buildWeaponCategories(weapons, weaponColumnPerks, customFilters, facets, perkFuse),
+    [weapons, weaponColumnPerks, customFilters, facets, perkFuse],
   );
 
   const armorCategories = useMemo(() => buildArmorCategories(owned), [owned]);
@@ -118,8 +136,8 @@ export function HomeSearch({
   const composingCustomFilter = customFilterComposer != null && mode === "weapon";
 
   const composerCategories = useMemo(
-    () => buildComposerCategories(weaponColumnPerks),
-    [weaponColumnPerks],
+    () => buildComposerCategories(weaponColumnPerks, perkFuse),
+    [weaponColumnPerks, perkFuse],
   );
 
   const categories: PaletteCategory[] = composingCustomFilter
