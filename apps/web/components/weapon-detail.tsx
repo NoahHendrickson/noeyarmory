@@ -16,6 +16,7 @@ import {
 import { useWeaponBuild } from "../lib/use-weapon-build";
 import { useWeaponDps } from "../lib/use-weapon-dps";
 import { useStatGroups, useWeaponDetail, useWeapons } from "../lib/weapons-context";
+import { trackPerkCommit } from "../lib/track-perk-commit";
 import { trackWeaponView } from "../lib/track-weapon-view";
 import { bungieIcon, RARITY_RING } from "../lib/bungie";
 import { AmmoIcon } from "./ammo-icon";
@@ -240,7 +241,16 @@ export function WeaponDetailView({
                       selectedPerkHash={
                         canSelect ? build.selectedByColumn.get(columnIndex) : undefined
                       }
-                      onSelectPerk={canSelect ? build.togglePerk : undefined}
+                      onSelectPerk={
+                        canSelect
+                          ? (colIndex, perk) => {
+                              if (!build.isSelected(colIndex, perk.hash)) {
+                                trackPerkCommit(perk.name, "build");
+                              }
+                              build.togglePerk(colIndex, perk);
+                            }
+                          : undefined
+                      }
                       onHoverPerk={canSelect ? handleHoverPerk : undefined}
                       onHoverEnd={canSelect ? clearHoverPreview : undefined}
                     />
