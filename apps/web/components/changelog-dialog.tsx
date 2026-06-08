@@ -1,16 +1,18 @@
 "use client";
 
-import { Button, cn } from "@repo/ui";
 import {
+  Button,
+  cn,
+  FrostedPopoverPopup,
+  FrostedToolbarButton,
   Popover,
   PopoverClose,
   PopoverDescription,
-  PopoverPopup,
   PopoverPortal,
   PopoverPositioner,
   PopoverTitle,
   PopoverTrigger,
-} from "@repo/ui/components/popover";
+} from "@repo/ui";
 import { X } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -24,11 +26,8 @@ import {
 const sectionClass = "border-b border-white/16 p-4";
 const headerTitleClass = "text-base font-normal";
 const headerDescriptionClass = "text-xs leading-snug text-white/60";
-const secondaryButtonClass =
-  "h-7 rounded-[8px] border border-white/16 bg-white/[0.04] px-2 text-xs font-medium text-white hover:bg-white/10 hover:text-white";
-
 const popupClassName =
-  "max-h-[min(85vh,var(--available-height))] w-[min(400px,var(--available-width))] overflow-hidden rounded-[16px] p-0 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)]";
+  "max-h-[min(85vh,var(--available-height))] w-[min(400px,var(--available-width))] overflow-hidden rounded-[16px] p-0";
 
 function formatReleaseDate(date: string | null): string | null {
   if (!date) return null;
@@ -90,11 +89,9 @@ export function ChangelogDialog() {
     <Popover open={open} onOpenChange={handleOpenChange} modal={false}>
       <PopoverTrigger
         render={
-          <Button
-            variant="outline"
+          <FrostedToolbarButton
             aria-label="What's new"
             data-palette-ignore-close
-            className={cn(secondaryButtonClass, "relative px-2.5 backdrop-blur-sm sm:px-3")}
             onClick={(e) => e.stopPropagation()}
             onPointerDown={(e) => e.stopPropagation()}
           />
@@ -110,7 +107,7 @@ export function ChangelogDialog() {
       </PopoverTrigger>
       <PopoverPortal>
         <PopoverPositioner side="bottom" align="end" sideOffset={8}>
-          <PopoverPopup className={popupClassName}>
+          <FrostedPopoverPopup className={popupClassName}>
             <div className={cn(sectionClass, "space-y-0.5")}>
               <div className="flex items-center justify-between gap-3">
                 <PopoverTitle className={headerTitleClass}>
@@ -162,7 +159,7 @@ export function ChangelogDialog() {
                 </div>
               )}
             </div>
-          </PopoverPopup>
+          </FrostedPopoverPopup>
         </PopoverPositioner>
       </PopoverPortal>
     </Popover>
