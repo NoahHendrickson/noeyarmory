@@ -1,10 +1,23 @@
-import { Plus, Search, X } from "lucide-react";
+import { ArrowRight, Plus, Search, X } from "lucide-react";
 
 import { cn } from "../../lib/utils";
 import { Button } from "../button";
 import { FilterChip, type FilterChipProps } from "../filter-chip";
+import { Kbd } from "../kbd";
 import { whisperForActiveItem } from "./palette-reducer";
 import type { PaletteCategory, PaletteChip, PaletteItem } from "./types";
+
+/** Visible Tab keycap hint — keep out of the width sizer to avoid duplicate layout work. */
+function GhostTabHint() {
+  return (
+    <span className="text-muted-foreground/35 ml-2.5 inline-flex shrink-0 items-center gap-0.5 text-xs">
+      Tab
+      <Kbd variant="keycap" className="text-muted-foreground/50 h-4 min-w-4 px-0.5 text-[10px]">
+        <ArrowRight className="size-2.5" aria-hidden />
+      </Kbd>
+    </span>
+  );
+}
 
 export interface PaletteInputBarProps {
   open: boolean;
@@ -71,6 +84,8 @@ export function PaletteInputBar({
   clearBarLabel,
   onClearBar,
 }: PaletteInputBarProps) {
+  const showGhost = Boolean(ghostSuffix && inputValue.length > 0);
+
   const valueInputPlaceholder = activeCategory
     ? (whisperForActiveItem(items[displayIndex]) ?? `Filter ${activeCategory.label}…`)
     : undefined;
@@ -85,7 +100,7 @@ export function PaletteInputBar({
       )}
       onClick={() => !disabled && !renderBarOverlay && inputRef.current?.focus()}
     >
-      <div className="flex min-w-0 flex-nowrap items-center gap-2.5 overflow-x-auto">
+      <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-2.5 overflow-x-auto">
         <span className="text-muted-foreground flex size-4 shrink-0 items-center justify-center">
           {leftAdornment ?? <Search className="size-4" />}
         </span>
@@ -135,29 +150,36 @@ export function PaletteInputBar({
                     <Plus className="size-4" />
                   </Button>
                 )}
-                <div className="relative inline-flex min-w-[8ch] shrink-0 items-center">
-                  {ghostSuffix && inputValue.length > 0 && (
-                    <span
-                      aria-hidden
-                      className="pointer-events-none absolute inset-y-0 left-0 flex items-center whitespace-pre text-base tracking-body"
-                    >
-                      <span className="invisible">{inputValue}</span>
-                      <span className="text-muted-foreground/50">{ghostSuffix}</span>
+                <div className="flex min-w-0 items-center">
+                  <div className="relative inline-flex min-w-[8ch] shrink-0 items-center">
+                    <span aria-hidden className="invisible whitespace-pre text-base tracking-body">
+                      {inputValue.length > 0 ? inputValue : effectivePlaceholder}
+                      {showGhost && ghostSuffix}
                     </span>
-                  )}
-                  <input
-                    ref={inputRef}
-                    type="text"
-                    size={inputSize}
-                    className="placeholder:text-muted-foreground relative min-w-[8ch] shrink-0 bg-transparent text-base tracking-body outline-none disabled:cursor-not-allowed"
-                    placeholder={effectivePlaceholder}
-                    value={inputValue}
-                    disabled={disabled}
-                    onChange={(e) => onQueryChange(e.target.value)}
-                    onFocus={() => !disabled && onOpenPanel()}
-                    onKeyDown={handleKeyDown}
-                    {...comboboxProps}
-                  />
+                    {showGhost && (
+                      <span
+                        aria-hidden
+                        className="pointer-events-none absolute inset-y-0 left-0 flex items-center whitespace-pre text-base tracking-body"
+                      >
+                        <span className="invisible">{inputValue}</span>
+                        <span className="text-muted-foreground/50">{ghostSuffix}</span>
+                      </span>
+                    )}
+                    <input
+                      ref={inputRef}
+                      type="text"
+                      size={inputSize}
+                      className="placeholder:text-muted-foreground absolute inset-0 min-w-[8ch] bg-transparent text-base tracking-body outline-none disabled:cursor-not-allowed"
+                      placeholder={effectivePlaceholder}
+                      value={inputValue}
+                      disabled={disabled}
+                      onChange={(e) => onQueryChange(e.target.value)}
+                      onFocus={() => !disabled && onOpenPanel()}
+                      onKeyDown={handleKeyDown}
+                      {...comboboxProps}
+                    />
+                  </div>
+                  {showGhost && <GhostTabHint />}
                 </div>
               </>
             )}

@@ -15,7 +15,7 @@ import type { WeaponDoc } from "@repo/destiny";
 
 import { WeaponDetailView } from "./weapon-detail";
 
-/** Match CommandPalette shell — frosted card over the shader background. */
+/** Match CommandPalette shell — frosted card over the app background. */
 const glassPanel =
   "border-border bg-card/35 shadow-lg shadow-black/25 backdrop-blur-xl rounded-2xl";
 
