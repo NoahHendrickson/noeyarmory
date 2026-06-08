@@ -54,6 +54,7 @@ import { PopularWeapons } from "./popular-weapons";
 import { WeaponDetailModal } from "./weapon-detail-modal";
 import { WeaponResultRow } from "./weapon-result-row";
 import { trackWeaponView } from "../lib/track-weapon-view";
+import { useIsFirefox } from "../lib/use-is-firefox";
 import { WeaponModeIcon } from "./icons/weapon-mode-icon";
 
 type Mode = "weapon" | "armor";
@@ -96,6 +97,7 @@ export function HomeSearch({
   const { filters: customFilters, createFilter } = useCustomWeaponFilters();
   const { recordSearch, getRecentForMode, findById, removeRecent, clearRecentForMode } =
     useRecentSearches();
+  const firefoxPalettePerf = useIsFirefox();
   const [mode, setMode] = useState<Mode>(initialMode);
   const armorEnabled = signedIn && mode === "armor";
   const {
@@ -359,6 +361,11 @@ export function HomeSearch({
 
   useEffect(() => () => clearTimeout(recordSearchTimerRef.current), []);
 
+  useEffect(() => {
+    if (!firefoxPalettePerf) return;
+    document.documentElement.dataset.browser = "firefox";
+  }, []);
+
   const handleSelectRecent = useCallback(
     (id: string) => {
       const recent = findById(id);
@@ -523,6 +530,8 @@ export function HomeSearch({
           </div>
           <CommandPalette
             className="mx-0"
+            instantPreviewExpand={firefoxPalettePerf}
+            instantInputSizing={firefoxPalettePerf}
             placeholder={placeholder}
             categories={categories}
             categoryActions={categoryActions}

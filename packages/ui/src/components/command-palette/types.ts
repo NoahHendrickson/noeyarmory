@@ -160,6 +160,10 @@ export interface CommandPaletteProps {
   onPanelStateChange?: (state: PalettePanelState) => void;
   /** Fired when preview rows may mount (after open-animation deferral, if any). */
   onPreviewsReadyChange?: (ready: boolean) => void;
+  /** Skip preview expand animation — Firefox perf; Chrome leaves this unset. */
+  instantPreviewExpand?: boolean;
+  /** Use `size` instead of `field-sizing:content` on the main input — Firefox perf. */
+  instantInputSizing?: boolean;
   className?: string;
 }
 

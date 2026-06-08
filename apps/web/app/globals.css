@@ -30,6 +30,13 @@
     text-rendering: geometricPrecision;
   }
 
+  /* Firefox: backdrop-blur on the palette is expensive while typing — use solid fill instead. */
+  html[data-browser="firefox"] [data-palette-root][data-palette-typing] .backdrop-blur-xl {
+    @apply bg-card/90;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
   .moonfang-screensaver {
     transform: translate3d(var(--moonfang-x, 0px), var(--moonfang-y, 0px), 0);
     will-change: transform;

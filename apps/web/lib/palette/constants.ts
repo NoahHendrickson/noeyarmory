@@ -6,6 +6,9 @@ export const MAX_SHOW_ALL = 200;
 
 export const MAX_PREVIEW_RESULTS = 20;
 
+/** Lower preview cap in Firefox — less DOM/layout work while typing. */
+export const MAX_PREVIEW_RESULTS_FIREFOX = 8;
+
 /** Cap fuzzy matches before filter/sort — filters may narrow further. */
 export const FUSE_PRE_LIMIT = 300;
 

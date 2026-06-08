@@ -51,6 +51,8 @@ export interface PaletteInputBarProps {
   displayIndex: number;
   items: PaletteItem[];
   ghostSuffix?: string;
+  /** Use `size` instead of `field-sizing:content` — avoids per-keystroke layout in Firefox. */
+  instantInputSizing?: boolean;
   showClearButton: boolean;
   clearBarLabel: string;
   onClearBar: () => void;
@@ -83,12 +85,14 @@ export function PaletteInputBar({
   displayIndex,
   items,
   ghostSuffix,
+  instantInputSizing = false,
   showClearButton,
   clearBarLabel,
   onClearBar,
 }: PaletteInputBarProps) {
-  const showGhostSizer = Boolean(ghostSuffix && inputValue.length > 0);
+  const showGhostSizer = Boolean(ghostSuffix && inputValue.length > 0 && !instantInputSizing);
   const showGhostHint = open && showGhostSizer;
+  const useInputSize = instantInputSizing || !showGhostSizer;
 
   const valueInputPlaceholder = activeCategory
     ? (whisperForActiveItem(items[displayIndex]) ?? `Filter ${activeCategory.label}…`)
@@ -183,10 +187,11 @@ export function PaletteInputBar({
                     <input
                       ref={inputRef}
                       type="text"
-                      {...(showGhostSizer ? {} : { size: inputSize })}
+                      {...(useInputSize ? { size: inputSize } : {})}
                       className={cn(
                         "placeholder:text-muted-foreground col-start-1 row-start-1 bg-transparent text-base tracking-body outline-none disabled:cursor-not-allowed",
-                        showGhostSizer ? "min-w-0 w-full" : "min-w-[8ch] [field-sizing:content]",
+                        showGhostSizer ? "min-w-0 w-full" : "min-w-[8ch]",
+                        !instantInputSizing && !showGhostSizer && "[field-sizing:content]",
                       )}
                       placeholder={effectivePlaceholder}
                       value={inputValue}

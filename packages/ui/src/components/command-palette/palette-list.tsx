@@ -32,6 +32,8 @@ export interface PaletteListProps {
   onClearHover: () => void;
   onSetActive: (index: number) => void;
   onSelectItem: (item: PaletteItem) => void;
+  /** Skip preview expand animation — Firefox perf. */
+  instantPreviewExpand?: boolean;
 }
 
 export function PaletteList({
@@ -59,6 +61,7 @@ export function PaletteList({
   onClearHover,
   onSetActive,
   onSelectItem,
+  instantPreviewExpand = false,
 }: PaletteListProps) {
   const { baseItems, previewItems } = useMemo(
     () => splitPreviewTail(renderItems),
@@ -169,6 +172,7 @@ export function PaletteList({
                 items={previewItems}
                 baseIndex={baseItems.length}
                 renderRow={renderRow}
+                instantExpand={instantPreviewExpand}
               />
             </ul>
           ) : null}
@@ -192,10 +196,16 @@ interface PreviewResultsExpandProps {
   items: PaletteItem[];
   baseIndex: number;
   renderRow: (item: PaletteItem, index: number, as?: "li" | "div") => React.ReactNode;
+  instantExpand?: boolean;
 }
 
 /** Animates the preview-results tail so the palette grows taller, not pop-in. */
-function PreviewResultsExpand({ items, baseIndex, renderRow }: PreviewResultsExpandProps) {
+function PreviewResultsExpand({
+  items,
+  baseIndex,
+  renderRow,
+  instantExpand = false,
+}: PreviewResultsExpandProps) {
   const contentRef = useRef<HTMLDivElement>(null);
   const [height, setHeight] = useState(0);
   const [expanded, setExpanded] = useState(false);
@@ -212,6 +222,12 @@ function PreviewResultsExpand({ items, baseIndex, renderRow }: PreviewResultsExp
     if (!node) return;
 
     const measure = () => node.scrollHeight;
+
+    if (instantExpand) {
+      setExpanded(true);
+      setHeight(measure());
+      return;
+    }
 
     setExpanded(false);
     setHeight(measure());
@@ -236,19 +252,22 @@ function PreviewResultsExpand({ items, baseIndex, renderRow }: PreviewResultsExp
       cancelAnimationFrame(innerFrame);
       clearTimeout(startTimer);
     };
-  }, [itemsKey, items.length]);
+  }, [itemsKey, items.length, instantExpand]);
 
   if (items.length === 0) return null;
 
   return (
     <li role="presentation" className="list-none p-0">
       <div
-        className="overflow-hidden motion-reduce:transition-none"
+        className={cn(
+          "overflow-hidden",
+          !instantExpand && "motion-reduce:transition-none",
+        )}
         style={{
           maxHeight: expanded ? height : 0,
-          transitionProperty: "max-height",
-          transitionDuration: `${PANEL_TRANSITION_MS}ms`,
-          transitionTimingFunction: "ease-out",
+          transitionProperty: instantExpand ? "none" : "max-height",
+          transitionDuration: instantExpand ? undefined : `${PANEL_TRANSITION_MS}ms`,
+          transitionTimingFunction: instantExpand ? undefined : "ease-out",
         }}
       >
         <div

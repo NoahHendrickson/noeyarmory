@@ -17,9 +17,11 @@ import {
   type WeaponSummary,
 } from "@repo/destiny";
 
+import { isFirefox } from "../lib/is-firefox";
 import type { PaletteResultsMode } from "../lib/palette/results-mode";
 import {
   MAX_PREVIEW_RESULTS,
+  MAX_PREVIEW_RESULTS_FIREFOX,
   MAX_RESULTS,
   MAX_SHOW_ALL,
 } from "../lib/palette/constants";
@@ -90,9 +92,19 @@ export function useWeaponSearchResults({
   const weaponFuse = useMemo(() => createWeaponFuse(weapons), [weapons]);
   const deferredQuery = useDeferredValue(query);
   const deferredPanelState = useDeferredValue(panelState);
-  // Preview must use live values while enabled — deferral causes a visible swap after open.
-  const previewQuery = previewsEnabled ? query : deferredQuery;
-  const previewPanelState = previewsEnabled ? panelState : deferredPanelState;
+  const deferPreviewsForInput = isFirefox();
+  const previewResultLimit = deferPreviewsForInput ? MAX_PREVIEW_RESULTS_FIREFOX : MAX_PREVIEW_RESULTS;
+  // Live preview query in Chrome; Firefox defers to keep keystrokes off the critical path.
+  const previewQuery = previewsEnabled
+    ? deferPreviewsForInput
+      ? deferredQuery
+      : query
+    : deferredQuery;
+  const previewPanelState = previewsEnabled
+    ? deferPreviewsForInput
+      ? deferredPanelState
+      : panelState
+    : deferredPanelState;
   const textSearchActive = resultsMode === "text";
 
   const weaponResults = useMemo(() => {
@@ -127,7 +139,11 @@ export function useWeaponSearchResults({
     const q = previewQuery.trim();
     if (q.length >= MIN_WEAPON_TEXT_QUERY_LENGTH) {
       appendWeapons(
-        filterWeapons(weaponsForPreviewQuery(weapons, weaponFuse, q, MAX_PREVIEW_RESULTS), base, perks),
+        filterWeapons(
+          weaponsForPreviewQuery(weapons, weaponFuse, q, previewResultLimit),
+          base,
+          perks,
+        ),
       );
     }
 
@@ -142,7 +158,7 @@ export function useWeaponSearchResults({
       if (category) {
         filterSets = category
           .getValues(previewPanelState.valueQuery)
-          .slice(0, MAX_PREVIEW_RESULTS)
+          .slice(0, previewResultLimit)
           .map((option) =>
             withHypotheticalChip(base, category.id, option.label, option.id, customFilters),
           );
@@ -159,7 +175,7 @@ export function useWeaponSearchResults({
 
     if (candidates.length === 0) return [];
 
-    return rankWeaponResults(candidates, q, sort, dpsByName).slice(0, MAX_PREVIEW_RESULTS);
+    return rankWeaponResults(candidates, q, sort, dpsByName).slice(0, previewResultLimit);
   }, [
     previewsEnabled,
     mode,
@@ -169,6 +185,7 @@ export function useWeaponSearchResults({
     previewPanelState,
     weaponCategories,
     previewQuery,
+    previewResultLimit,
     weapons,
     perks,
     sort,

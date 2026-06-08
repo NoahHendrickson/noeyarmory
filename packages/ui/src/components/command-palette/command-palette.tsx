@@ -103,6 +103,8 @@ export function CommandPalette({
   chipSuggestions,
   onPanelStateChange,
   onPreviewsReadyChange,
+  instantPreviewExpand = false,
+  instantInputSizing = false,
   className,
   renderResult,
 }: CommandPaletteProps) {
@@ -587,6 +589,8 @@ export function CommandPalette({
   return (
     <div
       ref={rootRef}
+      data-palette-root
+      data-palette-typing={inputValue.trim().length > 0 ? "" : undefined}
       className={cn(
         "mx-auto w-full min-w-0 max-w-[calc(100vw-2rem)] sm:w-[600px]",
         className,
@@ -621,6 +625,7 @@ export function CommandPalette({
             displayIndex={displayIndex}
             items={items}
             ghostSuffix={ghostSuffix}
+            instantInputSizing={instantInputSizing}
             showClearButton={showClearButton}
             clearBarLabel={clearBarLabel}
             onClearBar={handleClearBar}
@@ -650,6 +655,7 @@ export function CommandPalette({
             onSetActive={(index) => dispatch({ type: "setActive", index })}
             onSelectItem={selectItem}
             renderResult={renderResult}
+            instantPreviewExpand={instantPreviewExpand}
           />
         </div>
       </FrostedShell>
