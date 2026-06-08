@@ -9,15 +9,26 @@ import { MAX_PREVIEW_RESULTS, MAX_RESULTS, MAX_SHOW_ALL } from "../lib/palette/c
 import { chipsToArmorFilters } from "../lib/palette/weapon-filters";
 import { buildArmorCategories } from "../lib/palette/armor-categories";
 
-export function useArmorSearchResults(
-  owned: OwnedArmorItem[],
-  chips: PaletteChip[],
-  query: string,
-  showAllResults: boolean,
+export interface UseArmorSearchResultsParams {
+  owned: OwnedArmorItem[];
+  chips: PaletteChip[];
+  query: string;
+  showAllResults: boolean;
+  paletteOpen?: boolean;
+  /** When set, gates preview computation separately from `paletteOpen` (draft-query open deferral). */
+  previewsEnabled?: boolean;
+  inlineSuggestions?: ValueSuggestion[];
+}
+
+export function useArmorSearchResults({
+  owned,
+  chips,
+  query,
+  showAllResults,
   paletteOpen = true,
   previewsEnabled = paletteOpen,
-  inlineSuggestions: ValueSuggestion[] = [],
-) {
+  inlineSuggestions = [],
+}: UseArmorSearchResultsParams) {
   const armorFilters = useMemo(() => chipsToArmorFilters(chips), [chips]);
   const armorFuse = useMemo(() => createOwnedArmorFuse(owned), [owned]);
   const deferredQuery = useDeferredValue(query);

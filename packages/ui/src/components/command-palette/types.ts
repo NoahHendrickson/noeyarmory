@@ -158,6 +158,8 @@ export interface CommandPaletteProps {
   chipSuggestions?: PaletteItem[];
   /** Fired when drill state changes so consumers can compute preview filters. */
   onPanelStateChange?: (state: PalettePanelState) => void;
+  /** Fired when preview rows may mount (after open-animation deferral, if any). */
+  onPreviewsReadyChange?: (ready: boolean) => void;
   className?: string;
 }
 

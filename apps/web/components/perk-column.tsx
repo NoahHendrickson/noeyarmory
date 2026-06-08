@@ -6,6 +6,7 @@ import { memo, useCallback } from "react";
 import type { ReactNode } from "react";
 import {
   cn,
+  frostedSurface,
   Tooltip,
   TooltipPortal,
   TooltipPopup,
@@ -24,10 +25,6 @@ import {
   hasClarityOrBungieTooltip,
   useClarityDescriptions,
 } from "../lib/clarity-provider";
-
-/** Match weapon detail modal / command palette frosted surfaces. */
-const glassTooltipBase =
-  "relative overflow-hidden border border-border bg-card/35 p-0 shadow-lg shadow-black/25 backdrop-blur-xl";
 
 function perkTooltipMaxWidth(clarityLines: ClarityLine[] | undefined): string {
   if (!clarityLines?.length) return "max-w-md";
@@ -260,7 +257,11 @@ const PerkTile = memo(function PerkTile({
           }}
         >
           <TooltipPopup
-            className={cn(glassTooltipBase, perkTooltipMaxWidth(clarityLines), "pointer-events-none")}
+            className={cn(
+              frostedSurface("panel", "relative overflow-hidden p-0"),
+              perkTooltipMaxWidth(clarityLines),
+              "pointer-events-none",
+            )}
           >
             <PerkTooltipContent perk={perk} tiers={tiers} clarityLines={clarityLines} />
           </TooltipPopup>
