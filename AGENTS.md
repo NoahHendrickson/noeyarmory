@@ -4,15 +4,35 @@ Guidance for cloud agents working in this repository.
 
 ## Cursor Cloud specific instructions
 
+### Environment bootstrap
+
+Cloud agents load `.cursor/environment.json`, which runs `scripts/ensure-cloud-env.sh` before `pnpm install`. That script:
+
+- Activates **Node 24** from `.nvmrc` (the VM default at `/exec-daemon/node` is Node 22)
+- Normalizes `origin` owner casing to `NoahHendrickson` when the remote already points at this repo (preserves HTTPS auth tokens and SSH URLs)
+- Appends a `~/.bashrc` hook so interactive shells under `/workspace` also use Node 24
+
+Re-run manually after a fresh clone or if `pnpm` warns about `Unsupported engine`:
+
+```bash
+source scripts/ensure-cloud-env.sh
+node -v   # should print v24.x
+```
+
 ### Node.js version
 
-The repo requires **Node 24** (`engines.node >= 24`, `.nvmrc` is `24`). The VM default at `/exec-daemon/node` is Node 22 — **prepend nvm's Node 24 to `PATH`** before running pnpm scripts:
+The repo requires **Node 24** (`engines.node >= 24`, `.nvmrc` is `24`). If the bootstrap script was skipped, prepend nvm's Node 24 to `PATH` before pnpm scripts:
 
 ```bash
 export NVM_DIR="$HOME/.nvm" && . "$NVM_DIR/nvm.sh" && nvm use 24
 export PATH="$NVM_DIR/versions/node/$(nvm version)/bin:$PATH"
 node -v   # should print v24.x
 ```
+
+### Pull requests
+
+- Create PRs with the PR management tool or `gh pr create`.
+- If `update_pr` fails with *"PR URL must belong to the current repository"*, run `bash scripts/ensure-cloud-env.sh` first, then fall back to `gh pr edit <number> --body-file /tmp/pr-body.md`.
 
 ### Install & refresh dependencies
 
