@@ -157,6 +157,17 @@ export function filterRecentSearches(searches: RecentSearch[], query: string): R
   });
 }
 
+export function removeRecentSearch(searches: RecentSearch[], id: string): RecentSearch[] {
+  return searches.filter((search) => search.id !== id);
+}
+
+export function clearRecentSearchesForMode(
+  searches: RecentSearch[],
+  mode: "weapon" | "armor",
+): RecentSearch[] {
+  return searches.filter((search) => search.mode !== mode);
+}
+
 export function useRecentSearches() {
   const [searches, setSearches] = useState<RecentSearch[]>([]);
 
@@ -185,5 +196,21 @@ export function useRecentSearches() {
 
   const findById = useCallback((id: string) => searches.find((search) => search.id === id), [searches]);
 
-  return { recordSearch, getRecentForMode, findById };
+  const removeRecent = useCallback((id: string) => {
+    setSearches((prev) => {
+      const updated = removeRecentSearch(prev, id);
+      writeStoredSearches(updated);
+      return updated;
+    });
+  }, []);
+
+  const clearRecentForMode = useCallback((mode: "weapon" | "armor") => {
+    setSearches((prev) => {
+      const updated = clearRecentSearchesForMode(prev, mode);
+      writeStoredSearches(updated);
+      return updated;
+    });
+  }, []);
+
+  return { recordSearch, getRecentForMode, findById, removeRecent, clearRecentForMode };
 }

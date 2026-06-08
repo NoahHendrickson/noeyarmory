@@ -42,6 +42,12 @@ export interface PaletteRecentItem {
   hint?: ReactNode;
 }
 
+export interface PaletteSectionHeaderAction {
+  label: string;
+  ariaLabel: string;
+  onClick: () => void;
+}
+
 export interface PaletteAction {
   id: string;
   label: string;
@@ -119,6 +125,10 @@ export interface CommandPaletteProps {
   /** Recent searches shown at the top of the filter category list. */
   recentItems?: PaletteRecentItem[];
   onSelectRecent?: (id: string) => void;
+  /** Remove a single recent search by id. */
+  onRemoveRecent?: (id: string) => void;
+  /** Clear all recent searches for the current list. */
+  onClearRecent?: () => void;
   /** Section label above recent search rows. */
   recentSectionLabel?: string;
   /** Section label above filter category rows. */
@@ -160,8 +170,14 @@ export type PaletteReducerAction =
 export type PaletteItem =
   | { kind: "category"; category: PaletteCategory }
   | { kind: "action"; action: PaletteAction }
-  | { kind: "section"; id: string; label?: string; divider?: boolean }
-  | { kind: "recent"; recent: PaletteRecentItem }
+  | {
+      kind: "section";
+      id: string;
+      label?: string;
+      divider?: boolean;
+      headerAction?: PaletteSectionHeaderAction;
+    }
+  | { kind: "recent"; recent: PaletteRecentItem; onRemove?: () => void }
   | { kind: "chipSuggestion"; category: PaletteCategory; option: PaletteValueOption }
   | { kind: "value"; option: PaletteValueOption }
   | { kind: "result"; result: PaletteResultItem };

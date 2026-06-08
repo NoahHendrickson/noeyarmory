@@ -86,7 +86,8 @@ export function HomeSearch({
   const { elementIconMap, typeIconMap, ammoIconMap } = useWeaponIconMaps();
   const { dpsByName } = useWeaponDps();
   const { filters: customFilters, createFilter } = useCustomWeaponFilters();
-  const { recordSearch, getRecentForMode, findById } = useRecentSearches();
+  const { recordSearch, getRecentForMode, findById, removeRecent, clearRecentForMode } =
+    useRecentSearches();
   const [mode, setMode] = useState<Mode>(initialMode);
   const armorEnabled = signedIn && mode === "armor";
   const {
@@ -366,6 +367,8 @@ export function HomeSearch({
     [findById],
   );
 
+  const handleClearRecent = useCallback(() => clearRecentForMode(mode), [clearRecentForMode, mode]);
+
   const categoryActions = useMemo<PaletteAction[]>(() => {
     if (mode !== "weapon") return [];
     if (composingCustomFilter) {
@@ -509,6 +512,8 @@ export function HomeSearch({
             }}
             recentItems={recentPaletteItems}
             onSelectRecent={handleSelectRecent}
+            onRemoveRecent={removeRecent}
+            onClearRecent={handleClearRecent}
             onAddChip={handleAddChip}
             onRemoveChip={handleRemoveChip}
             onClearChips={handleClearChips}

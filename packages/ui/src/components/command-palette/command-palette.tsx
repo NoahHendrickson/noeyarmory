@@ -78,6 +78,8 @@ export function CommandPalette({
   getChipAppearance,
   recentItems = [],
   onSelectRecent,
+  onRemoveRecent,
+  onClearRecent,
   recentSectionLabel = "Recent searches",
   filtersSectionLabel = "Filters",
   previewResults = [],
@@ -208,10 +210,26 @@ export function CommandPalette({
     [openCategories, query, chips, mode],
   );
 
-  const recentListItems: PaletteItem[] =
-    hideCategoryList || mode !== "categories"
-      ? []
-      : recentItems.map((recent) => ({ kind: "recent" as const, recent }));
+  const recentListItems = useMemo<PaletteItem[]>(() => {
+    if (hideCategoryList || mode !== "categories") return [];
+    return recentItems.map((recent) => ({
+      kind: "recent" as const,
+      recent,
+      onRemove: onRemoveRecent ? () => onRemoveRecent(recent.id) : undefined,
+    }));
+  }, [hideCategoryList, mode, recentItems, onRemoveRecent]);
+
+  const recentSectionHeaderAction = useMemo(
+    () =>
+      onClearRecent != null
+        ? {
+            label: "Clear all",
+            ariaLabel: "Clear all recent searches",
+            onClick: onClearRecent,
+          }
+        : undefined,
+    [onClearRecent],
+  );
 
   const items = useMemo(
     () =>
@@ -226,6 +244,7 @@ export function CommandPalette({
         valueSuggestions,
         recentListItems,
         recentSectionLabel,
+        recentSectionHeaderAction,
         filtersSectionLabel,
         previewResults,
         previewSectionLabel,
@@ -244,6 +263,7 @@ export function CommandPalette({
       valueSuggestions,
       recentListItems,
       recentSectionLabel,
+      recentSectionHeaderAction,
       filtersSectionLabel,
       previewResults,
       previewSectionLabel,

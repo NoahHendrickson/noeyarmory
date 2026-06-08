@@ -8,6 +8,7 @@ import type {
   PaletteReducerAction,
   PaletteReducerState,
   PaletteResultItem,
+  PaletteSectionHeaderAction,
   PanelKind,
 } from "./types";
 
@@ -75,6 +76,7 @@ export function buildCategoryModeItems(
   categoryItems: PaletteItem[],
   actionItems: PaletteItem[],
   recentSectionLabel: string,
+  recentSectionHeaderAction: PaletteSectionHeaderAction | undefined,
   filtersSectionLabel: string,
   previewResults: PaletteResultItem[],
   previewSectionLabel: string,
@@ -85,7 +87,12 @@ export function buildCategoryModeItems(
     if (items.length > 0) {
       items.push({ kind: "section", id: "recent-divider", divider: true });
     }
-    items.push({ kind: "section", id: "recent-searches", label: recentSectionLabel });
+    items.push({
+      kind: "section",
+      id: "recent-searches",
+      label: recentSectionLabel,
+      headerAction: recentSectionHeaderAction,
+    });
     items.push(...recentListItems);
   }
 
@@ -167,6 +174,7 @@ export interface BuildItemsParams {
   valueSuggestions: PaletteItem[];
   recentListItems: PaletteItem[];
   recentSectionLabel: string;
+  recentSectionHeaderAction: PaletteSectionHeaderAction | undefined;
   filtersSectionLabel: string;
   previewResults: PaletteResultItem[];
   previewSectionLabel: string;
@@ -187,6 +195,7 @@ export function buildPaletteItems(params: BuildItemsParams): PaletteItem[] {
     valueSuggestions,
     recentListItems,
     recentSectionLabel,
+    recentSectionHeaderAction,
     filtersSectionLabel,
     previewResults,
     previewSectionLabel,
@@ -213,6 +222,7 @@ export function buildPaletteItems(params: BuildItemsParams): PaletteItem[] {
         action,
       })),
       recentSectionLabel,
+      recentSectionHeaderAction,
       filtersSectionLabel,
       previewResults,
       previewSectionLabel,

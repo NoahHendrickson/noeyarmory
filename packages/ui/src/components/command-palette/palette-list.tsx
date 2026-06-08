@@ -1,4 +1,4 @@
-import { ArrowRight, CornerDownLeft, History, ListFilter } from "lucide-react";
+import { ArrowRight, CornerDownLeft, History, ListFilter, X } from "lucide-react";
 
 import { cn } from "../../lib/utils";
 import { Kbd } from "../kbd";
@@ -170,6 +170,8 @@ function PaletteListRow({
   onSelect,
   renderResult,
 }: PaletteListRowProps) {
+  const sectionHasHeaderAction = item.kind === "section" && item.headerAction != null;
+
   return (
     // eslint-disable-next-line jsx-a11y/click-events-have-key-events
     <li
@@ -189,7 +191,10 @@ function PaletteListRow({
       aria-disabled={item.kind === "action" && item.action.disabled ? true : undefined}
       className={cn(
         item.kind === "section"
-          ? "pointer-events-none list-none py-0"
+          ? cn(
+              "list-none py-0",
+              sectionHasHeaderAction ? "pointer-events-auto" : "pointer-events-none",
+            )
           : "flex cursor-pointer items-center justify-between gap-3 rounded-[8px] px-3 py-1.5",
         selected && (item.kind === "result" ? "bg-white/[0.033]" : "bg-white/[0.05]"),
         item.kind === "action" && "mt-1 justify-center py-2",
@@ -297,8 +302,29 @@ function PaletteListRowContent({
           <div className="border-border/40 -mx-1.5 my-1.5 border-t" role="separator" aria-hidden />
         )}
         {item.label && (
-          <div className="text-muted-foreground px-3 pt-2 pb-0.5 text-[11px] font-normal tracking-wide">
-            {item.label}
+          <div
+            className={cn(
+              "px-3 pt-2 pb-0.5 text-[11px] font-normal tracking-wide",
+              item.headerAction != null
+                ? "flex items-center justify-between gap-2"
+                : "text-muted-foreground",
+            )}
+          >
+            <span className="text-muted-foreground">{item.label}</span>
+            {item.headerAction != null && (
+              <button
+                type="button"
+                aria-label={item.headerAction.ariaLabel}
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  item.headerAction!.onClick();
+                }}
+                className="text-muted-foreground hover:text-white cursor-pointer transition-colors"
+              >
+                {item.headerAction.label}
+              </button>
+            )}
           </div>
         )}
       </>
@@ -315,6 +341,20 @@ function PaletteListRowContent({
         <span className="flex shrink-0 items-center gap-2">
           {item.recent.hint != null && (
             <span className="text-muted-foreground text-xs">{item.recent.hint}</span>
+          )}
+          {item.onRemove != null && (
+            <button
+              type="button"
+              aria-label={`Remove recent search: ${item.recent.label}`}
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                item.onRemove!();
+              }}
+              className="flex size-5 shrink-0 cursor-pointer items-center justify-center rounded-full text-white/60 transition-colors hover:bg-white/10 hover:text-white"
+            >
+              <X className="size-3" />
+            </button>
           )}
           {showEnterHint ? (
             <Kbd className="hidden sm:inline-flex">
