@@ -10,6 +10,8 @@ export const frostedSurfaceTokens = {
   bar: "bg-card/55 backdrop-blur-xl",
   /** Sticky section headers with bottom border. */
   barBordered: "border-b border-border/40 bg-card/55 backdrop-blur-xl",
+  /** Panel footers and other chrome with a top border only. */
+  barTop: "border-t border-border/40 bg-card/55 backdrop-blur-xl",
   /** Popovers and pill-select menus. */
   popover: "border border-border bg-card/35 text-foreground shadow-lg shadow-black/25 backdrop-blur-xl",
   /** Compact circular controls (e.g. modal back button). */

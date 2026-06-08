@@ -179,7 +179,7 @@ export function PaletteList({
           )}
         </div>
         {panelFooter != null && (open || panelClosing) && (
-          <div className={frostedSurface("barBordered", "shrink-0 border-t")}>
+          <div className={frostedSurface("barTop", "shrink-0")}>
             {panelFooter}
           </div>
         )}
