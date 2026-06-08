@@ -8,6 +8,7 @@ import type {
   WeaponIndex,
   WeaponSummary,
 } from "./types";
+import { AMMO_GENERATION_STAT_HASH } from "./weapon-stats";
 
 const lower = (s: string) => s.toLowerCase();
 
@@ -52,6 +53,24 @@ export function expandWeapon(
     statGroupHash: detail?.statGroupHash,
     columns: resolveInternedColumns(columns, perks),
   };
+}
+
+/** Merge browse summaries with Ammo Generation values from loaded detail records. */
+export function enrichAmmoGenerationFromDetails(
+  weapons: WeaponSummary[],
+  details: ReadonlyMap<number, WeaponDetailFields>,
+): WeaponSummary[] {
+  let changed = false;
+  const enriched = weapons.map((weapon) => {
+    if (weapon.ammoGeneration != null) return weapon;
+    const value = details
+      .get(weapon.hash)
+      ?.stats.find((stat) => stat.hash === AMMO_GENERATION_STAT_HASH)?.value;
+    if (value == null) return weapon;
+    changed = true;
+    return { ...weapon, ammoGeneration: value };
+  });
+  return changed ? enriched : weapons;
 }
 
 /** Map every perk plug hash to its PerkRef from the global catalog. */
@@ -132,6 +151,7 @@ export function internWeaponCatalog(
       perkIndices: column.perks.map((perk) => internPerk(perk)),
     }));
     const perkNames = [...new Set(weapon.perks)];
+    const ammoGeneration = weapon.stats.find((s) => s.hash === AMMO_GENERATION_STAT_HASH)?.value;
     return {
       hash: weapon.hash,
       name: weapon.name,
@@ -147,6 +167,7 @@ export function internWeaponCatalog(
       adept: weapon.adept,
       seasonNumber: weapon.seasonNumber,
       releaseIndex: weapon.releaseIndex,
+      ...(ammoGeneration != null ? { ammoGeneration } : {}),
       columns,
       perks: perkNames,
       perksLower: perkNames.map(lower),

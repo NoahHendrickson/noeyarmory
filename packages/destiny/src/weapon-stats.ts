@@ -3,6 +3,9 @@ import type { PerkRef, StatGroupRef, StatGroupScaledStat, StatMod, WeaponDoc, We
 /** Linear 1:1 stat group used by sample fixtures and unit tests. */
 export const SAMPLE_STAT_GROUP_HASH = 99_999;
 
+/** Bungie stat hash for the Ammo Generation weapon stat. */
+export const AMMO_GENERATION_STAT_HASH = 1_931_675_084;
+
 export const sampleStatGroup: StatGroupRef = {
   hash: SAMPLE_STAT_GROUP_HASH,
   maximumValue: 100,

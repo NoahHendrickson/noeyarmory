@@ -30,6 +30,7 @@ export function weaponNameCategory(weapons: WeaponSummary[]): PaletteCategory {
     id: "name",
     label: "Exact Weapon",
     single: true,
+    inlineSuggestions: false,
     examples,
     getValues: (q) =>
       filterWeaponNames(weapons, q).map((o) => ({

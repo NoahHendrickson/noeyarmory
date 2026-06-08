@@ -83,8 +83,19 @@ export const WeaponResultRow = memo(function WeaponResultRow({
             {weapon.craftable ? <CraftableBadge className="mx-0.5" /> : null}
             {weaponTypeLabel(weapon.type, weapon.frame)}
           </span>
-          {dps != null ? <WeaponDpsLabel entry={dps} /> : null}
+          {dps != null ? (
+            <span className="sm:hidden">
+              <WeaponDpsLabel entry={dps} />
+            </span>
+          ) : null}
         </span>
+      }
+      trailing={
+        dps != null ? (
+          <span className="hidden sm:inline-flex">
+            <WeaponDpsLabel entry={dps} />
+          </span>
+        ) : undefined
       }
     />
   );

@@ -5,7 +5,12 @@ import { matchRank } from "@repo/search-rank";
 import type { InternedPerkColumn, PerkRef, WeaponSummary } from "./types";
 import type { WeaponDpsLookup } from "./weapon-dps";
 
-export type WeaponSort = "name" | "season-desc" | "season-asc" | "dps-desc";
+export type WeaponSort =
+  | "name"
+  | "season-desc"
+  | "season-asc"
+  | "dps-desc"
+  | "ammo-gen-desc";
 
 /** Composite key for season ordering: season number dominates, release index breaks ties. */
 function seasonSortKey(weapon: WeaponSummary): number {
@@ -31,6 +36,17 @@ export function sortWeapons(
       if (aDps == null) return 1;
       if (bDps == null) return -1;
       return bDps - aDps || a.name.localeCompare(b.name);
+    });
+    return sorted;
+  }
+  if (order === "ammo-gen-desc") {
+    sorted.sort((a, b) => {
+      const aAmmoGen = a.ammoGeneration;
+      const bAmmoGen = b.ammoGeneration;
+      if (aAmmoGen == null && bAmmoGen == null) return a.name.localeCompare(b.name);
+      if (aAmmoGen == null) return 1;
+      if (bAmmoGen == null) return -1;
+      return bAmmoGen - aAmmoGen || a.name.localeCompare(b.name);
     });
     return sorted;
   }

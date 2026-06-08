@@ -78,7 +78,7 @@ export function PaletteList({
           onScroll={onScroll}
         >
           {renderMode === "results" && resultsHeader != null && (
-            <div className="bg-card/80 sticky top-0 z-10 -mx-1.5 border-b border-border/40 px-3 py-2">
+            <div className="bg-card/35 sticky top-0 z-10 -mx-1.5 border-b border-border/40 px-3 py-1.5 backdrop-blur-xl">
               {resultsHeader}
             </div>
           )}
@@ -87,7 +87,7 @@ export function PaletteList({
               className={
                 plainPanelHeader
                   ? "px-3 pb-2"
-                  : "bg-card/80 sticky top-0 z-10 -mx-1.5 border-b border-border/40 px-3 py-2"
+                  : "bg-card/35 sticky top-0 z-10 -mx-1.5 border-b border-border/40 px-3 py-1.5 backdrop-blur-xl"
               }
             >
               {panelHeader}
@@ -139,7 +139,7 @@ export function PaletteList({
           )}
         </div>
         {panelFooter != null && (open || panelClosing) && (
-          <div className="border-t border-border/40 bg-card/80 shrink-0">
+          <div className="border-t border-border/40 bg-card/35 shrink-0 backdrop-blur-xl">
             {panelFooter}
           </div>
         )}
@@ -251,8 +251,7 @@ function PaletteListRowContent({
             <CornerDownLeft className="size-3" />
           </Kbd>
         ) : (
-          <Kbd className="hidden sm:inline-flex">
-            ↓
+          <Kbd variant="keycap" className="hidden sm:inline-flex">
             <ArrowDown className="size-3" />
           </Kbd>
         )}
@@ -286,8 +285,7 @@ function PaletteListRowContent({
               <CornerDownLeft className="size-3" />
             </Kbd>
           ) : (
-            <Kbd className="hidden sm:inline-flex">
-              ↓
+            <Kbd variant="keycap" className="hidden sm:inline-flex">
               <ArrowDown className="size-3" />
             </Kbd>
           ))}
@@ -362,8 +360,7 @@ function PaletteListRowContent({
               <CornerDownLeft className="size-3" />
             </Kbd>
           ) : (
-            <Kbd className="hidden sm:inline-flex">
-              ↓
+            <Kbd variant="keycap" className="hidden sm:inline-flex">
               <ArrowDown className="size-3" />
             </Kbd>
           )}
@@ -396,8 +393,7 @@ function PaletteListRowContent({
               <CornerDownLeft className="size-3" />
             </Kbd>
           ) : (
-            <Kbd className="hidden sm:inline-flex">
-              ↓
+            <Kbd variant="keycap" className="hidden sm:inline-flex">
               <ArrowDown className="size-3" />
             </Kbd>
           )}
@@ -424,8 +420,7 @@ function PaletteListRowContent({
               <CornerDownLeft className="size-3" />
             </Kbd>
           ) : (
-            <Kbd className="hidden sm:inline-flex">
-              ↓
+            <Kbd variant="keycap" className="hidden sm:inline-flex">
               <ArrowDown className="size-3" />
             </Kbd>
           )}

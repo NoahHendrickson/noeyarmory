@@ -3,6 +3,7 @@
 import {
   buildDetailIndexFromDocs,
   buildWeaponIndexLookups,
+  enrichAmmoGenerationFromDetails,
   expandWeapon,
   internWeaponCatalog,
   sampleAmmoTypes,
@@ -79,6 +80,31 @@ function seedDetails(index: WeaponDetailIndex): void {
   statGroupsCache = index.statGroups;
 }
 
+function applyAmmoGenerationEnrichment(): void {
+  if (!moduleCache || !detailCache) return;
+
+  const weapons = enrichAmmoGenerationFromDetails(moduleCache.weapons, detailCache);
+  if (weapons === moduleCache.weapons) return;
+
+  const byHash = new Map(weapons.map((weapon) => [weapon.hash, weapon]));
+  const weaponsByPerkName = new Map<string, WeaponSummary[]>();
+  for (const [name, hashes] of Object.entries(moduleCache.weaponsByPerkNameRecord)) {
+    weaponsByPerkName.set(
+      name,
+      hashes
+        .map((hash) => byHash.get(hash))
+        .filter((weapon): weapon is WeaponSummary => weapon != null),
+    );
+  }
+
+  moduleCache = {
+    ...moduleCache,
+    weapons,
+    byHash,
+    weaponsByPerkName,
+  };
+}
+
 async function seedSampleDetails(): Promise<void> {
   const { sampleWeapons } = await import("@repo/destiny");
   seedDetails(
@@ -98,6 +124,7 @@ async function loadWeaponDetails(): Promise<Map<number, WeaponDetailFields>> {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const index = (await res.json()) as WeaponDetailIndex;
         seedDetails(index);
+        applyAmmoGenerationEnrichment();
         return detailCache!;
       } catch {
         detailCache = new Map();
@@ -156,7 +183,8 @@ async function fetchWeaponIndex(): Promise<{ lookups: WeaponIndexLookups; isSamp
         const lookups = buildWeaponIndexLookups(index);
         moduleCache = lookups;
         isSampleCache = false;
-        return lookups;
+        applyAmmoGenerationEnrichment();
+        return moduleCache;
       } catch {
         const { sampleWeapons } = await import("@repo/destiny");
         const { index, detailIndex } = internWeaponCatalog(sampleWeapons, "sample");
@@ -172,7 +200,8 @@ async function fetchWeaponIndex(): Promise<{ lookups: WeaponIndexLookups; isSamp
         });
         moduleCache = lookups;
         isSampleCache = true;
-        return lookups;
+        applyAmmoGenerationEnrichment();
+        return moduleCache;
       } finally {
         loadPromise = null;
       }
@@ -221,7 +250,11 @@ export function WeaponsProvider({ children }: { children: ReactNode }) {
     let detailPreloadTimer: number | undefined;
     const cancelIdle = scheduleIdle(() => {
       detailPreloadTimer = window.setTimeout(() => {
-        void ensureDetailCache();
+        void ensureDetailCache().then(() => {
+          if (moduleCache) {
+            setState(lookupsToState(moduleCache, isSampleCache, getWeaponDoc));
+          }
+        });
       }, DETAIL_PRELOAD_DELAY_MS);
     }, 250);
 
@@ -229,7 +262,7 @@ export function WeaponsProvider({ children }: { children: ReactNode }) {
       cancelIdle();
       if (detailPreloadTimer !== undefined) window.clearTimeout(detailPreloadTimer);
     };
-  }, [state.loading, state.version]);
+  }, [state.loading, state.version, getWeaponDoc]);
 
   return <WeaponsContext.Provider value={state}>{children}</WeaponsContext.Provider>;
 }

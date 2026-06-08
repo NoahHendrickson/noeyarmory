@@ -398,6 +398,21 @@ describe("sortWeapons", () => {
       "Sunshot Scout",
     ]);
   });
+
+  test("highest Ammo Generation first, weapons without the stat last", () => {
+    const summaries = sampleSummaries.map((weapon) => {
+      if (weapon.name === "Fatebringer") return { ...weapon, ammoGeneration: 80 };
+      if (weapon.name === "Stormcharge") return { ...weapon, ammoGeneration: 95 };
+      return weapon;
+    });
+
+    expect(orderedNames(sortWeapons(summaries, "ammo-gen-desc"))).toEqual([
+      "Stormcharge",
+      "Fatebringer",
+      "Sunlit Fusion",
+      "Sunshot Scout",
+    ]);
+  });
 });
 
 describe("buildPerkMapFromCatalog", () => {

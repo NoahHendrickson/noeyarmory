@@ -5,6 +5,7 @@ import type { PaletteCategory, PaletteChip, PalettePanelState } from "@repo/ui";
 import { availableCategories, scanValueSuggestions } from "@repo/ui";
 import {
   createWeaponFuse,
+  filterWeaponNames,
   filterWeapons,
   sortWeapons,
   type PerkRef,
@@ -84,25 +85,39 @@ export function useWeaponSearchResults({
 
     const base = chipsToWeaponFilters(chips, customFilters);
     const seen = new Set<number>();
-    const merged: WeaponSummary[] = [];
+    const nameMatched: WeaponSummary[] = [];
+    const rest: WeaponSummary[] = [];
 
-    const appendWeapons = (list: WeaponSummary[]) => {
+    const appendTo = (target: WeaponSummary[], list: WeaponSummary[]) => {
       for (const weapon of list) {
         if (!seen.has(weapon.hash)) {
           seen.add(weapon.hash);
-          merged.push(weapon);
+          target.push(weapon);
         }
       }
     };
 
     const q = deferredQuery.trim();
     if (q.length >= MIN_TEXT_SEARCH_LENGTH) {
+      const rankedNames = filterWeaponNames(weapons, q).sort(
+        (a, b) =>
+          a.searchRank - b.searchRank ||
+          b.count - a.count ||
+          a.value.localeCompare(b.value),
+      );
+      for (const { value } of rankedNames) {
+        appendTo(
+          nameMatched,
+          weapons.filter((weapon) => weapon.name === value),
+        );
+      }
+
       const textMatches = filterWeapons(
         weaponFuse.search(q, { limit: MAX_PREVIEW_RESULTS }).map((r) => r.item),
         base,
         perks,
       );
-      appendWeapons(textMatches);
+      appendTo(rest, textMatches);
     }
 
     let filterSets: WeaponFilters[] = [];
@@ -134,12 +149,13 @@ export function useWeaponSearchResults({
     }
 
     for (const filters of filterSets) {
-      appendWeapons(filterWeapons(weapons, filters, perks));
+      appendTo(rest, filterWeapons(weapons, filters, perks));
     }
 
-    if (merged.length === 0) return [];
+    if (nameMatched.length === 0 && rest.length === 0) return [];
 
-    return sortWeapons(merged, sort, dpsByName).slice(0, MAX_PREVIEW_RESULTS);
+    const sortedRest = sortWeapons(rest, sort, dpsByName);
+    return [...nameMatched, ...sortedRest].slice(0, MAX_PREVIEW_RESULTS);
   }, [
     mode,
     composingCustomFilter,
