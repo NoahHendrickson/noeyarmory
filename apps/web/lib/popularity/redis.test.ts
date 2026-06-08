@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 vi.mock("./enabled", () => ({
   isPopularityPublishingEnabled: vi.fn(() => true),
@@ -6,6 +6,18 @@ vi.mock("./enabled", () => ({
 
 vi.mock("./mock", () => ({
   isPopularWeaponsMockEnabled: vi.fn(() => false),
+}));
+
+const upstashClient = vi.hoisted(() => ({
+  zrange: vi.fn(),
+  zunionstore: vi.fn(),
+  del: vi.fn(),
+}));
+
+vi.mock("@upstash/redis", () => ({
+  Redis: vi.fn(function () {
+    return upstashClient;
+  }),
 }));
 
 import { isPopularityPublishingEnabled } from "./enabled";
@@ -240,5 +252,100 @@ describe("isPopularityConfigured", () => {
     process.env.UPSTASH_REDIS_REST_URL = "https://example.upstash.io";
     process.env.UPSTASH_REDIS_REST_TOKEN = "token";
     expect(isPopularityConfigured()).toBe(true);
+  });
+});
+
+describe("zrange parsing", () => {
+  beforeEach(() => {
+    process.env.UPSTASH_REDIS_REST_URL = "https://example.upstash.io";
+    process.env.UPSTASH_REDIS_REST_TOKEN = "token";
+    resetPopularityRedisForTests();
+    mockedIsPopularityPublishingEnabled.mockReturnValue(true);
+    upstashClient.zunionstore.mockResolvedValue(0);
+    upstashClient.del.mockResolvedValue(0);
+  });
+
+  afterEach(() => {
+    delete process.env.UPSTASH_REDIS_REST_URL;
+    delete process.env.UPSTASH_REDIS_REST_TOKEN;
+    resetPopularityRedisForTests();
+    upstashClient.zrange.mockReset();
+    upstashClient.zunionstore.mockReset();
+    upstashClient.del.mockReset();
+    mockedIsPopularityPublishingEnabled.mockReset();
+    mockedIsPopularityPublishingEnabled.mockReturnValue(true);
+  });
+
+  test("getPopularWeapons parses the {member, score} object shape and skips invalid members", async () => {
+    upstashClient.zrange.mockResolvedValue([
+      { member: "100", score: 10 },
+      { member: "200", score: 6 },
+      { member: "300", score: 5 },
+      { member: "400", score: 4 },
+      { member: "0", score: 9 }, // hash <= 0 → skipped
+      { member: "nope", score: 8 }, // non-numeric hash → skipped
+    ]);
+    const result = await getPopularWeapons();
+    expect(result.weapons).toEqual([
+      { hash: 100, views: 10 },
+      { hash: 200, views: 6 },
+      { hash: 300, views: 5 },
+      { hash: 400, views: 4 },
+    ]);
+    expect(result.totalViews).toBe(25);
+    expect(result.distinctWeapons).toBe(4);
+  });
+
+  test("getPopularWeapons parses the flat [member, score, …] shape", async () => {
+    upstashClient.zrange.mockResolvedValue(["100", 10, "200", 6, "300", 5, "400", 4]);
+    const result = await getPopularWeapons();
+    expect(result.weapons).toEqual([
+      { hash: 100, views: 10 },
+      { hash: 200, views: 6 },
+      { hash: 300, views: 5 },
+      { hash: 400, views: 4 },
+    ]);
+    expect(result.totalViews).toBe(25);
+  });
+
+  test("getPopularPerks parses the {member, score} object shape and skips invalid members", async () => {
+    upstashClient.zrange.mockResolvedValue([
+      { member: "frenzy", score: 10 },
+      { member: "rampage", score: 6 },
+      { member: "surrounded", score: 5 },
+      { member: "kill clip", score: 4 },
+      { member: "", score: 9 }, // empty name → skipped
+      { member: 123, score: 8 }, // non-string name → skipped
+    ]);
+    const result = await getPopularPerks();
+    expect(result.perks).toEqual([
+      { name: "frenzy", commits: 10 },
+      { name: "rampage", commits: 6 },
+      { name: "surrounded", commits: 5 },
+      { name: "kill clip", commits: 4 },
+    ]);
+    expect(result.totalCommits).toBe(25);
+    expect(result.distinctPerks).toBe(4);
+  });
+
+  test("getPopularPerks parses the flat [member, score, …] shape", async () => {
+    upstashClient.zrange.mockResolvedValue([
+      "frenzy",
+      10,
+      "rampage",
+      6,
+      "surrounded",
+      5,
+      "kill clip",
+      4,
+    ]);
+    const result = await getPopularPerks();
+    expect(result.perks).toEqual([
+      { name: "frenzy", commits: 10 },
+      { name: "rampage", commits: 6 },
+      { name: "surrounded", commits: 5 },
+      { name: "kill clip", commits: 4 },
+    ]);
+    expect(result.totalCommits).toBe(25);
   });
 });

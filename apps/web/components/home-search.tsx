@@ -33,7 +33,11 @@ import {
   CUSTOM_FILTER_DRAFT_CATEGORY_ID,
   CUSTOM_FILTER_TRAIT_CATEGORY_IDS,
 } from "../lib/palette/constants";
-import { buildComposerCategories, buildWeaponCategories } from "../lib/palette/weapon-categories";
+import {
+  buildComposerCategories,
+  buildWeaponCategories,
+  isWeaponPerkFilterCategory,
+} from "../lib/palette/weapon-categories";
 import type { PaletteResultsMode } from "../lib/palette/results-mode";
 import { useOwnedArmor } from "../lib/use-owned-armor";
 import { useCustomWeaponFilters } from "../lib/use-custom-weapon-filters";
@@ -55,9 +59,6 @@ import { trackWeaponView } from "../lib/track-weapon-view";
 import { WeaponModeIcon } from "./icons/weapon-mode-icon";
 
 type Mode = "weapon" | "armor";
-
-/** Palette categories whose options are perks, tracked for perk popularity. */
-const PERK_FILTER_CATEGORIES = new Set(["trait1", "trait2", "originTrait"]);
 
 const WEAPON_MODE_LABEL = (
   <span className="inline-flex items-center gap-1.5">
@@ -349,7 +350,7 @@ export function HomeSearch({
         ];
       });
       if (added) {
-        if (PERK_FILTER_CATEGORIES.has(categoryId)) {
+        if (isWeaponPerkFilterCategory(categoryId)) {
           trackPerkCommit(option.label, "filter");
         }
         recordSearch(mode, "", [

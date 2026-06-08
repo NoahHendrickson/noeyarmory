@@ -153,62 +153,58 @@ export function applyPopularPerkThreshold(
   return { perks: top, totalCommits: total, distinctPerks: distinct };
 }
 
-function parseUnionEntries(raw: unknown): PopularWeaponEntry[] {
+/**
+ * Parse a `zrange(..., { withScores: true })` reply into typed entries.
+ *
+ * Upstash returns either an array of `{ member, score }` objects or a flat
+ * `[member, score, member, score, …]` array depending on client/runtime, so we
+ * handle both shapes here. `parseMember` validates each (member, score) pair and
+ * returns the typed entry, or `null` to skip it.
+ */
+function parseZRangeWithScores<T>(
+  raw: unknown,
+  parseMember: (member: unknown, score: number) => T | null,
+): T[] {
   if (!Array.isArray(raw) || raw.length === 0) return [];
 
-  const entries: PopularWeaponEntry[] = [];
+  const items = raw as unknown[];
+  const entries: T[] = [];
+  const first = items[0];
 
-  if (typeof raw[0] === "object" && raw[0] != null && "member" in raw[0] && "score" in raw[0]) {
-    for (const item of raw) {
+  if (typeof first === "object" && first != null && "member" in first && "score" in first) {
+    for (const item of items) {
       if (item == null || typeof item !== "object") continue;
-      const member = (item as { member?: unknown; score?: unknown }).member;
-      const score = (item as { member?: unknown; score?: unknown }).score;
+      const { member, score } = item as { member?: unknown; score?: unknown };
       if (typeof score !== "number") continue;
-      const hash = Number(member);
-      if (!Number.isFinite(hash) || hash <= 0 || score <= 0) continue;
-      entries.push({ hash, views: score });
+      const entry = parseMember(member, score);
+      if (entry != null) entries.push(entry);
     }
     return entries;
   }
 
-  for (let index = 0; index + 1 < raw.length; index += 2) {
-    const hash = Number(raw[index]);
-    const views = Number(raw[index + 1]);
-    if (!Number.isFinite(hash) || hash <= 0 || !Number.isFinite(views) || views <= 0) continue;
-    entries.push({ hash, views });
+  for (let index = 0; index + 1 < items.length; index += 2) {
+    const score = Number(items[index + 1]);
+    if (!Number.isFinite(score)) continue;
+    const entry = parseMember(items[index], score);
+    if (entry != null) entries.push(entry);
   }
 
   return entries;
 }
 
+function parseUnionEntries(raw: unknown): PopularWeaponEntry[] {
+  return parseZRangeWithScores(raw, (member, score) => {
+    const hash = Number(member);
+    if (!Number.isFinite(hash) || hash <= 0 || score <= 0) return null;
+    return { hash, views: score };
+  });
+}
+
 function parseUnionEntriesNamed(raw: unknown): PopularPerkEntry[] {
-  if (!Array.isArray(raw) || raw.length === 0) return [];
-
-  const arr = raw as unknown[];
-  const entries: PopularPerkEntry[] = [];
-
-  const first = arr[0];
-  if (typeof first === "object" && first != null && "member" in first && "score" in first) {
-    for (const item of arr) {
-      if (item == null || typeof item !== "object") continue;
-      const member = (item as { member?: unknown; score?: unknown }).member;
-      const score = (item as { member?: unknown; score?: unknown }).score;
-      if (typeof score !== "number" || score <= 0) continue;
-      if (typeof member !== "string" || !member) continue;
-      entries.push({ name: member, commits: score });
-    }
-    return entries;
-  }
-
-  for (let index = 0; index + 1 < arr.length; index += 2) {
-    const member = arr[index];
-    const commits = Number(arr[index + 1]);
-    if (typeof member !== "string" || !member) continue;
-    if (!Number.isFinite(commits) || commits <= 0) continue;
-    entries.push({ name: member, commits });
-  }
-
-  return entries;
+  return parseZRangeWithScores(raw, (member, score) => {
+    if (typeof member !== "string" || !member || score <= 0) return null;
+    return { name: member, commits: score };
+  });
 }
 
 export async function recordWeaponView(weaponHash: number): Promise<void> {
