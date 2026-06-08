@@ -1,4 +1,6 @@
-import { MAX_VALUE_SUGGESTIONS } from "../../lib/palette-suggestions";
+import { rankLabeledOptions } from "@repo/search-rank";
+
+import { MAX_VALUE_SUGGESTIONS, parsePopularity, scanValueSuggestions } from "../../lib/palette-suggestions";
 import type {
   ListMode,
   PaletteAction,
@@ -119,10 +121,11 @@ export function listMode(
   showResults: boolean,
   query: string,
   browseFilters: boolean,
+  resultsWhileFiltering = false,
 ): ListMode | null {
   if (panel === "closed") return null;
   if (panel === "values") return "values";
-  if (showResults && !query.trim() && !browseFilters) return "results";
+  if (showResults && !browseFilters && (!query.trim() || resultsWhileFiltering)) return "results";
   return "categories";
 }
 
@@ -131,22 +134,25 @@ export function searchValueSuggestions(
   categories: PaletteCategory[],
   query: string,
   chips: PaletteChip[],
+  recentValues?: ReadonlySet<string>,
 ): PaletteItem[] {
-  const q = query.trim();
-  if (!q) return [];
+  const suggestions = scanValueSuggestions(categories, query, chips, {
+    limit: MAX_VALUE_SUGGESTIONS,
+    recentValues,
+  });
+  const categoryById = new Map(categories.map((c) => [c.id, c] as const));
 
-  const applied = new Set(chips.map((c) => `${c.categoryId}:${c.valueId}`));
-  const items: PaletteItem[] = [];
-
-  for (const category of categories) {
-    if (category.single === true && chips.some((c) => c.categoryId === category.id)) continue;
-    for (const option of category.getValues(q)) {
-      if (applied.has(`${category.id}:${option.id}`)) continue;
-      items.push({ kind: "chipSuggestion", category, option });
-      if (items.length >= MAX_VALUE_SUGGESTIONS) return items;
-    }
-  }
-  return items;
+  return suggestions.flatMap((s) => {
+    const category = categoryById.get(s.categoryId);
+    if (!category) return [];
+    return [
+      {
+        kind: "chipSuggestion" as const,
+        category,
+        option: { id: s.valueId, label: s.value, hint: s.hint },
+      },
+    ];
+  });
 }
 
 export function buildValuesModeItems(
@@ -154,13 +160,31 @@ export function buildValuesModeItems(
   valueQuery: string,
   previewResults: PaletteResultItem[],
   previewSectionLabel: string,
+  recentValues?: ReadonlySet<string>,
 ): PaletteItem[] {
-  const capped = activeCategory.getValues(valueQuery).slice(0, MAX_VALUE_SUGGESTIONS);
-  return appendPreviewResults(
-    capped.map((option) => ({ kind: "value" as const, option })),
-    previewResults,
-    previewSectionLabel,
-  );
+  const raw = activeCategory.getValues(valueQuery);
+  const q = valueQuery.trim();
+  const valueItems: PaletteItem[] = q
+    ? (() => {
+        const byLabel = new Map(raw.map((option) => [option.label, option] as const));
+        const ranked = rankLabeledOptions(
+          raw.map((option) => ({
+            label: option.label,
+            popularity: parsePopularity(option.hint),
+            fallbackRank: option.searchRank,
+          })),
+          valueQuery,
+          MAX_VALUE_SUGGESTIONS,
+          recentValues,
+        );
+        return ranked.flatMap(({ label }) => {
+          const option = byLabel.get(label);
+          return option ? [{ kind: "value" as const, option }] : [];
+        });
+      })()
+    : raw.slice(0, MAX_VALUE_SUGGESTIONS).map((option) => ({ kind: "value" as const, option }));
+
+  return appendPreviewResults(valueItems, previewResults, previewSectionLabel);
 }
 
 export interface BuildItemsParams {
@@ -181,6 +205,7 @@ export interface BuildItemsParams {
   activeCategory: PaletteCategory | null;
   valueQuery: string;
   results: PaletteResultItem[];
+  recentValues?: ReadonlySet<string>;
 }
 
 export function buildPaletteItems(params: BuildItemsParams): PaletteItem[] {
@@ -202,6 +227,7 @@ export function buildPaletteItems(params: BuildItemsParams): PaletteItem[] {
     activeCategory,
     valueQuery,
     results,
+    recentValues,
   } = params;
 
   const categoryItems: PaletteItem[] = hideCategoryList
@@ -230,7 +256,13 @@ export function buildPaletteItems(params: BuildItemsParams): PaletteItem[] {
   }
 
   if (mode === "values" && activeCategory) {
-    return buildValuesModeItems(activeCategory, valueQuery, previewResults, previewSectionLabel);
+    return buildValuesModeItems(
+      activeCategory,
+      valueQuery,
+      previewResults,
+      previewSectionLabel,
+      recentValues,
+    );
   }
 
   if (mode === "results") {

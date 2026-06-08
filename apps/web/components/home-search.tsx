@@ -20,6 +20,8 @@ import { collectColumnPerks, type WeaponSort } from "@repo/destiny";
 
 import { useArmorActions } from "../hooks/use-armor-actions";
 import { useArmorSearchResults } from "../hooks/use-armor-search-results";
+import { usePaletteGhostCompletion } from "../hooks/use-palette-ghost-completion";
+import { usePaletteSubmit } from "../hooks/use-palette-submit";
 import { useWeaponSearchResults } from "../hooks/use-weapon-search-results";
 import { buildArmorCategories } from "../lib/palette/armor-categories";
 import {
@@ -29,6 +31,7 @@ import {
   CUSTOM_FILTER_TRAIT_CATEGORY_IDS,
 } from "../lib/palette/constants";
 import { buildComposerCategories, buildWeaponCategories } from "../lib/palette/weapon-categories";
+import type { PaletteResultsMode } from "../lib/palette/results-mode";
 import { useOwnedArmor } from "../lib/use-owned-armor";
 import { useCustomWeaponFilters } from "../lib/use-custom-weapon-filters";
 import {
@@ -111,6 +114,7 @@ export function HomeSearch({
   }, []);
   const [sort, setSort] = useState<WeaponSort>("season-desc");
   const [showAllResults, setShowAllResults] = useState(false);
+  const [resultsMode, setResultsMode] = useState<PaletteResultsMode | null>(null);
   const [customFilterComposer, setCustomFilterComposer] = useState<CustomFilterComposer | null>(
     null,
   );
@@ -139,6 +143,22 @@ export function HomeSearch({
       ? weaponCategories
       : armorCategories;
 
+  const paletteChips = composingCustomFilter
+    ? draftPerkChips(customFilterComposer!.perkNames)
+    : chips;
+
+  const recentValues = useMemo(() => {
+    const values = new Set<string>();
+    for (const search of getRecentForMode(mode)) {
+      for (const chip of search.chips) {
+        values.add(chip.value.toLowerCase());
+      }
+      const trimmed = search.query.trim();
+      if (trimmed) values.add(trimmed.toLowerCase());
+    }
+    return values;
+  }, [getRecentForMode, mode]);
+
   const {
     weaponShown,
     weaponPreviewWeapons,
@@ -157,13 +177,16 @@ export function HomeSearch({
     showAllResults,
     composingCustomFilter,
     mode,
+    resultsMode,
+    recentValues,
   });
 
   const {
     armorShown,
+    armorPreviewItems,
     resultCount: armorResultCount,
     shownCount: armorShownCount,
-  } = useArmorSearchResults(owned, chips, query, showAllResults);
+  } = useArmorSearchResults(owned, chips, query, showAllResults, recentValues);
 
   const resultCount = mode === "weapon" ? weaponResultCount : armorResultCount;
   const shownCount = mode === "weapon" ? weaponShownCount : armorShownCount;
@@ -176,6 +199,11 @@ export function HomeSearch({
   const weaponPreviewIds = useMemo(
     () => weaponPreviewWeapons.map((weapon) => String(weapon.hash)),
     [weaponPreviewWeapons],
+  );
+
+  const armorPreviewById = useMemo(
+    () => new Map(armorPreviewItems.map((armor) => [armor.instanceId, armor] as const)),
+    [armorPreviewItems],
   );
 
   const armorResultIds = useMemo(
@@ -216,7 +244,7 @@ export function HomeSearch({
 
   const renderArmorResult = useCallback(
     (id: string) => {
-      const armor = armorById.get(id);
+      const armor = armorById.get(id) ?? armorPreviewById.get(id);
       if (!armor) return null;
       return (
         <ArmorResultRow
@@ -229,7 +257,7 @@ export function HomeSearch({
         />
       );
     },
-    [armorById, armorAction, runArmorAction],
+    [armorById, armorPreviewById, armorAction, runArmorAction],
   );
 
   const addChip = useCallback(
@@ -265,6 +293,26 @@ export function HomeSearch({
     },
     [categories, mode, recordSearch],
   );
+
+  const { ghostCompletion, ghostSuffix: ghostSuffixText } = usePaletteGhostCompletion({
+    query,
+    mode,
+    categories,
+    chips: paletteChips,
+    weapons,
+    recentValues,
+    composingCustomFilter,
+  });
+
+  const handleSubmit = usePaletteSubmit({
+    query,
+    mode,
+    weapons,
+    composingCustomFilter,
+    addChip,
+    setQuery,
+    setResultsMode,
+  });
 
   const addComposerPerk = useCallback((categoryId: string, option: PaletteValueOption) => {
     if (!CUSTOM_FILTER_TRAIT_CATEGORY_IDS.has(categoryId)) return;
@@ -412,6 +460,12 @@ export function HomeSearch({
     setShowAllResults(false);
   }, [chips, query, mode, sort]);
 
+  useEffect(() => {
+    if (!query.trim() || chips.length > 0) {
+      setResultsMode(null);
+    }
+  }, [query, chips, mode]);
+
   const handleModeChange = useCallback((next: Mode) => {
     setMode(next);
     setChips([]);
@@ -427,13 +481,12 @@ export function HomeSearch({
     <span className="text-destructive text-sm">{armorLoadError}</span>
   ) : undefined;
 
-  const paletteChips = composingCustomFilter
-    ? draftPerkChips(customFilterComposer!.perkNames)
-    : chips;
-
   const hasFilters = paletteChips.length > 0;
   const isFiltering = query.trim().length > 0;
-  const showResults = hasFilters && !isFiltering && !composingCustomFilter;
+  const showFilterResults = hasFilters && !isFiltering && !composingCustomFilter;
+  const showTextResults = resultsMode === "text" && isFiltering && !composingCustomFilter;
+  const showResults = showFilterResults || showTextResults;
+  const resultsWhileFiltering = showTextResults;
 
   const recentPaletteItems = useMemo<PaletteRecentItem[]>(() => {
     if (composingCustomFilter) return [];
@@ -455,6 +508,16 @@ export function HomeSearch({
       : armorLoading
         ? "Loading your armor…"
         : "Search armor by class, set, or stats";
+
+  const armorPreviewIds = useMemo(
+    () => armorPreviewItems.map((armor) => armor.instanceId),
+    [armorPreviewItems],
+  );
+
+  const armorPreviewResults = useMemo(
+    () => armorPreviewIds.map((id) => ({ id })),
+    [armorPreviewIds],
+  );
 
   const weaponResults = useMemo(
     () => weaponResultIds.map((id) => ({ id })),
@@ -560,10 +623,19 @@ export function HomeSearch({
             }
             query={query}
             onQueryChange={setQuery}
+            onSubmit={handleSubmit}
             onPanelStateChange={handlePanelStateChange}
             showResults={showResults}
+            resultsWhileFiltering={resultsWhileFiltering}
+            ghostCompletion={ghostCompletion}
+            ghostSuffix={ghostSuffixText}
+            recentValues={recentValues}
             previewResults={
-              mode === "weapon" && !showResults ? weaponPreviewResults : undefined
+              !showResults
+                ? mode === "weapon"
+                  ? weaponPreviewResults
+                  : armorPreviewResults
+                : undefined
             }
             previewSectionLabel="Results"
             results={mode === "weapon" ? weaponResults : armorResults}
