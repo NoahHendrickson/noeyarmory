@@ -9,6 +9,7 @@ import {
 import { cn } from "../../lib/utils";
 import { PaletteInputBar } from "./palette-input-bar";
 import { PaletteList } from "./palette-list";
+import { resolveEscapeStep } from "./progressive-escape";
 import {
   buildPaletteItems,
   firstSelectableIndex,
@@ -44,7 +45,7 @@ export type {
  * the domain — the consumer supplies `categories`/`chips`/`results`.
  *
  * Keyboard: ↑/↓ move, Tab completes ghost suffix, Enter selects, Backspace removes chips or steps back,
- * Esc closes.
+ * Esc progressively clears input, steps back, or closes.
  */
 export function CommandPalette({
   placeholder = "Search…",
@@ -406,6 +407,30 @@ export function CommandPalette({
 
   const inputValue = state.panel === "values" ? state.valueQuery : query;
 
+  function clearCurrentInput() {
+    if (state.panel === "values") {
+      dispatch({ type: "setValueQuery", value: "" });
+    } else {
+      onQueryChange("");
+    }
+    setHoverIndex(-1);
+  }
+
+  function applyProgressiveEscape() {
+    switch (resolveEscapeStep(state.panel, state.valueQuery, query)) {
+      case "clear":
+        clearCurrentInput();
+        break;
+      case "back":
+        dispatch({ type: "back" });
+        setHoverIndex(-1);
+        break;
+      case "close":
+        closePanel();
+        break;
+    }
+  }
+
   function acceptGhostCompletion() {
     if (!ghostCompletion) return;
     if (state.panel === "values") {
@@ -453,10 +478,9 @@ export function CommandPalette({
         break;
       }
       case "Escape":
-        if (open) {
-          e.preventDefault();
-          closePanel();
-        }
+        if (!open) break;
+        e.preventDefault();
+        applyProgressiveEscape();
         break;
       case "Backspace":
         if (inputValue === "") {
@@ -507,9 +531,9 @@ export function CommandPalette({
 
   function handleClearBar() {
     if (state.panel === "values") {
-      dispatch({ type: "setValueQuery", value: "" });
+      clearCurrentInput();
     } else {
-      if (hasTypedInput) onQueryChange("");
+      if (hasTypedInput) clearCurrentInput();
       if (chips.length > 0) onClearChips?.();
     }
     inputRef.current?.focus();
