@@ -4,6 +4,7 @@ import { ChevronDown } from "lucide-react";
 
 import { frostedSurface } from "../lib/frosted-surface";
 import { cn } from "../lib/utils";
+import { FrostedShellBar } from "./frosted-shell";
 
 export interface PillSelectOption<T extends string> {
   value: T;
@@ -55,15 +56,7 @@ function PillSelect<T extends string>({
           className,
         )}
       >
-        {filled && (
-          <div
-            className={cn(
-              "pointer-events-none absolute inset-0 rounded-[inherit]",
-              frostedSurface("bar"),
-            )}
-            aria-hidden
-          />
-        )}
+        {filled && <FrostedShellBar />}
         <span className={triggerContentClass}>
           <span className="inline-flex items-center">{selected?.label}</span>
           <ChevronDown className="size-3 shrink-0 opacity-70" aria-hidden />

@@ -35,6 +35,7 @@ export {
   valueSuggestionsToChipItems,
 } from "./components/command-palette/command-palette";
 export { frostedSurface, type FrostedSurfaceToken } from "./lib/frosted-surface";
+export { FrostedShell, FrostedShellBar } from "./components/frosted-shell";
 export {
   availableCategories,
   categoryIsFull,
@@ -52,6 +53,18 @@ export {
   DialogPopup,
 } from "./components/dialog";
 export { FeedbackDialog, type FeedbackDialogProps } from "./components/feedback-dialog";
+export { FrostedToolbarButton, type FrostedToolbarButtonProps } from "./components/frosted-toolbar-button";
+export {
+  Popover,
+  PopoverTrigger,
+  PopoverPortal,
+  PopoverPositioner,
+  PopoverPopup,
+  FrostedPopoverPopup,
+  PopoverClose,
+  PopoverTitle,
+  PopoverDescription,
+} from "./components/popover";
 export {
   TooltipProvider,
   Tooltip,

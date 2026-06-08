@@ -1,7 +1,9 @@
-import type { ComponentProps } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { Popover as BasePopover } from "@base-ui/react/popover";
 
+import { frostedSurface } from "../lib/frosted-surface";
 import { cn } from "../lib/utils";
+import { FrostedShellBar } from "./frosted-shell";
 
 const Popover = BasePopover.Root;
 const PopoverTrigger = BasePopover.Trigger;
@@ -41,12 +43,33 @@ function PopoverPopup({ className, ...props }: ComponentProps<typeof BasePopover
   );
 }
 
+function FrostedPopoverPopup({
+  className,
+  children,
+  ...props
+}: ComponentProps<typeof BasePopover.Popup> & { children?: ReactNode }) {
+  return (
+    <PopoverPopup
+      className={cn(
+        "relative overflow-hidden border-0 bg-transparent",
+        frostedSurface("shell"),
+        className,
+      )}
+      {...props}
+    >
+      <FrostedShellBar />
+      <div className="relative">{children}</div>
+    </PopoverPopup>
+  );
+}
+
 export {
   Popover,
   PopoverTrigger,
   PopoverPortal,
   PopoverPositioner,
   PopoverPopup,
+  FrostedPopoverPopup,
   PopoverClose,
   PopoverTitle,
   PopoverDescription,

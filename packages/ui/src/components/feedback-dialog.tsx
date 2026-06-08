@@ -4,12 +4,13 @@ import { X } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "./button";
+import { FrostedToolbarButton } from "./frosted-toolbar-button";
 import { Input } from "./input";
 import {
   Popover,
   PopoverClose,
   PopoverDescription,
-  PopoverPopup,
+  FrostedPopoverPopup,
   PopoverPortal,
   PopoverPositioner,
   PopoverTitle,
@@ -42,7 +43,7 @@ const secondaryButtonClass = cn(
 );
 
 const popupClassName =
-  "max-h-[min(85vh,var(--available-height))] w-[min(360px,var(--available-width))] overflow-hidden rounded-[16px] p-0 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)]";
+  "max-h-[min(85vh,var(--available-height))] w-[min(360px,var(--available-width))] overflow-hidden rounded-[16px] p-0";
 
 export interface FeedbackDialogProps {
   defaultOpen?: boolean;
@@ -127,11 +128,9 @@ export function FeedbackDialog({
   }
 
   const triggerButton = (
-    <Button
-      variant="outline"
+    <FrostedToolbarButton
       aria-label="Send feedback"
       data-palette-ignore-close
-      className={cn(secondaryButtonClass, "px-2.5 backdrop-blur-sm sm:px-3")}
       onClick={(e) => e.stopPropagation()}
       onPointerDown={(e) => e.stopPropagation()}
     />
@@ -150,7 +149,7 @@ export function FeedbackDialog({
       )}
       <PopoverPortal>
         <PopoverPositioner side="bottom" align="end" sideOffset={8}>
-          <PopoverPopup className={popupClassName}>
+          <FrostedPopoverPopup className={popupClassName}>
             {submitState === "success" ? (
               <>
                 <div className={cn(sectionClass, "space-y-0.5")}>
@@ -241,7 +240,7 @@ export function FeedbackDialog({
                             "disabled:cursor-not-allowed disabled:opacity-50",
                             active
                               ? "bg-white text-card"
-                              : "bg-[#2e2c2d] text-foreground",
+                              : "bg-card/35 text-foreground",
                           )}
                         >
                           {option.label}
@@ -327,7 +326,7 @@ export function FeedbackDialog({
                 </div>
               </form>
             )}
-          </PopoverPopup>
+          </FrostedPopoverPopup>
         </PopoverPositioner>
       </PopoverPortal>
     </Popover>
