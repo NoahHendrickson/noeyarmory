@@ -1,0 +1,3 @@
+{
+  "install": "source scripts/ensure-cloud-env.sh && node -e 'process.exit(+process.versions.node.split(\".\")[0]>=24?0:1)' && pnpm install"
+}
