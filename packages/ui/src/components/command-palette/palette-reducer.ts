@@ -2,6 +2,7 @@ import { rankLabeledOptions } from "@repo/search-rank";
 
 import { MAX_VALUE_SUGGESTIONS, parsePopularity, scanValueSuggestions } from "../../lib/palette-suggestions";
 import type {
+  DormantSnapshot,
   ListMode,
   PaletteAction,
   PaletteCategory,
@@ -15,6 +16,15 @@ import type {
 } from "./types";
 
 export const PANEL_TRANSITION_MS = 200;
+
+/** True when a dormant snapshot still matches the current draft input. */
+export function dormantSnapshotMatches(
+  snapshot: Pick<DormantSnapshot, "query" | "chipsLength">,
+  query: string,
+  chipsLength: number,
+): boolean {
+  return snapshot.query === query.trim() && snapshot.chipsLength === chipsLength;
+}
 
 export function paletteReducer(
   state: PaletteReducerState,
@@ -56,6 +66,30 @@ export function nextSelectableIndex(items: PaletteItem[], from: number, delta: 1
     if (isSelectableItem(items[i]!)) return i;
   }
   return firstSelectableIndex(items);
+}
+
+/** Split list rows into body vs trailing preview section (divider, label, result rows). */
+export function splitPreviewTail(items: PaletteItem[]): {
+  baseItems: PaletteItem[];
+  previewItems: PaletteItem[];
+} {
+  const baseItems = stripPreviewItems(items);
+  if (baseItems.length === items.length) {
+    return { baseItems, previewItems: [] };
+  }
+  return { baseItems, previewItems: items.slice(baseItems.length) };
+}
+
+/** Drop preview rows/sections — used for lightweight open/close animation snapshots. */
+export function stripPreviewItems(items: PaletteItem[]): PaletteItem[] {
+  const previewIndex = items.findIndex(
+    (item) => item.kind === "section" && item.id === "preview",
+  );
+  if (previewIndex < 0) return items;
+  let start = previewIndex;
+  const prev = items[start - 1];
+  if (prev?.kind === "section" && prev.divider) start -= 1;
+  return items.slice(0, start);
 }
 
 export function appendPreviewResults(
@@ -127,6 +161,18 @@ export function listMode(
   if (panel === "values") return "values";
   if (showResults && !browseFilters && (!query.trim() || resultsWhileFiltering)) return "results";
   return "categories";
+}
+
+/** Collapsed pre-warm mode for draft query with no committed chips while the panel is closed. */
+export function draftListMode(
+  hasDraftQueryOnly: boolean,
+  showResults: boolean,
+  query: string,
+  browseFilters: boolean,
+  resultsWhileFiltering = false,
+): ListMode | null {
+  if (!hasDraftQueryOnly) return null;
+  return listMode("categories", showResults, query, browseFilters, resultsWhileFiltering);
 }
 
 /** Match filter values across all categories (e.g. "surr" → Trait 2 · Surrounded). */

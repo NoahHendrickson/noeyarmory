@@ -42,7 +42,7 @@ function PillSelect<T extends string>({
         onClick={(e) => e.stopPropagation()}
         onPointerDown={(e) => e.stopPropagation()}
         className={cn(
-          "border-border inline-flex h-8 cursor-pointer items-center gap-1 rounded-pill border py-1 text-xs font-normal text-foreground outline-none",
+          "border-border inline-flex h-8 cursor-pointer items-center gap-1 rounded-pill border text-xs font-normal leading-none text-foreground outline-none",
           "focus-visible:ring-ring focus-visible:ring-2",
           variant === "ghost"
             ? "bg-transparent pl-3 pr-2"
@@ -50,7 +50,7 @@ function PillSelect<T extends string>({
           className,
         )}
       >
-        <span>{selected?.label}</span>
+        <span className="inline-flex items-center">{selected?.label}</span>
         <ChevronDown className="size-3 shrink-0 opacity-70" aria-hidden />
       </Menu.Trigger>
       <Menu.Portal>

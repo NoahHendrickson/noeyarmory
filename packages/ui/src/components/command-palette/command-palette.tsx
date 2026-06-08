@@ -1,4 +1,13 @@
-import { useCallback, useEffect, useId, useMemo, useReducer, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+} from "react";
 
 import {
   availableCategories,
@@ -12,6 +21,7 @@ import { PaletteList } from "./palette-list";
 import { resolveEscapeStep } from "./progressive-escape";
 import {
   buildPaletteItems,
+  dormantSnapshotMatches,
   firstSelectableIndex,
   isSelectableItem,
   listMode,
@@ -19,10 +29,12 @@ import {
   PANEL_TRANSITION_MS,
   paletteReducer,
   searchValueSuggestions,
+  stripPreviewItems,
 } from "./palette-reducer";
 import type {
   ClosingSnapshot,
   CommandPaletteProps,
+  DormantSnapshot,
   ListMode,
   PaletteCategory,
   PaletteItem,
@@ -33,11 +45,14 @@ export type {
   PaletteAction,
   PaletteCategory,
   PaletteChip,
+  PaletteItem,
   PalettePanelState,
   PaletteRecentItem,
   PaletteResultItem,
   PaletteValueOption,
 } from "./types";
+
+export { PANEL_TRANSITION_MS, searchValueSuggestions } from "./palette-reducer";
 
 /**
  * A data-agnostic command palette: a pill input hosting filter chips, with a
@@ -89,6 +104,7 @@ export function CommandPalette({
   previewResults = [],
   previewSectionLabel = "Results",
   recentValues,
+  chipSuggestions,
   onPanelStateChange,
   className,
   renderResult,
@@ -114,8 +130,15 @@ export function CommandPalette({
   const [browseFilters, setBrowseFilters] = useState(false);
   const [hoverIndex, setHoverIndex] = useState(-1);
   const [closingSnapshot, setClosingSnapshot] = useState<ClosingSnapshot | null>(null);
+  const [openingSnapshot, setOpeningSnapshot] = useState<ClosingSnapshot | null>(null);
+  const [previewsMounted, setPreviewsMounted] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const closeAnimationTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const openAnimationTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const dormantSnapshotRef = useRef<DormantSnapshot | null>(null);
+  const openingFingerprintRef = useRef<Pick<DormantSnapshot, "query" | "chipsLength"> | null>(
+    null,
+  );
   const savedResultsScrollRef = useRef(0);
   const wasResultsSuspendedRef = useRef(false);
   const listScrollingRef = useRef(false);
@@ -157,15 +180,93 @@ export function CommandPalette({
     }
   }, [suspendResults, saveResultsScroll, restoreResultsScroll]);
 
-  const panelOpen = isControlled ? openProp : state.panel !== "closed";
+  const panelOpen = isControlled
+    ? openProp || state.panel !== "closed"
+    : state.panel !== "closed";
   const open = !disabled && !renderBarOverlay && panelOpen;
   const mode = listMode(state.panel, showResults, query, browseFilters, resultsWhileFiltering);
+
+  function clearOpenAnimationTimer() {
+    clearTimeout(openAnimationTimerRef.current);
+    openAnimationTimerRef.current = undefined;
+  }
+
+  function clearOpeningSnapshot() {
+    setOpeningSnapshot(null);
+    openingFingerprintRef.current = null;
+  }
+
+  function finishOpenAnimation(deferPreviews: boolean) {
+    clearOpenAnimationTimer();
+    clearOpeningSnapshot();
+    if (deferPreviews) setPreviewsMounted(true);
+  }
+
+  function startPreviewDeferTimer() {
+    const deferPreviews = query.trim().length > 0 && chips.length === 0;
+    if (!deferPreviews) return;
+    clearOpenAnimationTimer();
+    openAnimationTimerRef.current = setTimeout(
+      () => finishOpenAnimation(true),
+      PANEL_TRANSITION_MS,
+    );
+  }
+
+  function invalidateDormantSnapshot() {
+    const dormant = dormantSnapshotRef.current;
+    if (dormant && !dormantSnapshotMatches(dormant, query, chips.length)) {
+      dormantSnapshotRef.current = null;
+    }
+  }
+
+  function seedOpeningSnapshot() {
+    invalidateDormantSnapshot();
+    const dormant = dormantSnapshotRef.current;
+    if (!dormant || !dormantSnapshotMatches(dormant, query, chips.length)) {
+      dormantSnapshotRef.current = null;
+      return;
+    }
+    setOpeningSnapshot({ mode: dormant.mode, items: [...dormant.items] });
+    openingFingerprintRef.current = { query: dormant.query, chipsLength: dormant.chipsLength };
+    const deferPreviews = query.trim().length > 0 && chips.length === 0;
+    if (deferPreviews) setPreviewsMounted(false);
+    startPreviewDeferTimer();
+  }
 
   useEffect(() => {
     if (!open) return;
     clearTimeout(closeAnimationTimerRef.current);
     setClosingSnapshot(null);
   }, [open]);
+
+  useEffect(() => {
+    if (!open) {
+      setPreviewsMounted(false);
+      clearOpeningSnapshot();
+      clearOpenAnimationTimer();
+      return;
+    }
+    const deferPreviews = query.trim().length > 0 && chips.length === 0;
+    if (!deferPreviews) {
+      setPreviewsMounted(true);
+      return;
+    }
+    if (!previewsMounted && openAnimationTimerRef.current === undefined) {
+      startPreviewDeferTimer();
+    }
+  }, [open, query, chips.length, previewsMounted]);
+
+  useEffect(() => {
+    invalidateDormantSnapshot();
+    const fingerprint = openingFingerprintRef.current;
+    if (
+      fingerprint &&
+      !dormantSnapshotMatches(fingerprint, query, chips.length)
+    ) {
+      clearOpeningSnapshot();
+      clearOpenAnimationTimer();
+    }
+  }, [query, chips.length]);
 
   useEffect(() => {
     if (!open) setBrowseFilters(false);
@@ -176,6 +277,7 @@ export function CommandPalette({
   }, [chips.length]);
 
   function openPanel() {
+    seedOpeningSnapshot();
     dispatch({ type: "open" });
     onOpenChange?.(true);
   }
@@ -183,6 +285,14 @@ export function CommandPalette({
   function beginCloseAnimation(currentMode: ListMode | null, currentItems: PaletteItem[]) {
     if (!currentMode) return;
     setClosingSnapshot({ mode: currentMode, items: [...currentItems] });
+    if (query.trim().length > 0 && chips.length === 0) {
+      dormantSnapshotRef.current = {
+        mode: currentMode,
+        items: stripPreviewItems(currentItems),
+        query: query.trim(),
+        chipsLength: chips.length,
+      };
+    }
     clearTimeout(closeAnimationTimerRef.current);
     closeAnimationTimerRef.current = setTimeout(() => {
       setClosingSnapshot(null);
@@ -213,9 +323,10 @@ export function CommandPalette({
   const valueSuggestions = useMemo(
     () =>
       mode === "categories"
-        ? searchValueSuggestions(openCategories, query, chips, recentValues)
+        ? (chipSuggestions ??
+          searchValueSuggestions(openCategories, query, chips, recentValues))
         : [],
-    [openCategories, query, chips, mode, recentValues],
+    [openCategories, query, chips, mode, recentValues, chipSuggestions],
   );
 
   const recentListItems = useMemo<PaletteItem[]>(() => {
@@ -239,6 +350,9 @@ export function CommandPalette({
     [onClearRecent],
   );
 
+  const previewResultsForItems =
+    open && previewsMounted ? previewResults : [];
+
   const items = useMemo(
     () =>
       buildPaletteItems({
@@ -254,7 +368,7 @@ export function CommandPalette({
         recentSectionLabel,
         recentSectionHeaderAction,
         filtersSectionLabel,
-        previewResults,
+        previewResults: previewResultsForItems,
         previewSectionLabel,
         activeCategory,
         valueQuery: state.valueQuery,
@@ -274,7 +388,7 @@ export function CommandPalette({
       recentSectionLabel,
       recentSectionHeaderAction,
       filtersSectionLabel,
-      previewResults,
+      previewResultsForItems,
       previewSectionLabel,
       activeCategory,
       state.valueQuery,
@@ -289,7 +403,10 @@ export function CommandPalette({
   const keyboardFocus = hoverIndex < 0 && activeIndex >= 0;
   const resultsOrderKey =
     mode === "results" ? results.map((result) => result.id).join("\u0000") : "";
-  const previewOrderKey = previewResults.map((result) => result.id).join("\u0000");
+  const previewOrderKey =
+    previewsMounted && open
+      ? previewResults.map((result) => result.id).join("\u0000")
+      : "";
   const actionsOrderKey = categoryActions.map((action) => action.id).join("\u0000");
   const recentOrderKey = recentItems.map((item) => item.id).join("\u0000");
 
@@ -302,9 +419,11 @@ export function CommandPalette({
   }, [state.panel, state.categoryId, state.valueQuery, onPanelStateChange]);
 
   useEffect(() => {
+    if (!open) return;
     dispatch({ type: "setActive", index: firstSelectableIndex(items) });
     setHoverIndex(-1);
   }, [
+    open,
     mode,
     state.categoryId,
     state.valueQuery,
@@ -315,12 +434,21 @@ export function CommandPalette({
     previewOrderKey,
     actionsOrderKey,
     recentOrderKey,
+    items,
   ]);
+
+  useLayoutEffect(() => {
+    if (!isControlled) return;
+    if (openProp && state.panel === "closed") {
+      seedOpeningSnapshot();
+      dispatch({ type: "open" });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isControlled, openProp, state.panel]);
 
   useEffect(() => {
     if (!isControlled) return;
-    if (openProp && state.panel === "closed") dispatch({ type: "open" });
-    else if (!openProp && state.panel !== "closed") closePanel();
+    if (!openProp && state.panel !== "closed") closePanel();
     // closePanel is stable enough here — only runs on controlled openProp transitions.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isControlled, openProp, state.panel]);
@@ -547,8 +675,12 @@ export function CommandPalette({
         : "Clear search";
 
   const panelClosing = closingSnapshot != null;
-  const renderMode = open ? mode : (closingSnapshot?.mode ?? null);
-  const renderItems = open ? items : (closingSnapshot?.items ?? []);
+  const renderMode = open
+    ? (openingSnapshot?.mode ?? mode)
+    : (closingSnapshot?.mode ?? null);
+  const renderItems = open
+    ? (openingSnapshot?.items ?? items)
+    : (closingSnapshot?.items ?? []);
 
   const comboboxProps = {
     role: "combobox" as const,

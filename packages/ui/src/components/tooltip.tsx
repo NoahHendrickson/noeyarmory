@@ -7,6 +7,24 @@ const TooltipProvider = BaseTooltip.Provider;
 const Tooltip = BaseTooltip.Root;
 const TooltipTrigger = BaseTooltip.Trigger;
 const TooltipPortal = BaseTooltip.Portal;
+function TooltipArrow({
+  className,
+  ...props
+}: ComponentProps<typeof BaseTooltip.Arrow>) {
+  return (
+    <BaseTooltip.Arrow
+      className={cn(
+        "pointer-events-none z-10",
+        "data-[side=top]:-translate-y-full",
+        "data-[side=bottom]:translate-y-full",
+        "data-[side=left]:translate-x-full",
+        "data-[side=right]:-translate-x-full",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
 
 function TooltipPositioner({
   className,
@@ -44,4 +62,5 @@ export {
   TooltipPortal,
   TooltipPositioner,
   TooltipPopup,
+  TooltipArrow,
 };

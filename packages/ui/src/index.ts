@@ -29,11 +29,15 @@ export {
   type PaletteRecentItem,
   type PaletteResultItem,
   type PalettePanelState,
+  type PaletteItem,
+  PANEL_TRANSITION_MS,
+  searchValueSuggestions,
 } from "./components/command-palette/command-palette";
 export {
   availableCategories,
   categoryIsFull,
   scanValueSuggestions,
+  type ValueSuggestion,
 } from "./lib/palette-suggestions";
 export {
   Dialog,
@@ -53,5 +57,6 @@ export {
   TooltipPortal,
   TooltipPositioner,
   TooltipPopup,
+  TooltipArrow,
 } from "./components/tooltip";
 export { cn } from "./lib/utils";

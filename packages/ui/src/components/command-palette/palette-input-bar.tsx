@@ -7,12 +7,15 @@ import { Kbd } from "../kbd";
 import { whisperForActiveItem } from "./palette-reducer";
 import type { PaletteCategory, PaletteChip, PaletteItem } from "./types";
 
-/** Visible Tab keycap hint — keep out of the width sizer to avoid duplicate layout work. */
+/** Visible Tab keycap hint — rendered inline after the ghost suffix, outside the width sizer. */
 function GhostTabHint() {
   return (
-    <span className="text-muted-foreground/35 ml-2.5 inline-flex shrink-0 items-center gap-0.5 text-xs">
+    <span className="text-muted-foreground/35 ml-1.5 inline-flex shrink-0 items-center gap-0.5 text-[11px] leading-none">
       Tab
-      <Kbd variant="keycap" className="text-muted-foreground/50 h-4 min-w-4 px-0.5 text-[10px]">
+      <Kbd
+        variant="keycap"
+        className="text-muted-foreground/50 h-3.5 min-w-3.5 rounded-[3px] px-0 text-[10px]"
+      >
         <ArrowRight className="size-2.5" aria-hidden />
       </Kbd>
     </span>
@@ -84,7 +87,8 @@ export function PaletteInputBar({
   clearBarLabel,
   onClearBar,
 }: PaletteInputBarProps) {
-  const showGhost = Boolean(ghostSuffix && inputValue.length > 0);
+  const showGhostSizer = Boolean(ghostSuffix && inputValue.length > 0);
+  const showGhostHint = open && showGhostSizer;
 
   const valueInputPlaceholder = activeCategory
     ? (whisperForActiveItem(items[displayIndex]) ?? `Filter ${activeCategory.label}…`)
@@ -151,25 +155,39 @@ export function PaletteInputBar({
                   </Button>
                 )}
                 <div className="flex min-w-0 items-center">
-                  <div className="relative inline-flex min-w-[8ch] shrink-0 items-center">
-                    <span aria-hidden className="invisible whitespace-pre text-base tracking-body">
-                      {inputValue.length > 0 ? inputValue : effectivePlaceholder}
-                      {showGhost && ghostSuffix}
-                    </span>
-                    {showGhost && (
-                      <span
-                        aria-hidden
-                        className="pointer-events-none absolute inset-y-0 left-0 flex items-center whitespace-pre text-base tracking-body"
-                      >
-                        <span className="invisible">{inputValue}</span>
-                        <span className="text-muted-foreground/50">{ghostSuffix}</span>
-                      </span>
+                  <div
+                    className={cn(
+                      "relative shrink-0",
+                      showGhostSizer ? "inline-grid min-w-0" : "inline-flex min-w-[8ch] items-center",
+                    )}
+                  >
+                    {showGhostSizer && (
+                      <>
+                        <span
+                          aria-hidden
+                          className="invisible col-start-1 row-start-1 whitespace-pre text-base tracking-body"
+                        >
+                          {inputValue}
+                          {ghostSuffix}
+                        </span>
+                        <span
+                          aria-hidden
+                          className="pointer-events-none col-start-1 row-start-1 flex items-center whitespace-pre text-base tracking-body"
+                        >
+                          <span className="invisible">{inputValue}</span>
+                          <span className="text-muted-foreground/50">{ghostSuffix}</span>
+                          {showGhostHint && <GhostTabHint />}
+                        </span>
+                      </>
                     )}
                     <input
                       ref={inputRef}
                       type="text"
-                      size={inputSize}
-                      className="placeholder:text-muted-foreground absolute inset-0 min-w-[8ch] bg-transparent text-base tracking-body outline-none disabled:cursor-not-allowed"
+                      {...(showGhostSizer ? {} : { size: inputSize })}
+                      className={cn(
+                        "placeholder:text-muted-foreground col-start-1 row-start-1 bg-transparent text-base tracking-body outline-none disabled:cursor-not-allowed",
+                        showGhostSizer ? "min-w-0 w-full" : "min-w-[8ch] [field-sizing:content]",
+                      )}
                       placeholder={effectivePlaceholder}
                       value={inputValue}
                       disabled={disabled}
@@ -179,7 +197,6 @@ export function PaletteInputBar({
                       {...comboboxProps}
                     />
                   </div>
-                  {showGhost && <GhostTabHint />}
                 </div>
               </>
             )}

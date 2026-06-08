@@ -60,4 +60,33 @@ describe("scanValueSuggestions", () => {
       { id: "fatebringer", label: "Fatebringer", hint: "2" },
     ]);
   });
+
+  test("maxRank 2 allows word-boundary prefix but not contains matches", () => {
+    const trait: PaletteCategory = {
+      id: "trait1",
+      label: "Trait 1",
+      getValues: () => [
+        { id: "rewind-rounds", label: "Rewind Rounds", hint: "50" },
+        { id: "surrounded", label: "Surrounded", hint: "100" },
+      ],
+    };
+
+    const suggestions = scanValueSuggestions([trait], "round", [], { maxRank: 2 });
+
+    expect(suggestions.map((s) => s.value)).toEqual(["Rewind Rounds"]);
+  });
+
+  test("maxRank 2 excludes fuzzy-only matches", () => {
+    const trait: PaletteCategory = {
+      id: "trait1",
+      label: "Trait 1",
+      getValues: () => [
+        { id: "surrounded", label: "Surrounded", hint: "50", searchRank: 4 },
+      ],
+    };
+
+    const suggestions = scanValueSuggestions([trait], "suround", [], { maxRank: 2 });
+
+    expect(suggestions).toEqual([]);
+  });
 });

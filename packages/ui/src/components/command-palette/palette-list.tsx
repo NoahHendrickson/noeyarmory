@@ -1,8 +1,9 @@
 import { ArrowDown, CornerDownLeft, History, ListFilter, X } from "lucide-react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { cn } from "../../lib/utils";
 import { Kbd } from "../kbd";
-import { isSelectableItem, itemKey } from "./palette-reducer";
+import { isSelectableItem, itemKey, PANEL_TRANSITION_MS, splitPreviewTail } from "./palette-reducer";
 import type { ListMode, PaletteItem, PaletteResultItem } from "./types";
 
 export interface PaletteListProps {
@@ -58,6 +59,31 @@ export function PaletteList({
   onSetActive,
   onSelectItem,
 }: PaletteListProps) {
+  const { baseItems, previewItems } = useMemo(
+    () => splitPreviewTail(renderItems),
+    [renderItems],
+  );
+
+  function renderRow(item: PaletteItem, index: number, as: "li" | "div" = "li") {
+    return (
+      <PaletteListRow
+        key={itemKey(item)}
+        as={as}
+        item={item}
+        optionId={optionId(index)}
+        selected={isSelectableItem(item) && displayIndex >= 0 && index === displayIndex}
+        showEnterHint={isSelectableItem(item) && keyboardFocus && index === activeIndex}
+        listScrollingRef={listScrollingRef}
+        onHover={() => {
+          onHoverIndex(index);
+          if (activeIndex !== index) onSetActive(index);
+        }}
+        onSelect={() => onSelectItem(item)}
+        renderResult={renderResult}
+      />
+    );
+  }
+
   return (
     <div
       className={cn(
@@ -113,23 +139,12 @@ export function PaletteList({
               className="flex flex-col gap-0.5"
               onMouseLeave={onClearHover}
             >
-              {renderItems.map((item, i) => (
-                <PaletteListRow
-                  key={itemKey(item)}
-                  item={item}
-                  index={i}
-                  optionId={optionId(i)}
-                  selected={isSelectableItem(item) && displayIndex >= 0 && i === displayIndex}
-                  showEnterHint={isSelectableItem(item) && keyboardFocus && i === activeIndex}
-                  listScrollingRef={listScrollingRef}
-                  onHover={() => {
-                    onHoverIndex(i);
-                    if (activeIndex !== i) onSetActive(i);
-                  }}
-                  onSelect={() => onSelectItem(item)}
-                  renderResult={renderResult}
-                />
-              ))}
+              {baseItems.map((item, i) => renderRow(item, i))}
+              <PreviewResultsExpand
+                items={previewItems}
+                baseIndex={baseItems.length}
+                renderRow={renderRow}
+              />
             </ul>
           ) : null}
           {renderMode === "results" && resultsFooter != null && (
@@ -148,9 +163,83 @@ export function PaletteList({
   );
 }
 
+interface PreviewResultsExpandProps {
+  items: PaletteItem[];
+  baseIndex: number;
+  renderRow: (item: PaletteItem, index: number, as?: "li" | "div") => React.ReactNode;
+}
+
+/** Animates the preview-results tail so the palette grows taller, not pop-in. */
+function PreviewResultsExpand({ items, baseIndex, renderRow }: PreviewResultsExpandProps) {
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [height, setHeight] = useState(0);
+  const [expanded, setExpanded] = useState(false);
+  const itemsKey = useMemo(() => items.map((item) => itemKey(item)).join("\u0000"), [items]);
+
+  useLayoutEffect(() => {
+    if (items.length === 0) {
+      setHeight(0);
+      setExpanded(false);
+      return;
+    }
+
+    const node = contentRef.current;
+    if (!node) return;
+
+    const measure = () => node.scrollHeight;
+
+    setExpanded(false);
+    setHeight(measure());
+
+    const observer = new ResizeObserver(() => {
+      setHeight(measure());
+    });
+    observer.observe(node);
+
+    let innerFrame = 0;
+    let startTimer: ReturnType<typeof setTimeout> | undefined;
+    const outerFrame = requestAnimationFrame(() => {
+      innerFrame = requestAnimationFrame(() => {
+        // One frame at max-height 0 so the transition has a painted start state.
+        startTimer = setTimeout(() => setExpanded(true), 16);
+      });
+    });
+
+    return () => {
+      observer.disconnect();
+      cancelAnimationFrame(outerFrame);
+      cancelAnimationFrame(innerFrame);
+      clearTimeout(startTimer);
+    };
+  }, [itemsKey, items.length]);
+
+  if (items.length === 0) return null;
+
+  return (
+    <li role="presentation" className="list-none p-0">
+      <div
+        className="overflow-hidden motion-reduce:transition-none"
+        style={{
+          maxHeight: expanded ? height : 0,
+          transitionProperty: "max-height",
+          transitionDuration: `${PANEL_TRANSITION_MS}ms`,
+          transitionTimingFunction: "ease-out",
+        }}
+      >
+        <div
+          ref={contentRef}
+          className="flex flex-col gap-0.5 [&_*]:![content-visibility:visible]"
+        >
+          {items.map((item, i) => renderRow(item, baseIndex + i, "div"))}
+        </div>
+      </div>
+    </li>
+  );
+}
+
 interface PaletteListRowProps {
   item: PaletteItem;
-  index: number;
+  as?: "li" | "div";
   optionId: string;
   selected: boolean;
   showEnterHint: boolean;
@@ -162,6 +251,7 @@ interface PaletteListRowProps {
 
 function PaletteListRow({
   item,
+  as = "li",
   optionId,
   selected,
   showEnterHint,
@@ -171,10 +261,11 @@ function PaletteListRow({
   renderResult,
 }: PaletteListRowProps) {
   const sectionHasHeaderAction = item.kind === "section" && item.headerAction != null;
+  const RowTag = as;
 
   return (
     // eslint-disable-next-line jsx-a11y/click-events-have-key-events
-    <li
+    <RowTag
       id={optionId}
       role={item.kind === "section" ? "presentation" : "option"}
       aria-selected={item.kind === "section" ? undefined : selected}
@@ -220,7 +311,7 @@ function PaletteListRow({
       )}
     >
       <PaletteListRowContent item={item} showEnterHint={showEnterHint} renderResult={renderResult} />
-    </li>
+    </RowTag>
   );
 }
 

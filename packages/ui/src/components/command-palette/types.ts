@@ -154,6 +154,8 @@ export interface CommandPaletteProps {
   previewSectionLabel?: string;
   /** Recent chip/value labels used to boost inline suggestions. */
   recentValues?: ReadonlySet<string>;
+  /** Pre-computed chip suggestions; skips an internal scanValueSuggestions pass when set. */
+  chipSuggestions?: PaletteItem[];
   /** Fired when drill state changes so consumers can compute preview filters. */
   onPanelStateChange?: (state: PalettePanelState) => void;
   className?: string;
@@ -202,4 +204,10 @@ export type PaletteItem =
 export type ClosingSnapshot = {
   mode: ListMode;
   items: PaletteItem[];
+};
+
+/** Dormant list snapshot saved on close with a draft query; fingerprint validates on reopen. */
+export type DormantSnapshot = ClosingSnapshot & {
+  query: string;
+  chipsLength: number;
 };

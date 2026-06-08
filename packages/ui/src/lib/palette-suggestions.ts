@@ -51,6 +51,8 @@ export interface ValueSuggestion {
 export interface ScanValueSuggestionsOptions {
   limit?: number;
   recentValues?: ReadonlySet<string>;
+  /** Drop matches above this rank (inline chip suggestions use 2 = word-boundary prefix). */
+  maxRank?: number;
 }
 
 export function parsePopularity(hint: unknown): number {
@@ -79,6 +81,7 @@ export function scanValueSuggestions(
       : limitOrOptions;
   const limit = options.limit ?? MAX_VALUE_SUGGESTIONS;
   const recentValues = options.recentValues ?? legacyRecent;
+  const maxRank = options.maxRank;
 
   const q = query.trim();
   if (!q) return [];
@@ -93,6 +96,7 @@ export function scanValueSuggestions(
       if (applied.has(`${category.id}:${option.id}`)) continue;
       const baseRank = resolveMatchRank(option.label, q, option.searchRank);
       if (baseRank == null) continue;
+      if (maxRank != null && baseRank > maxRank) continue;
       const ql = q.toLowerCase();
       if (category.omitWeakInlineMatches && !option.label.toLowerCase().startsWith(ql)) {
         continue;

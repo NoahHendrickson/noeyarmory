@@ -55,8 +55,8 @@ export function filterPerkNames(
     }
   }
 
-  if (results.length < 3 && ql.length >= 3 && perkFuse) {
-    const fuzzy = perkFuse.search(query.trim(), { limit: limit - results.length });
+  if (results.length === 0 && ql.length >= 3 && perkFuse) {
+    const fuzzy = perkFuse.search(query.trim(), { limit });
     for (const result of fuzzy) {
       const key = lower(result.item.name);
       if (seen.has(key)) continue;

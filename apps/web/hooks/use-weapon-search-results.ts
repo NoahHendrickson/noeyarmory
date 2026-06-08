@@ -1,13 +1,14 @@
 "use client";
 
 import { useDeferredValue, useMemo } from "react";
-import type { PaletteCategory, PaletteChip, PalettePanelState } from "@repo/ui";
-import { availableCategories, scanValueSuggestions } from "@repo/ui";
+import type { PaletteCategory, PaletteChip, PalettePanelState, ValueSuggestion } from "@repo/ui";
 import {
   createWeaponFuse,
+  filterWeaponNames,
   filterWeapons,
   MIN_WEAPON_TEXT_QUERY_LENGTH,
   rankWeaponResults,
+  sortFilteredWeaponNames,
   weaponsMatchingTextQuery,
   type PerkRef,
   type WeaponDpsEntry,
@@ -38,7 +39,29 @@ export interface UseWeaponSearchResultsParams {
   composingCustomFilter: boolean;
   mode: "weapon" | "armor";
   resultsMode: PaletteResultsMode | null;
-  recentValues?: ReadonlySet<string>;
+  paletteOpen: boolean;
+  /** When set, gates preview computation separately from `paletteOpen` (draft-query open deferral). */
+  previewsEnabled?: boolean;
+  inlineSuggestions: ValueSuggestion[];
+}
+
+function weaponsForPreviewQuery(
+  weapons: WeaponSummary[],
+  weaponFuse: ReturnType<typeof createWeaponFuse>,
+  query: string,
+  limit: number,
+): WeaponSummary[] {
+  const q = query.trim();
+  if (q.length < MIN_WEAPON_TEXT_QUERY_LENGTH) return weapons;
+
+  const exact = sortFilteredWeaponNames(filterWeaponNames(weapons, q)).find(
+    (match) => match.searchRank === 0 && match.value.toLowerCase() === q.toLowerCase(),
+  );
+  if (exact) {
+    return weapons.filter((weapon) => weapon.name === exact.value);
+  }
+
+  return weaponsMatchingTextQuery(weapons, weaponFuse, q, limit);
 }
 
 export function useWeaponSearchResults({
@@ -55,7 +78,9 @@ export function useWeaponSearchResults({
   composingCustomFilter,
   mode,
   resultsMode,
-  recentValues,
+  paletteOpen,
+  previewsEnabled = paletteOpen,
+  inlineSuggestions,
 }: UseWeaponSearchResultsParams) {
   const weaponFilters = useMemo(
     () => chipsToWeaponFilters(chips, customFilters),
@@ -65,6 +90,9 @@ export function useWeaponSearchResults({
   const weaponFuse = useMemo(() => createWeaponFuse(weapons), [weapons]);
   const deferredQuery = useDeferredValue(query);
   const deferredPanelState = useDeferredValue(panelState);
+  // Preview must use live values while enabled — deferral causes a visible swap after open.
+  const previewQuery = previewsEnabled ? query : deferredQuery;
+  const previewPanelState = previewsEnabled ? panelState : deferredPanelState;
   const textSearchActive = resultsMode === "text";
 
   const weaponResults = useMemo(() => {
@@ -81,7 +109,7 @@ export function useWeaponSearchResults({
   const weaponShown = weaponResults.slice(0, resultLimit);
 
   const weaponPreviewWeapons = useMemo(() => {
-    if (mode !== "weapon" || composingCustomFilter) return [];
+    if (!previewsEnabled || mode !== "weapon" || composingCustomFilter) return [];
 
     const base = chipsToWeaponFilters(chips, customFilters);
     const seen = new Set<number>();
@@ -96,41 +124,31 @@ export function useWeaponSearchResults({
       }
     };
 
-    const q = deferredQuery.trim();
+    const q = previewQuery.trim();
     if (q.length >= MIN_WEAPON_TEXT_QUERY_LENGTH) {
       appendWeapons(
-        filterWeapons(
-          weaponsMatchingTextQuery(weapons, weaponFuse, q, MAX_PREVIEW_RESULTS),
-          base,
-          perks,
-        ),
+        filterWeapons(weaponsForPreviewQuery(weapons, weaponFuse, q, MAX_PREVIEW_RESULTS), base, perks),
       );
     }
 
     let filterSets: WeaponFilters[] = [];
 
     if (
-      deferredPanelState.panel === "values" &&
-      deferredPanelState.categoryId &&
-      deferredPanelState.valueQuery.trim()
+      previewPanelState.panel === "values" &&
+      previewPanelState.categoryId &&
+      previewPanelState.valueQuery.trim()
     ) {
-      const category = weaponCategories.find((c) => c.id === deferredPanelState.categoryId);
+      const category = weaponCategories.find((c) => c.id === previewPanelState.categoryId);
       if (category) {
         filterSets = category
-          .getValues(deferredPanelState.valueQuery)
+          .getValues(previewPanelState.valueQuery)
           .slice(0, MAX_PREVIEW_RESULTS)
           .map((option) =>
             withHypotheticalChip(base, category.id, option.label, option.id, customFilters),
           );
       }
-    } else if (deferredPanelState.panel === "categories" && q) {
-      const suggestions = scanValueSuggestions(
-        availableCategories(weaponCategories, chips),
-        q,
-        chips,
-        { limit: MAX_PREVIEW_RESULTS, recentValues },
-      );
-      filterSets = suggestions.map((s) =>
+    } else if (previewPanelState.panel === "categories" && q) {
+      filterSets = inlineSuggestions.map((s) =>
         withHypotheticalChip(base, s.categoryId, s.value, s.valueId, customFilters),
       );
     }
@@ -143,19 +161,20 @@ export function useWeaponSearchResults({
 
     return rankWeaponResults(candidates, q, sort, dpsByName).slice(0, MAX_PREVIEW_RESULTS);
   }, [
+    previewsEnabled,
     mode,
     composingCustomFilter,
     chips,
     customFilters,
-    deferredPanelState,
+    previewPanelState,
     weaponCategories,
-    deferredQuery,
+    previewQuery,
     weapons,
     perks,
     sort,
     dpsByName,
     weaponFuse,
-    recentValues,
+    inlineSuggestions,
   ]);
 
   return {

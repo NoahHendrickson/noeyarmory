@@ -16,6 +16,30 @@ describe("filterPerkNames", () => {
     expect(results.some((r) => r.name === "Surrounded")).toBe(true);
     expect(results.find((r) => r.name === "Surrounded")?.searchRank).toBe(4);
   });
+
+  test("does not fuzzy-pad when substring matches exist", () => {
+    const demoPerks = [
+      "Demolitionist",
+      "Demoralize",
+      "Deconstruct",
+      "Kinetic Tremors",
+      "Detonator Beam",
+      "Threat Remover",
+      "Remote Shield",
+      "Soul Devourer",
+    ];
+    const fuse = createPerkNameFuse(demoPerks);
+    const results = filterPerkNames(demoPerks, "demo", fuse);
+    expect(results.map((r) => r.name)).toEqual(["Demolitionist", "Demoralize"]);
+  });
+
+  test("fuzzy matches typos with zero substring hits", () => {
+    const demoPerks = ["Demolitionist", "Demoralize", "Deconstruct"];
+    const fuse = createPerkNameFuse(demoPerks);
+    const results = filterPerkNames(demoPerks, "deml", fuse);
+    expect(results.some((r) => r.name === "Demolitionist")).toBe(true);
+    expect(results.find((r) => r.name === "Demolitionist")?.searchRank).toBe(4);
+  });
 });
 
 describe("rankPerkNames", () => {

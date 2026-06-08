@@ -95,9 +95,15 @@ function stripArrowMarkers(lines: ClarityLine[]): ClarityLine[] {
       if (isSpacerLine(line)) return line;
       const parts =
         line.linesContent
-          ?.filter((part) => !part.classNames?.includes("enhancedArrow"))
-          .map((part) => ({ ...part, text: part.text?.replace(/^[\s▲]+/, "") }))
-          .filter((part) => part.text) ?? [];
+          ?.map((part) => ({
+            ...part,
+            text: part.classNames?.includes("enhancedArrow")
+              ? part.text
+              : part.text?.replace(/^[\s▲↑]+/, ""),
+          }))
+          .filter(
+            (part) => part.classNames?.includes("enhancedArrow") || part.text,
+          ) ?? [];
       if (!parts.length) return null;
       return { ...line, linesContent: parts };
     })

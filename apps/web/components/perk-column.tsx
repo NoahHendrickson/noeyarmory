@@ -15,13 +15,31 @@ import type { PerkRef, PerkColumn } from "@repo/destiny";
 
 import { ClarityAttribution, ClarityDescription } from "./clarity-description";
 import { bungieIcon } from "../lib/bungie";
-import type { ClarityDescriptionMap } from "../lib/clarity-types";
+import type { ClarityDescriptionMap, ClarityLine } from "../lib/clarity-types";
+import type { ClarityPerkTiers } from "../lib/clarity-provider";
 import {
   getClarityDisplayLines,
   getClarityPerkTiers,
   hasClarityOrBungieTooltip,
   useClarityDescriptions,
 } from "../lib/clarity-provider";
+
+/** Match weapon detail modal / command palette frosted surfaces. */
+const glassTooltipBase =
+  "relative overflow-hidden border border-border bg-card/35 p-0 shadow-lg shadow-black/25 backdrop-blur-xl";
+
+function perkTooltipMaxWidth(clarityLines: ClarityLine[] | undefined): string {
+  if (!clarityLines?.length) return "max-w-md";
+
+  const contentLines = clarityLines.filter((line) => !line.classNames?.includes("spacer"));
+  const charCount = contentLines.reduce(
+    (total, line) => total + (line.linesContent?.map((part) => part.text ?? "").join("").length ?? 0),
+    0,
+  );
+
+  if (contentLines.length >= 5 || charCount > 320) return "max-w-lg";
+  return "max-w-md";
+}
 
 /** Safety net for stale indexes that still list base + enhanced separately. */
 function dedupePerksByName(perks: PerkRef[]): PerkRef[] {
@@ -34,49 +52,65 @@ function dedupePerksByName(perks: PerkRef[]): PerkRef[] {
 
 function PerkTooltipContent({
   perk,
+  tiers,
   clarityLines,
 }: {
   perk: PerkRef;
+  tiers: ClarityPerkTiers;
   clarityLines?: ReturnType<typeof getClarityDisplayLines>;
 }) {
-  return (
-    <div className="max-w-sm space-y-2">
-      <div className="font-semibold">{perk.name}</div>
+  const hasEnhanced = Boolean(perk.enhancedDescription || tiers.enhanced);
+  const hasClarity = clarityLines != null && clarityLines.length > 0;
+  const showEnhancedText =
+    perk.enhancedDescription != null &&
+    perk.enhancedDescription !== perk.description;
+  const hasBungieText = Boolean(perk.description || showEnhancedText);
 
-      {clarityLines && clarityLines.length > 0 ? (
-        <>
-          <div className="text-muted-foreground space-y-0.5 text-xs">
-            <div className="text-muted-foreground/80 mb-1 text-sm font-semibold tracking-wide uppercase">
-              Community research
-            </div>
-            <ClarityDescription lines={clarityLines} />
+  return (
+    <div className="overflow-hidden rounded-md text-xs">
+      <div className="px-3 pt-2.5 pb-2">
+        <div className="text-foreground text-sm font-bold tracking-wide uppercase">
+          {perk.name}
+        </div>
+        {hasEnhanced && (
+          <div className="text-[#eade8b] mt-1.5 flex items-center gap-1 font-semibold">
+            <span aria-hidden>↑</span>
+            <span>Enhanced Trait</span>
           </div>
-          <ClarityAttribution />
-        </>
-      ) : (
-        <>
+        )}
+      </div>
+
+      {hasBungieText && (
+        <div className="border-border/40 bg-card/55 space-y-2.5 border-t px-3 py-2.5">
           {perk.description && (
-            <p className="text-muted-foreground text-xs leading-relaxed whitespace-pre-line">
+            <p className="text-muted-foreground leading-relaxed whitespace-pre-line">
               {perk.description}
             </p>
           )}
-          {perk.enhancedDescription && (
-            <div className="space-y-1 border-t border-white/10 pt-2">
-              <div className="text-[#eade8b] text-sm font-semibold tracking-wide uppercase">
-                Enhanced
-              </div>
-              <p className="text-muted-foreground text-xs leading-relaxed whitespace-pre-line">
-                {perk.enhancedDescription}
-              </p>
-            </div>
+          {showEnhancedText && (
+            <p className="text-muted-foreground/90 leading-relaxed whitespace-pre-line">
+              {perk.enhancedDescription}
+            </p>
           )}
-        </>
+        </div>
+      )}
+
+      {hasClarity && (
+        <div className="border-border/40 bg-card/35 border-t px-3 py-2">
+          <div className="text-muted-foreground/80 mb-1.5 text-[10px] font-semibold tracking-wide uppercase">
+            Community Insight
+          </div>
+          <div className="text-muted-foreground">
+            <ClarityDescription lines={clarityLines} />
+          </div>
+          <ClarityAttribution />
+        </div>
       )}
     </div>
   );
 }
 
-/** One perk icon tile (light.gg-style): blue tile when rollable, grey when retired. */
+/** One perk icon tile (light.gg-style): outline when rollable, grey when retired. */
 function PerkTile({
   perk,
   linkPerks,
@@ -84,6 +118,8 @@ function PerkTile({
   highlighted = false,
   selected = false,
   onSelect,
+  onHover,
+  onHoverEnd,
   clarityDescriptions,
 }: {
   perk: PerkRef;
@@ -92,6 +128,8 @@ function PerkTile({
   highlighted?: boolean;
   selected?: boolean;
   onSelect?: (perk: PerkRef) => void;
+  onHover?: (perk: PerkRef) => void;
+  onHoverEnd?: () => void;
   clarityDescriptions: ClarityDescriptionMap | null;
 }) {
   const tiers = getClarityPerkTiers(clarityDescriptions, perk);
@@ -99,17 +137,28 @@ function PerkTile({
   const icon = bungieIcon(perk.icon);
   const canRoll = perk.currentlyCanRoll;
   const tileDim = size === "lg" ? "size-14" : "size-12";
-  const iconDim = size === "lg" ? "size-12" : "size-10";
-  const imgPx = size === "lg" ? 48 : 40;
+  const iconDim = size === "lg" ? "size-9" : "size-8";
+  const imgPx = size === "lg" ? 36 : 32;
+
+  const hoverHandlers =
+    onHover || onHoverEnd
+      ? {
+          onMouseEnter: () => onHover?.(perk),
+          onMouseLeave: () => onHoverEnd?.(),
+        }
+      : undefined;
 
   const tile = (
     <span
       className={cn(
-        "relative flex shrink-0 items-center justify-center rounded-md",
+        "relative flex shrink-0 items-center justify-center rounded-full border transition-colors",
         tileDim,
-        canRoll ? "bg-[#3b6ea5]" : "bg-white/10 opacity-45",
-        selected && "ring-2 ring-white ring-offset-2 ring-offset-background",
-        highlighted && "ring-2 ring-amber-400/90 ring-offset-2 ring-offset-background",
+        canRoll
+          ? selected
+            ? "border-transparent bg-[#3b6ea5]"
+            : "border-white/35 bg-transparent group-hover:bg-[#3b6ea5]/40"
+          : "border-transparent bg-white/10 opacity-45",
+        selected && "ring-2 ring-white ring-offset-1 ring-offset-background",
       )}
     >
       {icon ? (
@@ -124,6 +173,15 @@ function PerkTile({
       ) : (
         <span className={cn("bg-muted rounded-full", iconDim)} />
       )}
+      {highlighted && (
+        <span
+          className="absolute -top-2 -right-2 text-3xl font-medium leading-none text-amber-400"
+          title="Community DPS benchmark perk"
+          aria-hidden
+        >
+          *
+        </span>
+      )}
     </span>
   );
 
@@ -135,7 +193,8 @@ function PerkTile({
           aria-label={perk.name}
           aria-pressed={selected}
           onClick={() => onSelect(perk)}
-          className="inline-flex rounded-md transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          {...hoverHandlers}
+          className="group inline-flex rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           {content}
         </button>
@@ -145,7 +204,7 @@ function PerkTile({
       return (
         <Link
           href={`/perk/${perk.hash}`}
-          className="inline-flex rounded-md transition-opacity hover:opacity-80"
+          className="group inline-flex rounded-full"
         >
           {content}
         </Link>
@@ -163,7 +222,7 @@ function PerkTile({
   }
 
   return (
-    <Tooltip>
+    <Tooltip disableHoverablePopup>
       <TooltipTrigger
         delay={0}
         render={
@@ -173,12 +232,13 @@ function PerkTile({
               aria-label={perk.name}
               aria-pressed={selected}
               onClick={() => onSelect(perk)}
-              className="inline-flex rounded-md transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              {...hoverHandlers}
+              className="group inline-flex rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
           ) : linkPerks ? (
             <Link
               href={`/perk/${perk.hash}`}
-              className="inline-flex rounded-md transition-opacity hover:opacity-80"
+              className="group inline-flex rounded-full"
             />
           ) : (
             <span className="inline-flex" />
@@ -188,9 +248,20 @@ function PerkTile({
         {tile}
       </TooltipTrigger>
       <TooltipPortal>
-        <TooltipPositioner side="top" align="center" sideOffset={6}>
-          <TooltipPopup className="max-w-sm">
-            <PerkTooltipContent perk={perk} clarityLines={clarityLines} />
+        <TooltipPositioner
+          side="right"
+          align="center"
+          sideOffset={2}
+          collisionAvoidance={{
+            side: "none",
+            align: "none",
+            fallbackAxisSide: "none",
+          }}
+        >
+          <TooltipPopup
+            className={cn(glassTooltipBase, perkTooltipMaxWidth(clarityLines), "pointer-events-none")}
+          >
+            <PerkTooltipContent perk={perk} tiers={tiers} clarityLines={clarityLines} />
           </TooltipPopup>
         </TooltipPositioner>
       </TooltipPortal>
@@ -202,39 +273,28 @@ function PerkTile({
 export function PerkColumnView({
   column,
   linkPerks = true,
-  /** Intrinsic columns use a larger lone icon. */
-  compactIntrinsic = false,
   highlightedPerks,
   selectedPerkHash,
   onSelectPerk,
+  onHoverPerk,
+  onHoverEnd,
   clarityDescriptions,
 }: {
   column: PerkColumn;
   linkPerks?: boolean;
-  compactIntrinsic?: boolean;
   /** Lowercase perk names from the community DPS benchmark build. */
   highlightedPerks?: ReadonlySet<string>;
   selectedPerkHash?: number;
   onSelectPerk?: (perk: PerkRef) => void;
+  onHoverPerk?: (perk: PerkRef) => void;
+  onHoverEnd?: () => void;
   clarityDescriptions?: ClarityDescriptionMap | null;
 }) {
   const contextDescriptions = useClarityDescriptions();
   const descriptions = clarityDescriptions ?? contextDescriptions;
 
-  if (compactIntrinsic && column.kind === "Intrinsic" && column.perks[0]) {
-    return (
-      <PerkTile
-        perk={column.perks[0]}
-        linkPerks={linkPerks}
-        size="lg"
-        highlighted={highlightedPerks?.has(column.perks[0].name.toLowerCase())}
-        clarityDescriptions={descriptions}
-      />
-    );
-  }
-
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2 pt-2 pb-1.5">
       {dedupePerksByName(column.perks).map((perk) => (
         <PerkTile
           key={perk.hash}
@@ -243,6 +303,8 @@ export function PerkColumnView({
           highlighted={highlightedPerks?.has(perk.name.toLowerCase())}
           selected={selectedPerkHash === perk.hash}
           onSelect={onSelectPerk}
+          onHover={onHoverPerk}
+          onHoverEnd={onHoverEnd}
           clarityDescriptions={descriptions}
         />
       ))}

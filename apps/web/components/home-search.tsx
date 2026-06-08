@@ -1,16 +1,18 @@
 "use client";
 
 import { ListFilterPlus } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Badge,
   cn,
   CommandPalette,
   Input,
+  PANEL_TRANSITION_MS,
   PillSelect,
   type PaletteAction,
   type PaletteCategory,
   type PaletteChip,
+  type PaletteItem,
   type PalettePanelState,
   type PaletteRecentItem,
   type PaletteValueOption,
@@ -21,6 +23,7 @@ import { collectColumnPerks, type WeaponSort } from "@repo/destiny";
 import { useArmorActions } from "../hooks/use-armor-actions";
 import { useArmorSearchResults } from "../hooks/use-armor-search-results";
 import { usePaletteGhostCompletion } from "../hooks/use-palette-ghost-completion";
+import { usePaletteInlineSuggestions } from "../hooks/use-palette-inline-suggestions";
 import { usePaletteSubmit } from "../hooks/use-palette-submit";
 import { useWeaponSearchResults } from "../hooks/use-weapon-search-results";
 import { buildArmorCategories } from "../lib/palette/armor-categories";
@@ -48,11 +51,19 @@ import { PopularWeapons } from "./popular-weapons";
 import { WeaponDetailModal } from "./weapon-detail-modal";
 import { WeaponResultRow } from "./weapon-result-row";
 import { trackWeaponView } from "../lib/track-weapon-view";
+import { WeaponModeIcon } from "./icons/weapon-mode-icon";
 
 type Mode = "weapon" | "armor";
 
+const WEAPON_MODE_LABEL = (
+  <span className="inline-flex items-center gap-1.5">
+    <WeaponModeIcon className="size-4 shrink-0" />
+    <span>Weapons mode</span>
+  </span>
+);
+
 const MODES: PillSelectOption<Mode>[] = [
-  { value: "weapon", label: "Weapons mode" },
+  { value: "weapon", label: WEAPON_MODE_LABEL },
   { value: "armor", label: "Armor mode" },
 ];
 
@@ -105,6 +116,7 @@ export function HomeSearch({
   const [query, setQuery] = useState("");
   const [chips, setChips] = useState<PaletteChip[]>([]);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [previewUnlocked, setPreviewUnlocked] = useState(false);
   const [panelState, setPanelState] = useState<PalettePanelState>({
     panel: "closed",
     categoryId: null,
@@ -160,6 +172,47 @@ export function HomeSearch({
     return values;
   }, [getRecentForMode, mode]);
 
+  useEffect(() => {
+    if (!paletteOpen) {
+      setPreviewUnlocked(false);
+      return;
+    }
+    const deferPreviews = query.trim().length > 0 && paletteChips.length === 0;
+    if (!deferPreviews) {
+      setPreviewUnlocked(true);
+      return;
+    }
+    setPreviewUnlocked(false);
+    const timer = setTimeout(() => setPreviewUnlocked(true), PANEL_TRANSITION_MS);
+    return () => clearTimeout(timer);
+  }, [paletteOpen, query, paletteChips.length]);
+
+  const previewsEnabled = paletteOpen && previewUnlocked;
+  const suggestionScanEnabled = paletteOpen && !composingCustomFilter;
+  const inlineSuggestions = usePaletteInlineSuggestions({
+    enabled: suggestionScanEnabled,
+    categories,
+    chips: paletteChips,
+    query,
+    recentValues,
+  });
+
+  const chipSuggestions = useMemo<PaletteItem[] | undefined>(() => {
+    if (!suggestionScanEnabled) return undefined;
+    const categoryById = new Map(categories.map((c) => [c.id, c] as const));
+    return inlineSuggestions.flatMap((s) => {
+      const category = categoryById.get(s.categoryId);
+      if (!category) return [];
+      return [
+        {
+          kind: "chipSuggestion" as const,
+          category,
+          option: { id: s.valueId, label: s.value, hint: s.hint },
+        },
+      ];
+    });
+  }, [suggestionScanEnabled, inlineSuggestions, categories]);
+
   const {
     weaponShown,
     weaponPreviewWeapons,
@@ -179,7 +232,9 @@ export function HomeSearch({
     composingCustomFilter,
     mode,
     resultsMode,
-    recentValues,
+    paletteOpen,
+    previewsEnabled,
+    inlineSuggestions,
   });
 
   const {
@@ -187,7 +242,15 @@ export function HomeSearch({
     armorPreviewItems,
     resultCount: armorResultCount,
     shownCount: armorShownCount,
-  } = useArmorSearchResults(owned, chips, query, showAllResults, recentValues);
+  } = useArmorSearchResults(
+    owned,
+    chips,
+    query,
+    showAllResults,
+    paletteOpen,
+    previewsEnabled,
+    inlineSuggestions,
+  );
 
   const resultCount = mode === "weapon" ? weaponResultCount : armorResultCount;
   const shownCount = mode === "weapon" ? weaponShownCount : armorShownCount;
@@ -296,13 +359,12 @@ export function HomeSearch({
   );
 
   const { ghostCompletion, ghostSuffix: ghostSuffixText } = usePaletteGhostCompletion({
+    enabled: suggestionScanEnabled,
     query,
     mode,
-    categories,
-    chips: paletteChips,
+    inlineSuggestions,
     weapons,
     recentValues,
-    composingCustomFilter,
   });
 
   const handleSubmit = usePaletteSubmit({
@@ -396,6 +458,10 @@ export function HomeSearch({
       })),
     );
   }, [composingCustomFilter, chips, query, mode, recordSearch]);
+
+  const recordSearchTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  useEffect(() => () => clearTimeout(recordSearchTimerRef.current), []);
 
   const handleSelectRecent = useCallback(
     (id: string) => {
@@ -569,7 +635,11 @@ export function HomeSearch({
             open={paletteOpen}
             onOpenChange={(open) => {
               if (!open) {
-                recordCurrentSearch();
+                clearTimeout(recordSearchTimerRef.current);
+                recordSearchTimerRef.current = setTimeout(
+                  recordCurrentSearch,
+                  PANEL_TRANSITION_MS,
+                );
                 setCustomFilterComposer(null);
               }
               setPaletteOpen(open);
@@ -628,11 +698,12 @@ export function HomeSearch({
             onPanelStateChange={handlePanelStateChange}
             showResults={showResults}
             resultsWhileFiltering={resultsWhileFiltering}
-            ghostCompletion={ghostCompletion}
-            ghostSuffix={ghostSuffixText}
+            ghostCompletion={paletteOpen ? ghostCompletion : undefined}
+            ghostSuffix={paletteOpen ? ghostSuffixText : undefined}
             recentValues={recentValues}
+            chipSuggestions={chipSuggestions}
             previewResults={
-              !showResults
+              previewsEnabled && !showResults
                 ? mode === "weapon"
                   ? weaponPreviewResults
                   : armorPreviewResults
@@ -727,6 +798,7 @@ export function HomeSearch({
         <WeaponDetailModal
           weapon={selected ?? null}
           loading={selectedLoading}
+          dps={selected ? dpsByName.get(selected.name) : undefined}
           highlightedBuildPerks={selected ? dpsByName.get(selected.name)?.buildPerks : undefined}
           onClose={() => setSelectedHash(null)}
         />

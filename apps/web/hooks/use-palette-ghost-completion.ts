@@ -1,37 +1,29 @@
 "use client";
 
 import { useMemo } from "react";
-import type { PaletteCategory, PaletteChip } from "@repo/ui";
-import { availableCategories, scanValueSuggestions } from "@repo/ui";
+import type { ValueSuggestion } from "@repo/ui";
 import { bestGhostCompletion, suggestWeaponNames, type WeaponSummary } from "@repo/destiny";
 
 export interface UsePaletteGhostCompletionParams {
+  enabled: boolean;
   query: string;
   mode: "weapon" | "armor";
-  categories: PaletteCategory[];
-  chips: PaletteChip[];
+  inlineSuggestions: ValueSuggestion[];
   weapons: WeaponSummary[];
   recentValues: ReadonlySet<string>;
-  composingCustomFilter: boolean;
 }
 
 export function usePaletteGhostCompletion({
+  enabled,
   query,
   mode,
-  categories,
-  chips,
+  inlineSuggestions,
   weapons,
   recentValues,
-  composingCustomFilter,
 }: UsePaletteGhostCompletionParams) {
   const candidates = useMemo(() => {
-    if (composingCustomFilter || !query.trim()) return [];
-    const open = availableCategories(categories, chips);
-    const suggestions = scanValueSuggestions(open, query, chips, {
-      limit: 8,
-      recentValues,
-    });
-    const items: { label: string; popularity?: number }[] = suggestions.map((s) => ({
+    if (!enabled || !query.trim()) return [];
+    const items: { label: string; popularity?: number }[] = inlineSuggestions.map((s) => ({
       label: s.value,
     }));
     if (mode === "weapon") {
@@ -40,11 +32,11 @@ export function usePaletteGhostCompletion({
       }
     }
     return items;
-  }, [composingCustomFilter, query, categories, chips, recentValues, mode, weapons]);
+  }, [enabled, query, inlineSuggestions, mode, weapons]);
 
   const ghost = useMemo(
-    () => bestGhostCompletion(query, candidates, recentValues),
-    [query, candidates, recentValues],
+    () => (enabled ? bestGhostCompletion(query, candidates, recentValues) : undefined),
+    [enabled, query, candidates, recentValues],
   );
 
   return {
