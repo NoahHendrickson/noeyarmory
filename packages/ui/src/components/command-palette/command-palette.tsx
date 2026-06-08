@@ -564,19 +564,18 @@ export function CommandPalette({
     <div
       ref={rootRef}
       className={cn(
-        "mx-auto w-full min-w-0 max-w-[calc(100vw-2rem)] sm:w-max sm:min-w-[600px]",
+        "mx-auto w-full min-w-0 max-w-[calc(100vw-2rem)] sm:w-[600px]",
         className,
       )}
     >
       <div
         className={cn(
           "relative overflow-hidden border border-border shadow-[0_28px_56px_-2px_rgba(0,0,0,0.42),0_12px_24px_-4px_rgba(0,0,0,0.22)]",
-          "transition-[border-radius] duration-200 ease-out motion-reduce:transition-none",
           open ? "rounded-[12px]" : "rounded-[1.75rem]",
         )}
       >
         <div
-          className="pointer-events-none absolute inset-0 bg-card/35 backdrop-blur-xl"
+          className="pointer-events-none absolute inset-0 rounded-[inherit] bg-card/35 backdrop-blur-xl"
           aria-hidden
         />
         <div className="relative flex flex-col">
