@@ -34,6 +34,7 @@ export interface PaletteInputBarProps {
   onQueryChange: (query: string) => void;
   displayIndex: number;
   items: PaletteItem[];
+  ghostSuffix?: string;
   showClearButton: boolean;
   clearBarLabel: string;
   onClearBar: () => void;
@@ -65,6 +66,7 @@ export function PaletteInputBar({
   onQueryChange,
   displayIndex,
   items,
+  ghostSuffix,
   showClearButton,
   clearBarLabel,
   onClearBar,
@@ -133,19 +135,30 @@ export function PaletteInputBar({
                     <Plus className="size-4" />
                   </Button>
                 )}
-                <input
-                  ref={inputRef}
-                  type="text"
-                  size={inputSize}
-                  className="placeholder:text-muted-foreground min-w-[8ch] shrink-0 bg-transparent text-base tracking-body outline-none disabled:cursor-not-allowed"
-                  placeholder={effectivePlaceholder}
-                  value={inputValue}
-                  disabled={disabled}
-                  onChange={(e) => onQueryChange(e.target.value)}
-                  onFocus={() => !disabled && onOpenPanel()}
-                  onKeyDown={handleKeyDown}
-                  {...comboboxProps}
-                />
+                <div className="relative inline-flex min-w-[8ch] shrink-0 items-center">
+                  {ghostSuffix && inputValue.length > 0 && (
+                    <span
+                      aria-hidden
+                      className="pointer-events-none absolute inset-y-0 left-0 flex items-center whitespace-pre text-base tracking-body"
+                    >
+                      <span className="invisible">{inputValue}</span>
+                      <span className="text-muted-foreground/50">{ghostSuffix}</span>
+                    </span>
+                  )}
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    size={inputSize}
+                    className="placeholder:text-muted-foreground relative min-w-[8ch] shrink-0 bg-transparent text-base tracking-body outline-none disabled:cursor-not-allowed"
+                    placeholder={effectivePlaceholder}
+                    value={inputValue}
+                    disabled={disabled}
+                    onChange={(e) => onQueryChange(e.target.value)}
+                    onFocus={() => !disabled && onOpenPanel()}
+                    onKeyDown={handleKeyDown}
+                    {...comboboxProps}
+                  />
+                </div>
               </>
             )}
           </>

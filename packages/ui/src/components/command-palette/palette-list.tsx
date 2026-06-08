@@ -1,4 +1,4 @@
-import { ArrowRight, CornerDownLeft, History, ListFilter, X } from "lucide-react";
+import { ArrowDown, CornerDownLeft, History, ListFilter, X } from "lucide-react";
 
 import { cn } from "../../lib/utils";
 import { Kbd } from "../kbd";
@@ -252,8 +252,8 @@ function PaletteListRowContent({
           </Kbd>
         ) : (
           <Kbd className="hidden sm:inline-flex">
-            Tab
-            <ArrowRight className="size-3" />
+            ↓
+            <ArrowDown className="size-3" />
           </Kbd>
         )}
       </>
@@ -287,8 +287,8 @@ function PaletteListRowContent({
             </Kbd>
           ) : (
             <Kbd className="hidden sm:inline-flex">
-              Tab
-              <ArrowRight className="size-3" />
+              ↓
+              <ArrowDown className="size-3" />
             </Kbd>
           ))}
       </span>
@@ -363,8 +363,8 @@ function PaletteListRowContent({
             </Kbd>
           ) : (
             <Kbd className="hidden sm:inline-flex">
-              Tab
-              <ArrowRight className="size-3" />
+              ↓
+              <ArrowDown className="size-3" />
             </Kbd>
           )}
         </span>
@@ -397,8 +397,8 @@ function PaletteListRowContent({
             </Kbd>
           ) : (
             <Kbd className="hidden sm:inline-flex">
-              Tab
-              <ArrowRight className="size-3" />
+              ↓
+              <ArrowDown className="size-3" />
             </Kbd>
           )}
         </span>
@@ -425,8 +425,8 @@ function PaletteListRowContent({
             </Kbd>
           ) : (
             <Kbd className="hidden sm:inline-flex">
-              Tab
-              <ArrowRight className="size-3" />
+              ↓
+              <ArrowDown className="size-3" />
             </Kbd>
           )}
         </span>

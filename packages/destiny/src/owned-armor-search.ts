@@ -1,3 +1,6 @@
+import Fuse from "fuse.js";
+
+import { matchRank } from "@repo/search-rank";
 import type { FacetOption } from "./search";
 
 export interface OwnedArmorSearchItem {
@@ -19,6 +22,7 @@ export interface OwnedArmorFilters {
 }
 
 const lower = (s: string) => s.toLowerCase();
+const MIN_SEARCH_LENGTH = 2;
 
 function matchesFacet(value: string | undefined, selected?: string[]): boolean {
   if (!selected || selected.length === 0) return true;
@@ -40,20 +44,76 @@ export function filterOwnedArmor<T extends OwnedArmorSearchItem>(
   });
 }
 
+function armorSearchFields(item: OwnedArmorSearchItem): string[] {
+  return [
+    item.name,
+    item.classType,
+    item.setName ?? "",
+    item.archetype ?? "",
+    item.tertiaryStat ?? "",
+    item.tunableStat ?? "",
+  ].filter(Boolean);
+}
+
+function armorMatchScore(item: OwnedArmorSearchItem, query: string): number | null {
+  let best: number | null = null;
+  for (const field of armorSearchFields(item)) {
+    const rank = matchRank(field, query);
+    if (rank != null && (best == null || rank < best)) best = rank;
+  }
+  return best;
+}
+
+/** Build a reusable Fuse index for owned armor text search. */
+export function createOwnedArmorFuse<T extends OwnedArmorSearchItem>(
+  armor: T[],
+): Fuse<T> {
+  return new Fuse(armor, {
+    keys: [
+      { name: "name", weight: 3 },
+      { name: "classType", weight: 1 },
+      { name: "setName", weight: 1 },
+      { name: "archetype", weight: 1 },
+      { name: "tertiaryStat", weight: 1 },
+      { name: "tunableStat", weight: 1 },
+    ],
+    threshold: 0.35,
+    ignoreLocation: true,
+  });
+}
+
 export function searchOwnedArmor<T extends OwnedArmorSearchItem>(
   armor: T[],
   query: string,
+  armorFuse?: Fuse<T> | null,
 ): T[] {
-  const q = query.trim().toLowerCase();
+  const q = query.trim();
   if (!q) return armor;
-  return armor.filter(
-    (a) =>
-      a.name.toLowerCase().includes(q) ||
-      a.classType.toLowerCase().includes(q) ||
-      a.setName?.toLowerCase().includes(q) ||
-      a.archetype?.toLowerCase().includes(q) ||
-      a.tertiaryStat?.toLowerCase().includes(q) ||
-      a.tunableStat?.toLowerCase().includes(q),
+  if (q.length < MIN_SEARCH_LENGTH) {
+    const ql = q.toLowerCase();
+    return armor.filter((a) =>
+      armorSearchFields(a).some((field) => field.toLowerCase().includes(ql)),
+    );
+  }
+
+  const ranked = armor
+    .map((item) => ({ item, rank: armorMatchScore(item, q) }))
+    .filter((entry): entry is { item: T; rank: number } => entry.rank != null)
+    .sort(
+      (a, b) => a.rank - b.rank || a.item.name.localeCompare(b.item.name),
+    );
+
+  if (ranked.length > 0) {
+    return ranked.map((entry) => entry.item);
+  }
+
+  if (armorFuse) {
+    return armorFuse.search(q, { limit: 200 }).map((r) => r.item);
+  }
+
+  const ql = q.toLowerCase();
+  return armor.filter((a) =>
+    armorSearchFields(a).some((field) => field.toLowerCase().includes(ql)),
   );
 }
 

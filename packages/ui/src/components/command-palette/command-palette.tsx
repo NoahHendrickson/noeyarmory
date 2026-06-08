@@ -43,7 +43,7 @@ export type {
  * drill-down panel (filter categories → values → results). Knows nothing about
  * the domain — the consumer supplies `categories`/`chips`/`results`.
  *
- * Keyboard: ↑/↓/Tab move, Enter selects, Backspace removes chips or steps back,
+ * Keyboard: ↑/↓ move, Tab completes ghost suffix, Enter selects, Backspace removes chips or steps back,
  * Esc closes.
  */
 export function CommandPalette({
@@ -59,6 +59,9 @@ export function CommandPalette({
   onQueryChange,
   onSubmit,
   showResults = false,
+  resultsWhileFiltering = false,
+  ghostCompletion,
+  ghostSuffix,
   results = [],
   onSelectResult,
   resultsHeader,
@@ -84,6 +87,7 @@ export function CommandPalette({
   filtersSectionLabel = "Filters",
   previewResults = [],
   previewSectionLabel = "Results",
+  recentValues,
   onPanelStateChange,
   className,
   renderResult,
@@ -154,7 +158,7 @@ export function CommandPalette({
 
   const panelOpen = isControlled ? openProp : state.panel !== "closed";
   const open = !disabled && !renderBarOverlay && panelOpen;
-  const mode = listMode(state.panel, showResults, query, browseFilters);
+  const mode = listMode(state.panel, showResults, query, browseFilters, resultsWhileFiltering);
 
   useEffect(() => {
     if (!open) return;
@@ -206,8 +210,11 @@ export function CommandPalette({
   );
 
   const valueSuggestions = useMemo(
-    () => (mode === "categories" ? searchValueSuggestions(openCategories, query, chips) : []),
-    [openCategories, query, chips, mode],
+    () =>
+      mode === "categories"
+        ? searchValueSuggestions(openCategories, query, chips, recentValues)
+        : [],
+    [openCategories, query, chips, mode, recentValues],
   );
 
   const recentListItems = useMemo<PaletteItem[]>(() => {
@@ -251,6 +258,7 @@ export function CommandPalette({
         activeCategory,
         valueQuery: state.valueQuery,
         results,
+        recentValues,
       }),
     [
       mode,
@@ -270,6 +278,7 @@ export function CommandPalette({
       activeCategory,
       state.valueQuery,
       results,
+      recentValues,
     ],
   );
 
@@ -397,6 +406,23 @@ export function CommandPalette({
 
   const inputValue = state.panel === "values" ? state.valueQuery : query;
 
+  function acceptGhostCompletion() {
+    if (!ghostCompletion) return;
+    if (state.panel === "values") {
+      dispatch({ type: "setValueQuery", value: ghostCompletion });
+    } else {
+      onQueryChange(ghostCompletion);
+    }
+    dispatch({ type: "setActive", index: 0 });
+    setHoverIndex(-1);
+    requestAnimationFrame(() => {
+      const input = inputRef.current;
+      if (input) {
+        input.setSelectionRange(ghostCompletion.length, ghostCompletion.length);
+      }
+    });
+  }
+
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     switch (e.key) {
       case "ArrowDown":
@@ -408,17 +434,20 @@ export function CommandPalette({
         if (open) moveActive(-1);
         break;
       case "Tab":
-        e.preventDefault();
-        if (e.shiftKey) moveActive(-1);
-        else moveActive(1);
+        if (ghostSuffix && ghostCompletion && !e.shiftKey) {
+          e.preventDefault();
+          acceptGhostCompletion();
+        }
         break;
       case "Enter": {
         const item = open ? items[activeIndex] : undefined;
         if (item && isSelectableItem(item)) {
           e.preventDefault();
           selectItem(item);
+        } else if (onSubmit) {
+          e.preventDefault();
+          onSubmit();
         } else {
-          onSubmit?.();
           closePanel();
         }
         break;
@@ -553,6 +582,7 @@ export function CommandPalette({
             onQueryChange={onQueryChange}
             displayIndex={displayIndex}
             items={items}
+            ghostSuffix={ghostSuffix}
             showClearButton={showClearButton}
             clearBarLabel={clearBarLabel}
             onClearBar={handleClearBar}

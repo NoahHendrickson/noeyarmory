@@ -7,6 +7,7 @@ import {
   collectColumnPerks,
   collectFacets,
   collectPerks,
+  filterWeaponNames,
   filterWeapons,
   fuzzySearchWeapons,
   sortWeapons,
@@ -198,6 +199,14 @@ describe("position-aware trait, slot + origin filters", () => {
     expect(
       filterWeapons(sampleSummaries, { name: ["Fatebringer"], trait2: ["Surrounded"] }, samplePerks),
     ).toEqual([]);
+  });
+});
+
+describe("filterWeaponNames", () => {
+  test("returns flat matches with weapon-specific searchRank", () => {
+    const matches = filterWeaponNames(sampleSummaries, "fate");
+    expect(matches.some((m) => m.value === "Fatebringer")).toBe(true);
+    expect(matches.find((m) => m.value === "Fatebringer")?.searchRank).toBeLessThanOrEqual(1);
   });
 });
 

@@ -1,3 +1,7 @@
+import type { ReactNode } from "react";
+
+import { effectiveRank, resolveMatchRank } from "@repo/search-rank";
+
 import type { PaletteCategory, PaletteChip } from "../components/command-palette/types";
 
 export const MAX_VALUE_SUGGESTIONS = 20;
@@ -41,30 +45,74 @@ export interface ValueSuggestion {
   categoryId: string;
   value: string;
   valueId: string;
+  hint?: ReactNode;
 }
 
-/** Scan filter values across all categories (e.g. "surr" → Trait 2 · Surrounded). */
+export interface ScanValueSuggestionsOptions {
+  limit?: number;
+  recentValues?: ReadonlySet<string>;
+}
+
+export function parsePopularity(hint: unknown): number {
+  if (typeof hint === "number") return hint;
+  if (typeof hint === "string") {
+    const n = Number.parseInt(hint, 10);
+    return Number.isFinite(n) ? n : 0;
+  }
+  return 0;
+}
+
+/**
+ * Scan filter values across all categories — single ranking pass.
+ * Category `getValues` should return flat matches only; ordering happens here.
+ */
 export function scanValueSuggestions(
   categories: PaletteCategory[],
   query: string,
   chips: PaletteChip[],
-  limit = MAX_VALUE_SUGGESTIONS,
+  limitOrOptions: number | ScanValueSuggestionsOptions = MAX_VALUE_SUGGESTIONS,
+  legacyRecent?: ReadonlySet<string>,
 ): ValueSuggestion[] {
+  const options =
+    typeof limitOrOptions === "number"
+      ? { limit: limitOrOptions, recentValues: legacyRecent }
+      : limitOrOptions;
+  const limit = options.limit ?? MAX_VALUE_SUGGESTIONS;
+  const recentValues = options.recentValues ?? legacyRecent;
+
   const q = query.trim();
   if (!q) return [];
 
   const applied = new Set(chips.map((c) => `${c.categoryId}:${c.valueId}`));
-  const items: ValueSuggestion[] = [];
+  const scored: { suggestion: ValueSuggestion; rank: number; popularity: number }[] = [];
 
   for (const category of categories) {
     if (categoryIsFull(category, chips)) continue;
     for (const option of category.getValues(q)) {
       if (applied.has(`${category.id}:${option.id}`)) continue;
-      items.push({ categoryId: category.id, value: option.label, valueId: option.id });
-      if (items.length >= limit) return items;
+      const baseRank = resolveMatchRank(option.label, q, option.searchRank);
+      if (baseRank == null) continue;
+      scored.push({
+        suggestion: {
+          categoryId: category.id,
+          value: option.label,
+          valueId: option.id,
+          hint: option.hint,
+        },
+        rank: effectiveRank(baseRank, option.label, recentValues),
+        popularity: parsePopularity(option.hint),
+      });
     }
   }
-  return items;
+
+  scored.sort(
+    (a, b) =>
+      a.rank - b.rank ||
+      b.popularity - a.popularity ||
+      a.suggestion.value.localeCompare(b.suggestion.value),
+  );
+
+  return scored.slice(0, limit).map((entry) => entry.suggestion);
 }
 
 export function shouldIgnoreSearchShortcut(target: EventTarget | null): boolean {
