@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { memo } from "react";
 import type { ReactNode } from "react";
 import {
   cn,
@@ -111,7 +112,7 @@ function PerkTooltipContent({
 }
 
 /** One perk icon tile (light.gg-style): outline when rollable, grey when retired. */
-function PerkTile({
+const PerkTile = memo(function PerkTile({
   perk,
   linkPerks,
   size = "md",
@@ -267,7 +268,7 @@ function PerkTile({
       </TooltipPortal>
     </Tooltip>
   );
-}
+});
 
 /** One weapon perk column: vertical stack of perk icons (light.gg-style). */
 export function PerkColumnView({

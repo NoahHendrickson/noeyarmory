@@ -1,3 +1,4 @@
+import { memo } from "react";
 import Image from "next/image";
 
 import { cn } from "@repo/ui";
@@ -18,7 +19,7 @@ const MASK_STYLE = (src: string) =>
   }) as const;
 
 /** Destiny ammo-type HUD icon from DestinyIconDefinition (Primary / Special / Heavy). */
-export function AmmoIcon({
+export const AmmoIcon = memo(function AmmoIcon({
   ammo,
   iconPath,
   className,
@@ -62,4 +63,4 @@ export function AmmoIcon({
       {ammo.slice(0, 1)}
     </span>
   );
-}
+});

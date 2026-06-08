@@ -32,6 +32,35 @@ const samplePerks = sampleIndex.perks;
 const names = (ws: { name: string }[]) => ws.map((w) => w.name).sort();
 const orderedNames = (ws: { name: string }[]) => ws.map((w) => w.name);
 
+describe("on-disk perksLower round-trip", () => {
+  // generate.ts strips `perksLower` from the serialized index; normalizeWeaponIndex
+  // (via buildWeaponIndexLookups) must re-derive it so search functions keep working.
+  const onDisk = JSON.parse(
+    JSON.stringify(sampleIndex, (key, value: unknown) =>
+      key === "perksLower" ? undefined : value,
+    ),
+  ) as typeof sampleIndex;
+
+  test("serialized index omits perksLower", () => {
+    expect(onDisk.weapons.every((w) => !("perksLower" in w))).toBe(true);
+  });
+
+  test("normalizeWeaponIndex re-derives perksLower from perks", () => {
+    const { weapons } = buildWeaponIndexLookups(onDisk);
+    for (const w of weapons) {
+      expect(w.perksLower).toEqual(w.perks.map((p) => p.toLowerCase()));
+    }
+  });
+
+  test("required-perk filtering still works after the round-trip", () => {
+    const { weapons, perks } = buildWeaponIndexLookups(onDisk);
+    const sample = sampleSummaries.find((w) => w.perks.length > 0)!;
+    const perkName = sample.perks[0]!;
+    const result = filterWeapons(weapons, { perks: [perkName] }, perks);
+    expect(result.map((w) => w.hash)).toContain(sample.hash);
+  });
+});
+
 describe("filterWeapons", () => {
   test("element + type facets (all solar fusion rifles)", () => {
     const result = filterWeapons(

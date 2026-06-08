@@ -34,7 +34,12 @@ async function main(): Promise<void> {
   console.log("Flattening weapons…");
   const { index, detailIndex } = buildWeaponIndex(defs, version, ammoTypes);
   mkdirSync(dirname(weaponsFile), { recursive: true });
-  writeFileSync(weaponsFile, JSON.stringify(index));
+  // Drop `perksLower` from the on-disk index — it's a lowercased duplicate of
+  // `perks`, re-derived at load by normalizeWeaponIndex. Saves payload + parse time.
+  writeFileSync(
+    weaponsFile,
+    JSON.stringify(index, (key, value: unknown) => (key === "perksLower" ? undefined : value)),
+  );
   writeFileSync(weaponsDetailFile, JSON.stringify(detailIndex));
   console.log(`✓ Wrote ${index.weapons.length} weapons → ${weaponsFile}`);
   console.log(`✓ Wrote ${Object.keys(detailIndex.details).length} weapon details → ${weaponsDetailFile}`);
