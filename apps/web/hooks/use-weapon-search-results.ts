@@ -6,7 +6,9 @@ import { availableCategories, scanValueSuggestions } from "@repo/ui";
 import {
   createWeaponFuse,
   filterWeapons,
-  sortWeapons,
+  MIN_WEAPON_TEXT_QUERY_LENGTH,
+  rankWeaponResults,
+  weaponsMatchingTextQuery,
   type PerkRef,
   type WeaponDpsEntry,
   type WeaponFilters,
@@ -21,8 +23,6 @@ import {
   MAX_SHOW_ALL,
 } from "../lib/palette/constants";
 import { chipsToWeaponFilters, withHypotheticalChip } from "../lib/palette/weapon-filters";
-
-const MIN_TEXT_SEARCH_LENGTH = 2;
 
 export interface UseWeaponSearchResultsParams {
   weapons: WeaponSummary[];
@@ -70,10 +70,11 @@ export function useWeaponSearchResults({
   const weaponResults = useMemo(() => {
     const q = deferredQuery.trim();
     const base =
-      textSearchActive && q.length >= MIN_TEXT_SEARCH_LENGTH
-        ? weaponFuse.search(q, { limit: MAX_SHOW_ALL }).map((r) => r.item)
+      textSearchActive && q.length >= MIN_WEAPON_TEXT_QUERY_LENGTH
+        ? weaponsMatchingTextQuery(weapons, weaponFuse, q, MAX_SHOW_ALL)
         : weapons;
-    return sortWeapons(filterWeapons(base, weaponFilters, perks), sort, dpsByName);
+    const filtered = filterWeapons(base, weaponFilters, perks);
+    return rankWeaponResults(filtered, q, sort, dpsByName);
   }, [weaponFuse, weapons, perks, deferredQuery, weaponFilters, sort, dpsByName, textSearchActive]);
 
   const resultLimit = showAllResults ? MAX_SHOW_ALL : MAX_RESULTS;
@@ -84,25 +85,26 @@ export function useWeaponSearchResults({
 
     const base = chipsToWeaponFilters(chips, customFilters);
     const seen = new Set<number>();
-    const merged: WeaponSummary[] = [];
+    const candidates: WeaponSummary[] = [];
 
     const appendWeapons = (list: WeaponSummary[]) => {
       for (const weapon of list) {
         if (!seen.has(weapon.hash)) {
           seen.add(weapon.hash);
-          merged.push(weapon);
+          candidates.push(weapon);
         }
       }
     };
 
     const q = deferredQuery.trim();
-    if (q.length >= MIN_TEXT_SEARCH_LENGTH) {
-      const textMatches = filterWeapons(
-        weaponFuse.search(q, { limit: MAX_PREVIEW_RESULTS }).map((r) => r.item),
-        base,
-        perks,
+    if (q.length >= MIN_WEAPON_TEXT_QUERY_LENGTH) {
+      appendWeapons(
+        filterWeapons(
+          weaponsMatchingTextQuery(weapons, weaponFuse, q, MAX_PREVIEW_RESULTS),
+          base,
+          perks,
+        ),
       );
-      appendWeapons(textMatches);
     }
 
     let filterSets: WeaponFilters[] = [];
@@ -137,9 +139,9 @@ export function useWeaponSearchResults({
       appendWeapons(filterWeapons(weapons, filters, perks));
     }
 
-    if (merged.length === 0) return [];
+    if (candidates.length === 0) return [];
 
-    return sortWeapons(merged, sort, dpsByName).slice(0, MAX_PREVIEW_RESULTS);
+    return rankWeaponResults(candidates, q, sort, dpsByName).slice(0, MAX_PREVIEW_RESULTS);
   }, [
     mode,
     composingCustomFilter,

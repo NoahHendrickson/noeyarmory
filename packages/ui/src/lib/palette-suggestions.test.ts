@@ -1,0 +1,63 @@
+import { describe, expect, test } from "vitest";
+
+import type { PaletteCategory } from "../components/command-palette/types";
+import { scanValueSuggestions } from "./palette-suggestions";
+
+describe("scanValueSuggestions", () => {
+  test("skips categories with inlineSuggestions false", () => {
+    const hidden: PaletteCategory = {
+      id: "name",
+      label: "Exact Weapon",
+      inlineSuggestions: false,
+      getValues: () => [{ id: "fatebringer", label: "Fatebringer", hint: "2" }],
+    };
+    const visible: PaletteCategory = {
+      id: "frame",
+      label: "Frame",
+      getValues: () => [{ id: "fate-frame", label: "Fate Frame", hint: "10" }],
+    };
+
+    const suggestions = scanValueSuggestions([hidden, visible], "fate", []);
+
+    expect(suggestions.some((s) => s.categoryId === "name")).toBe(false);
+    expect(suggestions.some((s) => s.categoryId === "frame")).toBe(true);
+  });
+
+  test("omits weak inline frame matches when omitWeakInlineMatches is set", () => {
+    const frame: PaletteCategory = {
+      id: "frame",
+      label: "Frame",
+      omitWeakInlineMatches: true,
+      getValues: () => [
+        { id: "fate-of-fools", label: "The Fate of All Fools", hint: "1" },
+        { id: "fate-frame", label: "Fate Frame", hint: "2" },
+      ],
+    };
+    const trait: PaletteCategory = {
+      id: "trait1",
+      label: "Trait 1",
+      getValues: () => [{ id: "fatebringer", label: "Fatebringer", hint: "3" }],
+    };
+
+    const suggestions = scanValueSuggestions([frame, trait], "fate", []);
+
+    expect(suggestions.map((s) => s.value)).toEqual(["Fatebringer", "Fate Frame"]);
+    expect(suggestions.some((s) => s.value === "The Fate of All Fools")).toBe(false);
+  });
+
+  test("hidden category getValues still works for drill-down", () => {
+    const hidden: PaletteCategory = {
+      id: "name",
+      label: "Exact Weapon",
+      inlineSuggestions: false,
+      getValues: (q) =>
+        q.toLowerCase().includes("fate")
+          ? [{ id: "fatebringer", label: "Fatebringer", hint: "2" }]
+          : [],
+    };
+
+    expect(hidden.getValues("fate")).toEqual([
+      { id: "fatebringer", label: "Fatebringer", hint: "2" },
+    ]);
+  });
+});

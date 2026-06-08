@@ -5,7 +5,12 @@ import { matchRank } from "@repo/search-rank";
 import type { InternedPerkColumn, PerkRef, WeaponSummary } from "./types";
 import type { WeaponDpsLookup } from "./weapon-dps";
 
-export type WeaponSort = "name" | "season-desc" | "season-asc" | "dps-desc";
+export type WeaponSort =
+  | "name"
+  | "season-desc"
+  | "season-asc"
+  | "dps-desc"
+  | "ammo-gen-desc";
 
 /** Composite key for season ordering: season number dominates, release index breaks ties. */
 function seasonSortKey(weapon: WeaponSummary): number {
@@ -31,6 +36,17 @@ export function sortWeapons(
       if (aDps == null) return 1;
       if (bDps == null) return -1;
       return bDps - aDps || a.name.localeCompare(b.name);
+    });
+    return sorted;
+  }
+  if (order === "ammo-gen-desc") {
+    sorted.sort((a, b) => {
+      const aAmmoGen = a.ammoGeneration;
+      const bAmmoGen = b.ammoGeneration;
+      if (aAmmoGen == null && bAmmoGen == null) return a.name.localeCompare(b.name);
+      if (aAmmoGen == null) return 1;
+      if (bAmmoGen == null) return -1;
+      return bAmmoGen - aAmmoGen || a.name.localeCompare(b.name);
     });
     return sorted;
   }
@@ -212,6 +228,107 @@ export function filterWeaponNames(
   return matches;
 }
 
+/** Minimum query length before text search and name-match pinning apply. */
+export const MIN_WEAPON_TEXT_QUERY_LENGTH = 2;
+
+/** Canonical tie-break order for `filterWeaponNames` results across search surfaces. */
+export function sortFilteredWeaponNames(matches: FilteredWeaponName[]): FilteredWeaponName[] {
+  return [...matches].sort(
+    (a, b) =>
+      a.searchRank - b.searchRank ||
+      b.count - a.count ||
+      a.value.localeCompare(b.value),
+  );
+}
+
+function appendUniqueWeapons(
+  seen: Set<number>,
+  target: WeaponSummary[],
+  list: WeaponSummary[],
+): void {
+  for (const weapon of list) {
+    if (!seen.has(weapon.hash)) {
+      seen.add(weapon.hash);
+      target.push(weapon);
+    }
+  }
+}
+
+/** Collect exact name hits plus fuse matches for a text query, deduped. */
+export function weaponsMatchingTextQuery(
+  weapons: WeaponSummary[],
+  fuse: Fuse<WeaponSummary>,
+  query: string,
+  limit: number,
+): WeaponSummary[] {
+  const q = query.trim();
+  if (q.length < MIN_WEAPON_TEXT_QUERY_LENGTH) return weapons;
+
+  const seen = new Set<number>();
+  const merged: WeaponSummary[] = [];
+
+  const rankedNames = sortFilteredWeaponNames(filterWeaponNames(weapons, q));
+  for (const { value } of rankedNames) {
+    appendUniqueWeapons(
+      seen,
+      merged,
+      weapons.filter((weapon) => weapon.name === value),
+    );
+  }
+
+  appendUniqueWeapons(
+    seen,
+    merged,
+    fuse.search(q, { limit }).map((result) => result.item),
+  );
+
+  return merged;
+}
+
+function sortNameMatchedWeapons(
+  weapons: WeaponSummary[],
+  query: string,
+  sort: WeaponSort,
+  dpsByName?: WeaponDpsLookup,
+): WeaponSummary[] {
+  if (sort !== "name") return sortWeapons(weapons, sort, dpsByName);
+
+  const rankByName = new Map(
+    filterWeaponNames(weapons, query).map((match) => [match.value, match.searchRank]),
+  );
+  return [...weapons].sort(
+    (a, b) =>
+      (rankByName.get(a.name) ?? Number.MAX_SAFE_INTEGER) -
+        (rankByName.get(b.name) ?? Number.MAX_SAFE_INTEGER) ||
+      a.name.localeCompare(b.name),
+  );
+}
+
+/** Sort weapons with exact name matches pinned above the rest; both groups respect `sort`. */
+export function rankWeaponResults(
+  weapons: WeaponSummary[],
+  query: string,
+  sort: WeaponSort,
+  dpsByName?: WeaponDpsLookup,
+): WeaponSummary[] {
+  const q = query.trim();
+  if (q.length < MIN_WEAPON_TEXT_QUERY_LENGTH) {
+    return sortWeapons(weapons, sort, dpsByName);
+  }
+
+  const nameMatches = new Set(filterWeaponNames(weapons, q).map((match) => match.value));
+  const nameMatched: WeaponSummary[] = [];
+  const rest: WeaponSummary[] = [];
+  for (const weapon of weapons) {
+    (nameMatches.has(weapon.name) ? nameMatched : rest).push(weapon);
+  }
+
+  return [
+    ...sortNameMatchedWeapons(nameMatched, q, sort, dpsByName),
+    ...sortWeapons(rest, sort, dpsByName),
+  ];
+}
+
 /** Predict weapon names from a partial query — name-only, ranked best-first. */
 export function suggestWeaponNames(
   weapons: WeaponSummary[],
@@ -221,14 +338,9 @@ export function suggestWeaponNames(
   const ql = query.trim().toLowerCase();
   if (!ql) return [];
 
-  const filtered = filterWeaponNames(weapons, query);
-  const ranked = filtered
-    .map((entry) => ({ name: entry.value, rank: entry.searchRank, count: entry.count }))
-    .sort(
-      (a, b) => a.rank - b.rank || a.name.localeCompare(b.name) || b.count - a.count,
-    );
-
-  return ranked.slice(0, limit).map(({ name, count }) => ({ value: name, count }));
+  return sortFilteredWeaponNames(filterWeaponNames(weapons, query))
+    .slice(0, limit)
+    .map(({ value, count }) => ({ value, count }));
 }
 
 /** Build a reusable Fuse index for fuzzy name/type/perk search. */

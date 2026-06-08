@@ -30,6 +30,7 @@ export function weaponNameCategory(weapons: WeaponSummary[]): PaletteCategory {
     id: "name",
     label: "Exact Weapon",
     single: true,
+    inlineSuggestions: false,
     examples,
     getValues: (q) =>
       filterWeaponNames(weapons, q).map((o) => ({
@@ -41,10 +42,16 @@ export function weaponNameCategory(weapons: WeaponSummary[]): PaletteCategory {
   };
 }
 
-export function facetCategory(id: string, label: string, options: FacetOption[]): PaletteCategory {
+export function facetCategory(
+  id: string,
+  label: string,
+  options: FacetOption[],
+  config?: { omitWeakInlineMatches?: boolean },
+): PaletteCategory {
   return {
     id,
     label,
+    omitWeakInlineMatches: config?.omitWeakInlineMatches,
     examples: formatExamples(options.map((option) => option.value)),
     getValues: (q) =>
       filterFacetOptions(options, q).map((o) => ({
@@ -157,7 +164,7 @@ export function buildWeaponCategories(
     facetCategory("element", "Element", facets.element ?? []),
     facetCategory("slot", "Slot", facets.slot ?? []),
     facetCategory("ammo", "Ammo type", facets.ammo ?? []),
-    facetCategory("frame", "Frame", facets.frame ?? []),
+    facetCategory("frame", "Frame", facets.frame ?? [], { omitWeakInlineMatches: true }),
     facetCategory("craftable", "Craftable", facets.craftable ?? []),
     facetCategory("rarity", "Rarity", facets.rarity ?? []),
     perkCategory("originTrait", "Origin Trait", weaponColumnPerks.originTrait, perkFuse),

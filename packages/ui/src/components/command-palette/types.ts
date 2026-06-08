@@ -20,6 +20,13 @@ export interface PaletteCategory {
   examples?: string;
   /** When true, hide this category from suggestions once a chip is committed (e.g. Trait 1). */
   single?: boolean;
+  /** When false, omit from cross-category inline chip suggestions (drill-down still works). */
+  inlineSuggestions?: boolean;
+  /**
+   * When true, omit inline suggestions whose label does not start with the query
+   * (e.g. frame "The Fate of All Fools" on query "fate"). Drill-down still lists them.
+   */
+  omitWeakInlineMatches?: boolean;
   /** Values for this category, filtered by the in-category query. */
   getValues: (query: string) => PaletteValueOption[];
 }

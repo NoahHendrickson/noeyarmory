@@ -65,6 +65,8 @@ export interface WeaponSummary {
   seasonNumber?: number;
   /** Manifest investment-table index — proxy for add order when season is unknown. */
   releaseIndex: number;
+  /** Base Ammo Generation display value (0–100); omitted when the weapon has no such stat. */
+  ammoGeneration?: number;
   columns: InternedPerkColumn[];
   /** Every perk name across all columns (deduped) — powers reverse perk search. */
   perks: string[];

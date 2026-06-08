@@ -50,6 +50,7 @@ export {
   expandWeapon,
   buildPerkMapFromCatalog,
   internWeaponCatalog,
+  enrichAmmoGenerationFromDetails,
   normalizeWeaponIndex,
   buildDetailIndexFromDocs,
   summariesForPerkName,
@@ -82,6 +83,10 @@ export {
   collectPerks,
   collectColumnPerks,
   filterWeaponNames,
+  sortFilteredWeaponNames,
+  MIN_WEAPON_TEXT_QUERY_LENGTH,
+  weaponsMatchingTextQuery,
+  rankWeaponResults,
   suggestWeaponNames,
   buildPerkMap,
   buildWeaponsByPerkName,
@@ -93,6 +98,7 @@ export {
 } from "./search";
 export {
   buildWeaponIndexLookups,
+  refreshWeaponSummaries,
   type WeaponIndexLookups,
 } from "./weapon-index-lookups";
 export {
@@ -126,6 +132,7 @@ export {
   computeWeaponStats,
   interpolateStatValue,
   sampleStatGroup,
+  AMMO_GENERATION_STAT_HASH,
   scaleInvestmentStats,
   sumInvestmentStats,
   SAMPLE_STAT_GROUP_HASH,

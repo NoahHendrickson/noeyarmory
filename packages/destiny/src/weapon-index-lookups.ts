@@ -53,4 +53,30 @@ export function buildWeaponIndexLookups(raw: WeaponIndex): WeaponIndexLookups {
   };
 }
 
+/** Rebuild hash/perk maps after mutating weapon summaries (e.g. detail enrichment). */
+export function refreshWeaponSummaries(
+  lookups: WeaponIndexLookups,
+  weapons: WeaponSummary[],
+): WeaponIndexLookups {
+  if (weapons === lookups.weapons) return lookups;
+
+  const byHash = new Map(weapons.map((w) => [w.hash, w]));
+  const weaponsByPerkName = new Map<string, WeaponSummary[]>();
+  for (const [name, hashes] of Object.entries(lookups.weaponsByPerkNameRecord)) {
+    weaponsByPerkName.set(
+      name,
+      hashes
+        .map((hash) => byHash.get(hash))
+        .filter((weapon): weapon is WeaponSummary => weapon != null),
+    );
+  }
+
+  return {
+    ...lookups,
+    weapons,
+    byHash,
+    weaponsByPerkName,
+  };
+}
+
 export { summariesForPerkName };

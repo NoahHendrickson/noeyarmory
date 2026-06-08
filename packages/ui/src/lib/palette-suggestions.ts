@@ -88,10 +88,15 @@ export function scanValueSuggestions(
 
   for (const category of categories) {
     if (categoryIsFull(category, chips)) continue;
+    if (category.inlineSuggestions === false) continue;
     for (const option of category.getValues(q)) {
       if (applied.has(`${category.id}:${option.id}`)) continue;
       const baseRank = resolveMatchRank(option.label, q, option.searchRank);
       if (baseRank == null) continue;
+      const ql = q.toLowerCase();
+      if (category.omitWeakInlineMatches && !option.label.toLowerCase().startsWith(ql)) {
+        continue;
+      }
       scored.push({
         suggestion: {
           categoryId: category.id,

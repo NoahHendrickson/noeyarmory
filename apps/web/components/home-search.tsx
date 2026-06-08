@@ -59,6 +59,7 @@ const MODES: PillSelectOption<Mode>[] = [
 const WEAPON_SORT_OPTIONS: PillSelectOption<WeaponSort>[] = [
   { value: "name", label: "A–Z", direction: "asc" },
   { value: "dps-desc", label: "DPS", direction: "desc" },
+  { value: "ammo-gen-desc", label: "Ammo gen", direction: "desc" },
   { value: "season-desc", label: "Newest", direction: "desc" },
   { value: "season-asc", label: "Oldest", direction: "asc" },
 ];
@@ -653,17 +654,17 @@ export function HomeSearch({
             resultsEmpty={mode === "weapon" ? "No weapons match." : "Go farm!"}
             resultsHeader={
               showResults && mode === "armor" ? (
-                <div className="text-muted-foreground text-base tracking-body">
+                <div className="text-muted-foreground text-xs tracking-body">
                   {resultCount} {resultCount === 1 ? "result" : "results"}
                 </div>
               ) : showResults && mode === "weapon" ? (
                 <div
                   data-palette-ignore-close
-                  className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3"
+                  className="flex items-center justify-between gap-3"
                   onClick={(e) => e.stopPropagation()}
                   onPointerDown={(e) => e.stopPropagation()}
                 >
-                  <span className="text-muted-foreground text-base tracking-body">
+                  <span className="text-muted-foreground text-xs tracking-body">
                     {resultCount} {resultCount === 1 ? "result" : "results"}
                   </span>
                   <PillSelect

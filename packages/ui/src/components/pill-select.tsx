@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Menu } from "@base-ui/react/menu";
-import { ArrowDown, ArrowUp, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 
 import { cn } from "../lib/utils";
 
@@ -51,12 +51,6 @@ function PillSelect<T extends string>({
         )}
       >
         <span>{selected?.label}</span>
-        {selected?.direction === "asc" && (
-          <ArrowUp className="size-3 shrink-0 opacity-70" aria-hidden />
-        )}
-        {selected?.direction === "desc" && (
-          <ArrowDown className="size-3 shrink-0 opacity-70" aria-hidden />
-        )}
         <ChevronDown className="size-3 shrink-0 opacity-70" aria-hidden />
       </Menu.Trigger>
       <Menu.Portal>
