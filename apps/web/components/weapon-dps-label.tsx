@@ -14,6 +14,15 @@ import {
   type WeaponDpsEntry,
 } from "@repo/destiny";
 
+function WeaponDpsDisclaimer() {
+  return (
+    <p className="text-muted-foreground text-xs leading-relaxed">
+      These are community estimates from controlled boss-DPS test scenarios with optimal builds. In-game
+      performance varies by encounter, buffs, and your roll.
+    </p>
+  );
+}
+
 function WeaponDpsAttribution() {
   return (
     <p className="text-muted-foreground mt-2 border-t border-white/10 pt-2 text-sm">
@@ -54,6 +63,7 @@ function WeaponDpsMetricTooltip({
             <div className="space-y-1">
               <div className="font-semibold">{label}</div>
               <p className="text-muted-foreground text-xs leading-relaxed">{description}</p>
+              <WeaponDpsDisclaimer />
               <WeaponDpsAttribution />
             </div>
           </TooltipPopup>
@@ -71,14 +81,14 @@ export function WeaponDpsLabel({ entry }: { entry: WeaponDpsEntry }) {
     <span className="text-muted-foreground inline-flex items-center gap-1 text-sm tabular-nums tracking-body">
       <WeaponDpsMetricTooltip
         label="Total damage"
-        description={`Total damage dealt during the ${WEAPON_DPS_SHEET_NAME} boss-DPS benchmark for this weapon's optimal community build.`}
+        description={`Estimated total damage from the ${WEAPON_DPS_SHEET_NAME} boss-DPS benchmark for this weapon's optimal community build.`}
       >
         {total}
       </WeaponDpsMetricTooltip>
       <span aria-hidden="true">/</span>
       <WeaponDpsMetricTooltip
         label="DPS"
-        description={`Sustained damage per second from the ${WEAPON_DPS_SHEET_NAME} benchmark build.`}
+        description={`Estimated sustained damage per second from the ${WEAPON_DPS_SHEET_NAME} benchmark build.`}
       >
         {dps}
       </WeaponDpsMetricTooltip>
