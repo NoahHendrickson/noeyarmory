@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 
+import { effectiveRank, matchRank } from "@repo/search-rank";
+
 import type { PaletteCategory, PaletteChip } from "../components/command-palette/types";
-import { effectiveRank, matchRank } from "./match-rank";
 
 export const MAX_VALUE_SUGGESTIONS = 20;
 
@@ -52,7 +53,7 @@ export interface ScanValueSuggestionsOptions {
   recentValues?: ReadonlySet<string>;
 }
 
-function parsePopularity(hint: unknown): number {
+export function parsePopularity(hint: unknown): number {
   if (typeof hint === "number") return hint;
   if (typeof hint === "string") {
     const n = Number.parseInt(hint, 10);
@@ -61,7 +62,10 @@ function parsePopularity(hint: unknown): number {
   return 0;
 }
 
-/** Scan filter values across all categories (e.g. "surr" → Trait 2 · Surrounded). */
+/**
+ * Scan filter values across all categories — single ranking pass.
+ * Category `getValues` should return flat matches only; ordering happens here.
+ */
 export function scanValueSuggestions(
   categories: PaletteCategory[],
   query: string,
@@ -86,7 +90,7 @@ export function scanValueSuggestions(
     if (categoryIsFull(category, chips)) continue;
     for (const option of category.getValues(q)) {
       if (applied.has(`${category.id}:${option.id}`)) continue;
-      const baseRank = matchRank(option.label, q);
+      const baseRank = matchRank(option.label, q) ?? option.searchRank ?? null;
       if (baseRank == null) continue;
       scored.push({
         suggestion: {

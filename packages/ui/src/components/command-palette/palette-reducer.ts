@@ -1,4 +1,6 @@
-import { MAX_VALUE_SUGGESTIONS, scanValueSuggestions } from "../../lib/palette-suggestions";
+import { rankLabeledOptions } from "@repo/search-rank";
+
+import { MAX_VALUE_SUGGESTIONS, parsePopularity, scanValueSuggestions } from "../../lib/palette-suggestions";
 import type {
   ListMode,
   PaletteAction,
@@ -159,12 +161,28 @@ export function buildValuesModeItems(
   previewResults: PaletteResultItem[],
   previewSectionLabel: string,
 ): PaletteItem[] {
-  const capped = activeCategory.getValues(valueQuery).slice(0, MAX_VALUE_SUGGESTIONS);
-  return appendPreviewResults(
-    capped.map((option) => ({ kind: "value" as const, option })),
-    previewResults,
-    previewSectionLabel,
-  );
+  const raw = activeCategory.getValues(valueQuery);
+  const q = valueQuery.trim();
+  const valueItems: PaletteItem[] = q
+    ? (() => {
+        const byLabel = new Map(raw.map((option) => [option.label, option] as const));
+        const ranked = rankLabeledOptions(
+          raw.map((option) => ({
+            label: option.label,
+            popularity: parsePopularity(option.hint),
+            fallbackRank: option.searchRank,
+          })),
+          valueQuery,
+          MAX_VALUE_SUGGESTIONS,
+        );
+        return ranked.flatMap(({ label }) => {
+          const option = byLabel.get(label);
+          return option ? [{ kind: "value" as const, option }] : [];
+        });
+      })()
+    : raw.slice(0, MAX_VALUE_SUGGESTIONS).map((option) => ({ kind: "value" as const, option }));
+
+  return appendPreviewResults(valueItems, previewResults, previewSectionLabel);
 }
 
 export interface BuildItemsParams {

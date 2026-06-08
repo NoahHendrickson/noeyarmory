@@ -8,8 +8,6 @@ import {
   CommandPalette,
   Input,
   PillSelect,
-  availableCategories,
-  scanValueSuggestions,
   type PaletteAction,
   type PaletteCategory,
   type PaletteChip,
@@ -18,17 +16,12 @@ import {
   type PaletteValueOption,
   type PillSelectOption,
 } from "@repo/ui";
-import {
-  collectColumnPerks,
-  ghostSuffix as computeGhostSuffix,
-  matchRank,
-  rankLabeledOptions,
-  suggestWeaponNames,
-  type WeaponSort,
-} from "@repo/destiny";
+import { collectColumnPerks, type WeaponSort } from "@repo/destiny";
 
 import { useArmorActions } from "../hooks/use-armor-actions";
 import { useArmorSearchResults } from "../hooks/use-armor-search-results";
+import { usePaletteGhostCompletion } from "../hooks/use-palette-ghost-completion";
+import { usePaletteSubmit } from "../hooks/use-palette-submit";
 import { useWeaponSearchResults } from "../hooks/use-weapon-search-results";
 import { buildArmorCategories } from "../lib/palette/armor-categories";
 import {
@@ -38,6 +31,7 @@ import {
   CUSTOM_FILTER_TRAIT_CATEGORY_IDS,
 } from "../lib/palette/constants";
 import { buildComposerCategories, buildWeaponCategories } from "../lib/palette/weapon-categories";
+import type { PaletteResultsMode } from "../lib/palette/results-mode";
 import { useOwnedArmor } from "../lib/use-owned-armor";
 import { useCustomWeaponFilters } from "../lib/use-custom-weapon-filters";
 import {
@@ -120,7 +114,7 @@ export function HomeSearch({
   }, []);
   const [sort, setSort] = useState<WeaponSort>("season-desc");
   const [showAllResults, setShowAllResults] = useState(false);
-  const [textResultsMode, setTextResultsMode] = useState(false);
+  const [resultsMode, setResultsMode] = useState<PaletteResultsMode | null>(null);
   const [customFilterComposer, setCustomFilterComposer] = useState<CustomFilterComposer | null>(
     null,
   );
@@ -148,6 +142,10 @@ export function HomeSearch({
     : mode === "weapon"
       ? weaponCategories
       : armorCategories;
+
+  const paletteChips = composingCustomFilter
+    ? draftPerkChips(customFilterComposer!.perkNames)
+    : chips;
 
   const recentValues = useMemo(() => {
     const values = new Set<string>();
@@ -179,7 +177,7 @@ export function HomeSearch({
     showAllResults,
     composingCustomFilter,
     mode,
-    textResultsMode,
+    resultsMode,
     recentValues,
   });
 
@@ -188,7 +186,7 @@ export function HomeSearch({
     armorPreviewItems,
     resultCount: armorResultCount,
     shownCount: armorShownCount,
-  } = useArmorSearchResults(owned, chips, query, showAllResults, textResultsMode, recentValues);
+  } = useArmorSearchResults(owned, chips, query, showAllResults, recentValues);
 
   const resultCount = mode === "weapon" ? weaponResultCount : armorResultCount;
   const shownCount = mode === "weapon" ? weaponShownCount : armorShownCount;
@@ -295,6 +293,26 @@ export function HomeSearch({
     },
     [categories, mode, recordSearch],
   );
+
+  const { ghostCompletion, ghostSuffix: ghostSuffixText } = usePaletteGhostCompletion({
+    query,
+    mode,
+    categories,
+    chips: paletteChips,
+    weapons,
+    recentValues,
+    composingCustomFilter,
+  });
+
+  const handleSubmit = usePaletteSubmit({
+    query,
+    mode,
+    weapons,
+    composingCustomFilter,
+    addChip,
+    setQuery,
+    setResultsMode,
+  });
 
   const addComposerPerk = useCallback((categoryId: string, option: PaletteValueOption) => {
     if (!CUSTOM_FILTER_TRAIT_CATEGORY_IDS.has(categoryId)) return;
@@ -443,18 +461,16 @@ export function HomeSearch({
   }, [chips, query, mode, sort]);
 
   useEffect(() => {
-    if (!query.trim()) setTextResultsMode(false);
-  }, [query]);
-
-  useEffect(() => {
-    setTextResultsMode(false);
-  }, [chips, mode]);
+    if (!query.trim() || chips.length > 0) {
+      setResultsMode(null);
+    }
+  }, [query, chips, mode]);
 
   const handleModeChange = useCallback((next: Mode) => {
     setMode(next);
     setChips([]);
     setQuery("");
-    setTextResultsMode(false);
+    setResultsMode(null);
     clearArmorAction();
   }, [clearArmorAction]);
 
@@ -466,73 +482,12 @@ export function HomeSearch({
     <span className="text-destructive text-sm">{armorLoadError}</span>
   ) : undefined;
 
-  const paletteChips = composingCustomFilter
-    ? draftPerkChips(customFilterComposer!.perkNames)
-    : chips;
-
   const hasFilters = paletteChips.length > 0;
   const isFiltering = query.trim().length > 0;
   const showFilterResults = hasFilters && !isFiltering && !composingCustomFilter;
-  const showTextResults = textResultsMode && isFiltering && !composingCustomFilter;
+  const showTextResults = resultsMode === "text" && isFiltering && !composingCustomFilter;
   const showResults = showFilterResults || showTextResults;
   const resultsWhileFiltering = showTextResults;
-
-  const ghostCandidates = useMemo(() => {
-    if (composingCustomFilter || !query.trim()) return [];
-    const open = availableCategories(categories, paletteChips);
-    const suggestions = scanValueSuggestions(open, query, paletteChips, {
-      limit: 8,
-      recentValues,
-    });
-    const candidates: { label: string; popularity?: number }[] = suggestions.map((s) => ({
-      label: s.value,
-    }));
-    if (mode === "weapon") {
-      for (const weapon of suggestWeaponNames(weapons, query, 5)) {
-        candidates.push({ label: weapon.value, popularity: weapon.count });
-      }
-    }
-    return candidates;
-  }, [composingCustomFilter, query, categories, paletteChips, recentValues, mode, weapons]);
-
-  const ghostCompletion = useMemo(() => {
-    const ranked = rankLabeledOptions(ghostCandidates, query, 1, recentValues);
-    const top = ranked[0];
-    if (!top || top.rank > 1) return undefined;
-    return computeGhostSuffix(top.label, query) != null ? top.label : undefined;
-  }, [ghostCandidates, query, recentValues]);
-
-  const ghostSuffixText = useMemo(() => {
-    if (!ghostCompletion || !query) return undefined;
-    const suffix = ghostCompletion.slice(query.length);
-    return suffix.length > 0 ? suffix : undefined;
-  }, [ghostCompletion, query]);
-
-  const handleSubmit = useCallback(() => {
-    if (composingCustomFilter) return;
-    const q = query.trim();
-    if (!q) return;
-
-    if (mode === "weapon") {
-      const names = suggestWeaponNames(weapons, q, 1);
-      const top = names[0];
-      if (top) {
-        const rank = matchRank(top.value, q);
-        if (rank != null && rank <= 1) {
-          addChip("name", {
-            id: top.value.toLowerCase(),
-            label: top.value,
-            hint: String(top.count),
-          });
-          setQuery("");
-          setTextResultsMode(false);
-          return;
-        }
-      }
-    }
-
-    setTextResultsMode(true);
-  }, [composingCustomFilter, query, mode, weapons, addChip]);
 
   const recentPaletteItems = useMemo<PaletteRecentItem[]>(() => {
     if (composingCustomFilter) return [];

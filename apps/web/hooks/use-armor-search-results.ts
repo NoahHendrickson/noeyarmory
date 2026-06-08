@@ -15,7 +15,6 @@ export function useArmorSearchResults(
   chips: PaletteChip[],
   query: string,
   showAllResults: boolean,
-  textResultsMode = false,
   recentValues?: ReadonlySet<string>,
 ) {
   const armorFilters = useMemo(() => chipsToArmorFilters(chips), [chips]);

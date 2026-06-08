@@ -1,5 +1,5 @@
 {
-  "name": "@repo/destiny",
+  "name": "@repo/search-rank",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -12,24 +12,12 @@
     }
   },
   "scripts": {
-    "generate": "tsx src/generate.ts",
-    "sync:dps": "tsx src/sync-weapon-dps.ts",
-    "build": "tsup",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
-  "dependencies": {
-    "@repo/search-rank": "workspace:*",
-    "fuse.js": "^7.4.2"
-  },
   "devDependencies": {
     "@repo/tsconfig": "workspace:*",
-    "@types/node": "^25.9.2",
-    "bungie-api-ts": "^5.10.0",
-    "dotenv": "^17.4.2",
-    "tsup": "^8.5.1",
-    "tsx": "^4.22.4",
     "typescript": "^6.0.3",
     "vitest": "^4.1.8"
   }

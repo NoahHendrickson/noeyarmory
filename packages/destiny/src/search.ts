@@ -1,6 +1,6 @@
 import Fuse from "fuse.js";
 
-import { matchRank } from "./suggest";
+import { matchRank } from "@repo/search-rank";
 
 import type { InternedPerkColumn, PerkRef, WeaponSummary } from "./types";
 import type { WeaponDpsLookup } from "./weapon-dps";

@@ -62,10 +62,15 @@ export {
   rankLabeledOptions,
   ghostSuffix,
   bestGhostSuffix,
+  bestGhostCompletion,
   createPerkNameFuse,
+  filterPerkNames,
+  rankPerkNames,
   suggestPerkNames,
   type RankedLabel,
+  type GhostCompletion,
   type PerkNameEntry,
+  type FilteredPerkName,
 } from "./suggest";
 export {
   filterWeapons,

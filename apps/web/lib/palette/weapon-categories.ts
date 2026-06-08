@@ -3,8 +3,7 @@ import {
   collectColumnPerks,
   collectFacets,
   createPerkNameFuse,
-  rankLabeledOptions,
-  suggestPerkNames,
+  filterPerkNames,
   suggestWeaponNames,
   type FacetOption,
   type ModOption,
@@ -19,28 +18,10 @@ function formatExamples(labels: string[], limit = 3): string {
   return labels.slice(0, limit).join(", ");
 }
 
-function rankedFacetOptions(
-  options: FacetOption[],
-  q: string,
-  recentValues?: ReadonlySet<string>,
-) {
-  const ql = q.trim();
-  if (!ql) {
-    return options.map((o) => ({ id: o.value.toLowerCase(), label: o.value, hint: String(o.count) }));
-  }
-  return rankLabeledOptions(
-    options.map((o) => ({ label: o.value, popularity: o.count })),
-    ql,
-    options.length,
-    recentValues,
-  ).map(({ label, popularity }) => {
-    const source = options.find((o) => o.value === label);
-    return {
-      id: label.toLowerCase(),
-      label,
-      hint: String(source?.count ?? popularity),
-    };
-  });
+function filterFacetOptions(options: FacetOption[], q: string): FacetOption[] {
+  const ql = q.trim().toLowerCase();
+  if (!ql) return options;
+  return options.filter((o) => o.value.toLowerCase().includes(ql));
 }
 
 export function weaponNameCategory(weapons: WeaponSummary[]): PaletteCategory {
@@ -64,7 +45,12 @@ export function facetCategory(id: string, label: string, options: FacetOption[])
     id,
     label,
     examples: formatExamples(options.map((option) => option.value)),
-    getValues: (q) => rankedFacetOptions(options, q),
+    getValues: (q) =>
+      filterFacetOptions(options, q).map((o) => ({
+        id: o.value.toLowerCase(),
+        label: o.value,
+        hint: String(o.count),
+      })),
   };
 }
 
@@ -73,8 +59,8 @@ export function perkCategory(
   label: string,
   options: PerkOption[] | ModOption[],
   perkFuse: ReturnType<typeof createPerkNameFuse> | null = null,
-  recentValues?: ReadonlySet<string>,
 ): PaletteCategory {
+  const names = options.map((o) => o.name);
   return {
     id,
     label,
@@ -93,19 +79,18 @@ export function perkCategory(
           dimmed: "currentlyCanRoll" in o && o.currentlyCanRoll === false,
         }));
       }
-      const names = options.map((o) => o.name);
-      const ranked = suggestPerkNames(names, ql, perkFuse, options.length, recentValues);
-      return ranked.map(({ label: perkName }) => {
-        const source = options.find((o) => o.name === perkName);
-        if (!source) {
-          return { id: perkName.toLowerCase(), label: perkName, hint: "0" };
-        }
-        return {
-          id: source.name.toLowerCase(),
-          label: source.name,
-          hint: String(source.count),
-          dimmed: "currentlyCanRoll" in source && source.currentlyCanRoll === false,
-        };
+      return filterPerkNames(names, ql, perkFuse, options.length).flatMap((entry) => {
+        const source = options.find((o) => o.name === entry.name);
+        if (!source) return [];
+        return [
+          {
+            id: source.name.toLowerCase(),
+            label: source.name,
+            hint: String(source.count),
+            searchRank: entry.searchRank,
+            dimmed: "currentlyCanRoll" in source && source.currentlyCanRoll === false,
+          },
+        ];
       });
     },
   };
@@ -135,22 +120,15 @@ export function customFilterCategory(filters: CustomWeaponFilter[]): PaletteCate
       2,
     ),
     getValues: (q) => {
-      const ql = q.trim();
-      const items = filters.map((filter) => ({
+      const ql = q.trim().toLowerCase();
+      const matched = ql
+        ? filters.filter((filter) => filter.name.toLowerCase().includes(ql))
+        : filters;
+      return matched.map((filter) => ({
+        id: filter.id,
         label: filter.name,
-        popularity: filter.perkNames.length,
+        hint: `${filter.perkNames.length} ${filter.perkNames.length === 1 ? "perk" : "perks"}`,
       }));
-      const ranked = ql
-        ? rankLabeledOptions(items, ql, filters.length)
-        : items.map((item) => ({ ...item, rank: 0 }));
-      return ranked.map(({ label: filterName }) => {
-        const filter = filters.find((f) => f.name === filterName)!;
-        return {
-          id: filter.id,
-          label: filter.name,
-          hint: `${filter.perkNames.length} ${filter.perkNames.length === 1 ? "perk" : "perks"}`,
-        };
-      });
     },
   };
 }

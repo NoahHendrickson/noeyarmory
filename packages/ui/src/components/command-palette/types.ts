@@ -7,6 +7,8 @@ export interface PaletteValueOption {
   label: string;
   /** Trailing hint, e.g. a count. */
   hint?: ReactNode;
+  /** Precomputed rank for fuzzy-only matches (lower = better). */
+  searchRank?: number;
   /** Dim the row (e.g. a retired perk). */
   dimmed?: boolean;
 }

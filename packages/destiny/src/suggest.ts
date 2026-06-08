@@ -1,94 +1,18 @@
 import Fuse from "fuse.js";
 
+import { rankLabeledOptions, type RankedLabel } from "@repo/search-rank";
+
+export type { GhostCompletion, RankedLabel } from "@repo/search-rank";
+export {
+  bestGhostCompletion,
+  bestGhostSuffix,
+  effectiveRank,
+  ghostSuffix,
+  matchRank,
+  rankLabeledOptions,
+} from "@repo/search-rank";
+
 const lower = (s: string) => s.toLowerCase();
-
-/** Word-boundary prefix: query matches start of a word in label. */
-function wordBoundaryPrefix(labelLower: string, queryLower: string): boolean {
-  if (labelLower.startsWith(queryLower)) return true;
-  const parts = labelLower.split(/[\s\-–—]+/);
-  return parts.some((part) => part.startsWith(queryLower));
-}
-
-/**
- * Match quality ladder — lower is better.
- * 0 exact, 1 prefix, 2 word-boundary prefix, 3 contains, null = no match.
- */
-export function matchRank(label: string, query: string): number | null {
-  const ql = query.trim().toLowerCase();
-  if (!ql) return null;
-  const ll = lower(label);
-  if (ll === ql) return 0;
-  if (ll.startsWith(ql)) return 1;
-  if (wordBoundaryPrefix(ll, ql)) return 2;
-  if (ll.includes(ql)) return 3;
-  return null;
-}
-
-/** Apply recency boost — subtract when label matches a recent value. */
-export function effectiveRank(rank: number, label: string, recentValues?: ReadonlySet<string>): number {
-  if (!recentValues || recentValues.size === 0) return rank;
-  return recentValues.has(lower(label)) ? rank - 0.5 : rank;
-}
-
-export interface RankedLabel {
-  label: string;
-  rank: number;
-  popularity: number;
-}
-
-/** Rank and sort labeled options; drops non-matches. */
-export function rankLabeledOptions(
-  items: readonly { label: string; popularity?: number }[],
-  query: string,
-  limit: number,
-  recentValues?: ReadonlySet<string>,
-): RankedLabel[] {
-  const ql = query.trim();
-  if (!ql) return [];
-
-  const ranked: RankedLabel[] = [];
-  for (const item of items) {
-    const baseRank = matchRank(item.label, ql);
-    if (baseRank == null) continue;
-    ranked.push({
-      label: item.label,
-      rank: effectiveRank(baseRank, item.label, recentValues),
-      popularity: item.popularity ?? 0,
-    });
-  }
-
-  ranked.sort(
-    (a, b) =>
-      a.rank - b.rank || b.popularity - a.popularity || a.label.localeCompare(b.label),
-  );
-
-  return ranked.slice(0, limit);
-}
-
-/** Suffix to append for Tab ghost completion, or undefined if none. */
-export function ghostSuffix(label: string, query: string, maxRank = 1): string | undefined {
-  const q = query;
-  const ql = q.trim().toLowerCase();
-  if (ql.length < 2) return undefined;
-  const rank = matchRank(label, q);
-  if (rank == null || rank > maxRank) return undefined;
-  const ll = label.toLowerCase();
-  if (!ll.startsWith(ql)) return undefined;
-  const suffix = label.slice(q.trim().length);
-  return suffix.length > 0 ? suffix : undefined;
-}
-
-/** Pick the best ghost completion from candidate labels. */
-export function bestGhostSuffix(
-  query: string,
-  candidates: readonly { label: string; popularity?: number }[],
-  recentValues?: ReadonlySet<string>,
-): string | undefined {
-  const ranked = rankLabeledOptions(candidates, query, 1, recentValues);
-  const top = ranked[0];
-  if (!top) return undefined;
-  return ghostSuffix(top.label, query);
-}
 
 export interface PerkNameEntry {
   name: string;
@@ -104,7 +28,68 @@ export function createPerkNameFuse(names: string[]): Fuse<PerkNameEntry> {
   });
 }
 
-/** Substring matches first; fuzzy fallback when few hits and query length >= 3. */
+export interface FilteredPerkName {
+  name: string;
+  /** Set when matched only via fuzzy search (for cross-category ranking). */
+  searchRank?: number;
+}
+
+/** Substring filter with optional fuzzy fallback — no global sort (caller ranks). */
+export function filterPerkNames(
+  names: readonly string[],
+  query: string,
+  perkFuse: Fuse<PerkNameEntry> | null,
+  limit = 20,
+): FilteredPerkName[] {
+  const ql = query.trim().toLowerCase();
+  if (!ql) return names.slice(0, limit).map((name) => ({ name }));
+
+  const results: FilteredPerkName[] = [];
+  const seen = new Set<string>();
+
+  for (const name of names) {
+    if (name.toLowerCase().includes(ql)) {
+      results.push({ name });
+      seen.add(lower(name));
+      if (results.length >= limit) return results;
+    }
+  }
+
+  if (results.length < 3 && ql.length >= 3 && perkFuse) {
+    const fuzzy = perkFuse.search(query.trim(), { limit: limit - results.length });
+    for (const result of fuzzy) {
+      const key = lower(result.item.name);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      results.push({ name: result.item.name, searchRank: 4 });
+      if (results.length >= limit) break;
+    }
+  }
+
+  return results;
+}
+
+/** Rank perk names for drill-down lists (values mode). */
+export function rankPerkNames(
+  names: readonly string[],
+  query: string,
+  perkFuse: Fuse<PerkNameEntry> | null,
+  limit = 20,
+  recentValues?: ReadonlySet<string>,
+): RankedLabel[] {
+  const filtered = filterPerkNames(names, query, perkFuse, limit);
+  return rankLabeledOptions(
+    filtered.map((entry) => ({
+      label: entry.name,
+      fallbackRank: entry.searchRank,
+    })),
+    query,
+    limit,
+    recentValues,
+  );
+}
+
+/** @deprecated Use filterPerkNames + rankLabeledOptions at the call site. */
 export function suggestPerkNames(
   names: readonly string[],
   query: string,
@@ -112,28 +97,5 @@ export function suggestPerkNames(
   limit = 20,
   recentValues?: ReadonlySet<string>,
 ): RankedLabel[] {
-  const ql = query.trim();
-  if (!ql) return [];
-
-  const items = names.map((name) => ({ label: name, popularity: 0 }));
-  let ranked = rankLabeledOptions(items, ql, limit, recentValues);
-
-  if (ranked.length < 3 && ql.length >= 3 && perkFuse) {
-    const seen = new Set(ranked.map((r) => lower(r.label)));
-    const fuzzy = perkFuse.search(ql, { limit: limit - ranked.length });
-    for (const result of fuzzy) {
-      const name = result.item.name;
-      const key = lower(name);
-      if (seen.has(key)) continue;
-      seen.add(key);
-      ranked.push({ label: name, rank: 4, popularity: 0 });
-      if (ranked.length >= limit) break;
-    }
-    ranked.sort(
-      (a, b) =>
-        a.rank - b.rank || b.popularity - a.popularity || a.label.localeCompare(b.label),
-    );
-  }
-
-  return ranked.slice(0, limit);
+  return rankPerkNames(names, query, perkFuse, limit, recentValues);
 }

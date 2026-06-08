@@ -14,6 +14,7 @@ import {
   type WeaponSummary,
 } from "@repo/destiny";
 
+import type { PaletteResultsMode } from "../lib/palette/results-mode";
 import {
   MAX_PREVIEW_RESULTS,
   MAX_RESULTS,
@@ -36,7 +37,7 @@ export interface UseWeaponSearchResultsParams {
   showAllResults: boolean;
   composingCustomFilter: boolean;
   mode: "weapon" | "armor";
-  textResultsMode?: boolean;
+  resultsMode: PaletteResultsMode | null;
   recentValues?: ReadonlySet<string>;
 }
 
@@ -53,7 +54,7 @@ export function useWeaponSearchResults({
   showAllResults,
   composingCustomFilter,
   mode,
-  textResultsMode = false,
+  resultsMode,
   recentValues,
 }: UseWeaponSearchResultsParams) {
   const weaponFilters = useMemo(
@@ -64,24 +65,16 @@ export function useWeaponSearchResults({
   const weaponFuse = useMemo(() => createWeaponFuse(weapons), [weapons]);
   const deferredQuery = useDeferredValue(query);
   const deferredPanelState = useDeferredValue(panelState);
+  const textSearchActive = resultsMode === "text";
 
   const weaponResults = useMemo(() => {
     const q = deferredQuery.trim();
-    const shouldFuse = q.length >= MIN_TEXT_SEARCH_LENGTH && (textResultsMode || q.length > 0);
-    const base = shouldFuse
-      ? weaponFuse.search(q, { limit: textResultsMode ? MAX_SHOW_ALL : 300 }).map((r) => r.item)
-      : weapons;
+    const base =
+      textSearchActive && q.length >= MIN_TEXT_SEARCH_LENGTH
+        ? weaponFuse.search(q, { limit: MAX_SHOW_ALL }).map((r) => r.item)
+        : weapons;
     return sortWeapons(filterWeapons(base, weaponFilters, perks), sort, dpsByName);
-  }, [
-    weaponFuse,
-    weapons,
-    perks,
-    deferredQuery,
-    weaponFilters,
-    sort,
-    dpsByName,
-    textResultsMode,
-  ]);
+  }, [weaponFuse, weapons, perks, deferredQuery, weaponFilters, sort, dpsByName, textSearchActive]);
 
   const resultLimit = showAllResults ? MAX_SHOW_ALL : MAX_RESULTS;
   const weaponShown = weaponResults.slice(0, resultLimit);

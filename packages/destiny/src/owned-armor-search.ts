@@ -1,6 +1,6 @@
 import Fuse from "fuse.js";
 
-import { matchRank } from "./suggest";
+import { matchRank } from "@repo/search-rank";
 import type { FacetOption } from "./search";
 
 export interface OwnedArmorSearchItem {
