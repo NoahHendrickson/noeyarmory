@@ -413,7 +413,7 @@ function PaletteListRowContent({
     return (
       <>
         {item.divider && (
-          <div className="border-border/40 -mx-1.5 my-1.5 border-t" role="separator" aria-hidden />
+          <div className="-mx-1.5 my-1.5 border-t border-white/12" role="separator" aria-hidden />
         )}
         {item.label && (
           <div

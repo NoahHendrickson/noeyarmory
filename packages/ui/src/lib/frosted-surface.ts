@@ -2,20 +2,27 @@ import type { ClassValue } from "clsx";
 
 import { cn } from "./utils";
 
-/** Shared frosted-glass surface tokens (command palette, modals, tooltips). */
+/**
+ * Shared frosted-glass surface tokens (command palette, modals, tooltips).
+ * Use `shell` + `bar` as separate layers when the rim should read bright against blur.
+ * Keep arbitrary shadow strings literal so Tailwind's scanner emits them in production.
+ */
 export const frostedSurfaceTokens = {
   /** Modal panels, perk tooltips — heavier shadow, 35% card fill. */
-  panel: "border border-border bg-card/35 shadow-lg shadow-black/25 backdrop-blur-xl",
+  panel: "border border-white/16 bg-card/35 shadow-lg shadow-black/25 backdrop-blur-xl",
   /** Palette bar, sticky headers, list chrome — 55% card fill. */
   bar: "bg-card/55 backdrop-blur-xl",
   /** Sticky section headers with bottom border. */
-  barBordered: "border-b border-border/40 bg-card/55 backdrop-blur-xl",
+  barBordered: "border-b border-white/16 bg-card/55 backdrop-blur-xl",
   /** Panel footers and other chrome with a top border only. */
-  barTop: "border-t border-border/40 bg-card/55 backdrop-blur-xl",
-  /** Popovers and pill-select menus. */
-  popover: "border border-border bg-card/35 text-foreground shadow-lg shadow-black/25 backdrop-blur-xl",
-  /** Compact circular controls (e.g. modal back button). */
-  pill: "border border-border bg-card/55 shadow-sm backdrop-blur-xl",
+  barTop: "border-t border-white/16 bg-card/55 backdrop-blur-xl",
+  /** Single-layer pill (e.g. modal back) when shell+bar layering is impractical. */
+  pill: "border border-white/16 bg-card/55 backdrop-blur-xl shadow-[inset_0_1px_0_0_rgba(255,255,255,0.12),0_28px_56px_-2px_rgba(0,0,0,0.42),0_12px_24px_-4px_rgba(0,0,0,0.22)]",
+  /** Glass rim + inset highlight only — pair with `bar`; no drop shadow (menus, attached panels). */
+  rim: "border border-white/16 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.12)]",
+  /** Outer perimeter — glass rim + drop shadow only; pair with `bar` on an inset layer. */
+  shell:
+    "border border-white/16 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.12),0_28px_56px_-2px_rgba(0,0,0,0.42),0_12px_24px_-4px_rgba(0,0,0,0.22)]",
 } as const;
 
 export type FrostedSurfaceToken = keyof typeof frostedSurfaceTokens;

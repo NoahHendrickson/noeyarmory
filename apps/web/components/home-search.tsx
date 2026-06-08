@@ -502,8 +502,8 @@ export function HomeSearch({
       <main className="mx-auto flex w-full flex-1 flex-col px-4 pt-4 sm:pt-[12vh]">
         <div
           className={cn(
-            "mx-auto flex w-full max-w-[calc(100vw-2rem)] flex-col transition-opacity duration-200 ease-out motion-reduce:transition-none sm:w-fit",
-            selected && "pointer-events-none opacity-0",
+            "mx-auto flex w-full max-w-[calc(100vw-2rem)] flex-col sm:w-fit",
+            selectedHash != null && "pointer-events-none invisible",
           )}
         >
           <div className="mb-4 flex justify-end">
@@ -691,15 +691,14 @@ export function HomeSearch({
         )}
       </main>
 
-      {selectedHash != null && (
-        <WeaponDetailModal
-          weapon={selected ?? null}
-          loading={selectedLoading}
-          dps={selected ? dpsByName.get(selected.name) : undefined}
-          highlightedBuildPerks={selected ? dpsByName.get(selected.name)?.buildPerks : undefined}
-          onClose={() => setSelectedHash(null)}
-        />
-      )}
+      <WeaponDetailModal
+        open={selectedHash != null}
+        weapon={selected ?? null}
+        loading={selectedLoading && selectedHash != null}
+        dps={selected ? dpsByName.get(selected.name) : undefined}
+        highlightedBuildPerks={selected ? dpsByName.get(selected.name)?.buildPerks : undefined}
+        onClose={() => setSelectedHash(null)}
+      />
     </div>
   );
 }

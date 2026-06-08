@@ -18,12 +18,14 @@ import { WeaponDetailView } from "./weapon-detail";
 
 /** Weapon detail in a modal — the primary in-app path from a search result. */
 export function WeaponDetailModal({
+  open,
   weapon,
   loading,
   dps,
   highlightedBuildPerks,
   onClose,
 }: {
+  open: boolean;
   weapon: WeaponDoc | null;
   loading: boolean;
   dps?: WeaponDpsEntry;
@@ -32,16 +34,23 @@ export function WeaponDetailModal({
 }) {
   return (
     <Dialog
-      open={weapon != null || loading}
-      onOpenChange={(open) => {
-        if (!open) onClose();
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) onClose();
       }}
     >
       <DialogPortal>
-        <DialogBackdrop className="bg-black/10 backdrop-blur-none" />
+        <DialogBackdrop
+          className={cn(
+            "bg-black/10 backdrop-blur-none transition-none",
+            "data-[starting-style]:opacity-100 data-[ending-style]:opacity-100",
+          )}
+        />
         <DialogPopup
           className={cn(
             "relative flex max-h-[85vh] w-full max-w-5xl flex-col gap-2 overflow-hidden border-0 bg-transparent p-0 shadow-none backdrop-blur-none",
+            "transition-none motion-reduce:transition-none",
+            "data-[starting-style]:opacity-100 data-[ending-style]:opacity-100",
           )}
         >
           <DialogTitle className="sr-only">{weapon?.name ?? "Loading weapon"}</DialogTitle>
@@ -73,11 +82,11 @@ export function WeaponDetailModal({
               <div className="grid min-h-[22rem] place-items-center px-10 py-16">
                 <p className="text-muted-foreground text-sm">Loading weapon…</p>
               </div>
-            ) : (
+            ) : open ? (
               <div className="grid min-h-[22rem] place-items-center px-10 py-16">
                 <p className="text-muted-foreground text-sm">Weapon not found.</p>
               </div>
-            )}
+            ) : null}
           </div>
         </DialogPopup>
       </DialogPortal>
