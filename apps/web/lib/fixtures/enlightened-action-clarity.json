@@ -1,0 +1,154 @@
+{
+  "1771736209": {
+    "hash": 1771736209,
+    "name": "Enlightened Action",
+    "descriptions": {
+      "en": [
+        {
+          "linesContent": [
+            {
+              "text": "Weapon Hits grant Stacks of Enlightened Action for 2 seconds. Maximum of 12 Stacks."
+            }
+          ]
+        },
+        {
+          "classNames": [
+            "spacer"
+          ]
+        },
+        {
+          "linesContent": [
+            {
+              "text": "Stat bonuses at 1|2|…|12 Stacks:"
+            }
+          ]
+        },
+        {
+          "linesContent": [
+            {
+              "text": "2|7|12|15|20|25|30|35|38|40|45|50 Handling and Reload Speed"
+            }
+          ]
+        },
+        {
+          "classNames": [
+            "spacer"
+          ]
+        },
+        {
+          "linesContent": [
+            {
+              "text": "Stacks granted per hit by Weapon Type:"
+            }
+          ]
+        },
+        {
+          "linesContent": [
+            {
+              "text": "• Hand Cannons: 3 Stacks"
+            }
+          ]
+        },
+        {
+          "linesContent": [
+            {
+              "text": "• Bows: ? Stacks"
+            }
+          ]
+        },
+        {
+          "linesContent": [
+            {
+              "text": "• Automatic Weapons: 1 Stack"
+            }
+          ]
+        },
+        {
+          "classNames": [
+            "spacer"
+          ]
+        },
+        {
+          "linesContent": [
+            {
+              "text": "",
+              "classNames": [
+                "enhancedArrow"
+              ]
+            },
+            {
+              "text": " Maximum Stat Bonus is increased by 5. (50🠚55, breakdown by Stacks currently unknown)"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "3828510309": {
+    "hash": 3828510309,
+    "name": "Enlightened Action",
+    "descriptions": {
+      "en": [
+        {
+          "linesContent": [
+            {
+              "text": "Weapon Hits grant Stacks of Enlightened Action for 2 seconds. Maximum of 12 Stacks."
+            }
+          ]
+        },
+        {
+          "classNames": [
+            "spacer"
+          ]
+        },
+        {
+          "linesContent": [
+            {
+              "text": "Stat bonuses at 1|2|…|12 Stacks:"
+            }
+          ]
+        },
+        {
+          "linesContent": [
+            {
+              "text": "2|7|12|15|20|25|30|35|38|40|45|50 Handling and Reload Speed"
+            }
+          ]
+        },
+        {
+          "classNames": [
+            "spacer"
+          ]
+        },
+        {
+          "linesContent": [
+            {
+              "text": "Stacks granted per hit by Weapon Type:"
+            }
+          ]
+        },
+        {
+          "linesContent": [
+            {
+              "text": "• Hand Cannons: 3 Stacks"
+            }
+          ]
+        },
+        {
+          "linesContent": [
+            {
+              "text": "• Bows: ? Stacks"
+            }
+          ]
+        },
+        {
+          "linesContent": [
+            {
+              "text": "• Automatic Weapons: 1 Stack"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -173,18 +173,6 @@ export function listMode(
   return "categories";
 }
 
-/** Collapsed pre-warm mode for draft query with no committed chips while the panel is closed. */
-export function draftListMode(
-  hasDraftQueryOnly: boolean,
-  showResults: boolean,
-  query: string,
-  browseFilters: boolean,
-  resultsWhileFiltering = false,
-): ListMode | null {
-  if (!hasDraftQueryOnly) return null;
-  return listMode("categories", showResults, query, browseFilters, resultsWhileFiltering);
-}
-
 /** Map ranked value suggestions to palette chip-suggestion rows. */
 export function valueSuggestionsToChipItems(
   suggestions: ValueSuggestion[],

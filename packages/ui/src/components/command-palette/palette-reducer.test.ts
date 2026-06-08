@@ -50,6 +50,15 @@ describe("valueSuggestionsToChipItems", () => {
       option: { id: "surrounded", label: "Surrounded", hint: "50" },
     });
   });
+
+  it("drops suggestions for unknown categories", () => {
+    expect(
+      valueSuggestionsToChipItems(
+        [{ categoryId: "missing", valueId: "x", value: "X" }],
+        [{ id: "trait1", label: "Trait 1", getValues: () => [] }],
+      ),
+    ).toEqual([]);
+  });
 });
 
 describe("splitPreviewTail", () => {

@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Menu } from "@base-ui/react/menu";
 import { ChevronDown } from "lucide-react";
 
+import { frostedSurface } from "../lib/frosted-surface";
 import { cn } from "../lib/utils";
 
 export interface PillSelectOption<T extends string> {
@@ -46,7 +47,7 @@ function PillSelect<T extends string>({
           "focus-visible:ring-ring focus-visible:ring-2",
           variant === "ghost"
             ? "bg-transparent pl-3 pr-2"
-            : "bg-card/35 pl-3 pr-2 shadow-lg shadow-black/25 backdrop-blur-xl",
+            : frostedSurface("popover", "pl-3 pr-2"),
           className,
         )}
       >
@@ -65,7 +66,7 @@ function PillSelect<T extends string>({
             data-pill-select-menu
             className={cn(
               // Match CommandPalette bar shell — subtle see-through over the shader
-              "border-border bg-card/35 text-foreground shadow-lg shadow-black/25 backdrop-blur-xl min-w-[var(--anchor-width)] rounded-lg border p-1 outline-none",
+              frostedSurface("popover", "min-w-[var(--anchor-width)] rounded-lg p-1 outline-none"),
               // Opacity-only — scale fights Floating UI positioning and reads as a close hitch.
               "transition-opacity duration-150 ease-in-out motion-reduce:transition-none",
               "data-ending-style:opacity-0",

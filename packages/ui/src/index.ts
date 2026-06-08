@@ -34,6 +34,7 @@ export {
   searchValueSuggestions,
   valueSuggestionsToChipItems,
 } from "./components/command-palette/command-palette";
+export { frostedSurface, type FrostedSurfaceToken } from "./lib/frosted-surface";
 export {
   availableCategories,
   categoryIsFull,
