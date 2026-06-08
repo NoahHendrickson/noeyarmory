@@ -1,15 +1,11 @@
 "use client";
 
-import { Check } from "lucide-react";
-
 import { cn } from "@repo/ui";
+import { Check } from "lucide-react";
 
 import { useShaderPreference } from "../lib/shader-preference";
 
-function toggleTitle(
-  enabled: boolean,
-  webgpuSupported: boolean | null,
-): string {
+function toggleTitle(enabled: boolean, webgpuSupported: boolean | null): string {
   if (webgpuSupported === false) {
     return "Pretty shader requires WebGPU (update your browser)";
   }
@@ -38,6 +34,7 @@ export function ShaderToggle() {
           onChange={(e) => setEnabled(e.target.checked)}
           disabled={disabled}
           className="peer sr-only"
+          aria-label="Pretty shader"
         />
         <span
           aria-hidden

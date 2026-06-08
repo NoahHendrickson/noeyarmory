@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
   type ReactNode,
 } from "react";
@@ -70,10 +71,13 @@ export function ShaderPreferenceProvider({ children }: { children: ReactNode }) 
     }
   }, []);
 
+  const value = useMemo(
+    () => ({ enabled, setEnabled, webgpuSupported }),
+    [enabled, setEnabled, webgpuSupported],
+  );
+
   return (
-    <ShaderPreferenceContext.Provider value={{ enabled, setEnabled, webgpuSupported }}>
-      {children}
-    </ShaderPreferenceContext.Provider>
+    <ShaderPreferenceContext.Provider value={value}>{children}</ShaderPreferenceContext.Provider>
   );
 }
 
