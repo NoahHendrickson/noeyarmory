@@ -470,7 +470,6 @@ export function HomeSearch({
     setMode(next);
     setChips([]);
     setQuery("");
-    setResultsMode(null);
     clearArmorAction();
   }, [clearArmorAction]);
 

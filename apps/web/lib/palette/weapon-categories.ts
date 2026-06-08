@@ -4,7 +4,7 @@ import {
   collectFacets,
   createPerkNameFuse,
   filterPerkNames,
-  suggestWeaponNames,
+  filterWeaponNames,
   type FacetOption,
   type ModOption,
   type PerkOption,
@@ -32,10 +32,11 @@ export function weaponNameCategory(weapons: WeaponSummary[]): PaletteCategory {
     single: true,
     examples,
     getValues: (q) =>
-      suggestWeaponNames(weapons, q).map((o) => ({
+      filterWeaponNames(weapons, q).map((o) => ({
         id: o.value.toLowerCase(),
         label: o.value,
         hint: String(o.count),
+        searchRank: o.searchRank,
       })),
   };
 }

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import { effectiveRank, matchRank } from "@repo/search-rank";
+import { effectiveRank, resolveMatchRank } from "@repo/search-rank";
 
 import type { PaletteCategory, PaletteChip } from "../components/command-palette/types";
 
@@ -90,7 +90,7 @@ export function scanValueSuggestions(
     if (categoryIsFull(category, chips)) continue;
     for (const option of category.getValues(q)) {
       if (applied.has(`${category.id}:${option.id}`)) continue;
-      const baseRank = matchRank(option.label, q) ?? option.searchRank ?? null;
+      const baseRank = resolveMatchRank(option.label, q, option.searchRank);
       if (baseRank == null) continue;
       scored.push({
         suggestion: {

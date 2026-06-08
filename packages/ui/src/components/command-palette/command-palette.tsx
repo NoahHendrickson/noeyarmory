@@ -258,6 +258,7 @@ export function CommandPalette({
         activeCategory,
         valueQuery: state.valueQuery,
         results,
+        recentValues,
       }),
     [
       mode,
@@ -277,6 +278,7 @@ export function CommandPalette({
       activeCategory,
       state.valueQuery,
       results,
+      recentValues,
     ],
   );
 

@@ -21,6 +21,17 @@ export function matchRank(label: string, query: string): number | null {
   return null;
 }
 
+/** Combine generic and category-specific ranks (e.g. weapon names). */
+export function resolveMatchRank(
+  label: string,
+  query: string,
+  searchRank?: number,
+): number | null {
+  const generic = matchRank(label, query);
+  if (generic != null && searchRank != null) return Math.min(generic, searchRank);
+  return generic ?? searchRank ?? null;
+}
+
 /** Apply recency boost — subtract when label matches a recent value. */
 export function effectiveRank(
   rank: number,
@@ -49,7 +60,7 @@ export function rankLabeledOptions(
 
   const ranked: RankedLabel[] = [];
   for (const item of items) {
-    const baseRank = matchRank(item.label, ql) ?? item.fallbackRank ?? null;
+    const baseRank = resolveMatchRank(item.label, ql, item.fallbackRank);
     if (baseRank == null) continue;
     ranked.push({
       label: item.label,

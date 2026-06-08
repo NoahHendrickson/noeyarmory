@@ -81,6 +81,7 @@ export {
   collectFacets,
   collectPerks,
   collectColumnPerks,
+  filterWeaponNames,
   suggestWeaponNames,
   buildPerkMap,
   buildWeaponsByPerkName,

@@ -42,7 +42,6 @@ export function usePaletteSubmit({
             hint: String(top.count),
           });
           setQuery("");
-          setResultsMode(null);
           return;
         }
       }

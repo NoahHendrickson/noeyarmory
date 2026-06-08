@@ -1,5 +1,6 @@
 export {
   matchRank,
+  resolveMatchRank,
   effectiveRank,
   rankLabeledOptions,
   ghostSuffix,

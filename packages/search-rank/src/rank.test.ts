@@ -6,6 +6,7 @@ import {
   ghostSuffix,
   matchRank,
   rankLabeledOptions,
+  resolveMatchRank,
 } from "./rank";
 
 describe("matchRank", () => {
@@ -27,6 +28,16 @@ describe("matchRank", () => {
 
   test("no match returns null", () => {
     expect(matchRank("Firefly", "xyz")).toBeNull();
+  });
+});
+
+describe("resolveMatchRank", () => {
+  test("prefers lower category-specific rank over generic contains", () => {
+    expect(resolveMatchRank("Fatebringer", "bringer", 2)).toBe(2);
+  });
+
+  test("falls back to searchRank when generic match fails", () => {
+    expect(resolveMatchRank("Surrounded", "suround", 4)).toBe(4);
   });
 });
 

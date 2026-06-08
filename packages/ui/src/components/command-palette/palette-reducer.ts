@@ -160,6 +160,7 @@ export function buildValuesModeItems(
   valueQuery: string,
   previewResults: PaletteResultItem[],
   previewSectionLabel: string,
+  recentValues?: ReadonlySet<string>,
 ): PaletteItem[] {
   const raw = activeCategory.getValues(valueQuery);
   const q = valueQuery.trim();
@@ -174,6 +175,7 @@ export function buildValuesModeItems(
           })),
           valueQuery,
           MAX_VALUE_SUGGESTIONS,
+          recentValues,
         );
         return ranked.flatMap(({ label }) => {
           const option = byLabel.get(label);
@@ -203,6 +205,7 @@ export interface BuildItemsParams {
   activeCategory: PaletteCategory | null;
   valueQuery: string;
   results: PaletteResultItem[];
+  recentValues?: ReadonlySet<string>;
 }
 
 export function buildPaletteItems(params: BuildItemsParams): PaletteItem[] {
@@ -224,6 +227,7 @@ export function buildPaletteItems(params: BuildItemsParams): PaletteItem[] {
     activeCategory,
     valueQuery,
     results,
+    recentValues,
   } = params;
 
   const categoryItems: PaletteItem[] = hideCategoryList
@@ -252,7 +256,13 @@ export function buildPaletteItems(params: BuildItemsParams): PaletteItem[] {
   }
 
   if (mode === "values" && activeCategory) {
-    return buildValuesModeItems(activeCategory, valueQuery, previewResults, previewSectionLabel);
+    return buildValuesModeItems(
+      activeCategory,
+      valueQuery,
+      previewResults,
+      previewSectionLabel,
+      recentValues,
+    );
   }
 
   if (mode === "results") {

@@ -184,6 +184,34 @@ function weaponNameRank(nameLower: string, queryLower: string): number | null {
   return rank != null && rank <= 2 ? rank : rank === 3 ? 2 : null;
 }
 
+export interface FilteredWeaponName {
+  value: string;
+  count: number;
+  searchRank: number;
+}
+
+/** Flat weapon-name matches for palette ranking — no sort (caller ranks). */
+export function filterWeaponNames(
+  weapons: WeaponSummary[],
+  query: string,
+): FilteredWeaponName[] {
+  const ql = query.trim().toLowerCase();
+  if (!ql) return [];
+
+  const counts = new Map<string, number>();
+  for (const w of weapons) {
+    counts.set(w.name, (counts.get(w.name) ?? 0) + 1);
+  }
+
+  const matches: FilteredWeaponName[] = [];
+  for (const [name, count] of counts) {
+    const rank = weaponNameRank(name.toLowerCase(), ql);
+    if (rank != null) matches.push({ value: name, count, searchRank: rank });
+  }
+
+  return matches;
+}
+
 /** Predict weapon names from a partial query — name-only, ranked best-first. */
 export function suggestWeaponNames(
   weapons: WeaponSummary[],
@@ -193,20 +221,12 @@ export function suggestWeaponNames(
   const ql = query.trim().toLowerCase();
   if (!ql) return [];
 
-  const counts = new Map<string, number>();
-  for (const w of weapons) {
-    counts.set(w.name, (counts.get(w.name) ?? 0) + 1);
-  }
-
-  const ranked: { name: string; rank: number; count: number }[] = [];
-  for (const [name, count] of counts) {
-    const rank = weaponNameRank(name.toLowerCase(), ql);
-    if (rank != null) ranked.push({ name, rank, count });
-  }
-
-  ranked.sort(
-    (a, b) => a.rank - b.rank || a.name.localeCompare(b.name) || b.count - a.count,
-  );
+  const filtered = filterWeaponNames(weapons, query);
+  const ranked = filtered
+    .map((entry) => ({ name: entry.value, rank: entry.searchRank, count: entry.count }))
+    .sort(
+      (a, b) => a.rank - b.rank || a.name.localeCompare(b.name) || b.count - a.count,
+    );
 
   return ranked.slice(0, limit).map(({ name, count }) => ({ value: name, count }));
 }
