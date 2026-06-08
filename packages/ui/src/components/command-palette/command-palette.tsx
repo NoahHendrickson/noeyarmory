@@ -594,7 +594,8 @@ export function CommandPalette({
     >
       <div
         className={cn(
-          "relative overflow-hidden border border-border shadow-[0_28px_56px_-2px_rgba(0,0,0,0.42),0_12px_24px_-4px_rgba(0,0,0,0.22)]",
+          "relative overflow-hidden",
+          frostedSurface("shell"),
           open ? "rounded-[12px]" : "rounded-[1.75rem]",
         )}
       >
