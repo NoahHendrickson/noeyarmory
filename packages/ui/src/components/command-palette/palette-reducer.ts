@@ -22,6 +22,11 @@ import type {
 
 export const PANEL_TRANSITION_MS = 200;
 
+/** Draft query with no committed chips — defer preview rows until the open animation settles. */
+export function shouldDeferPreviews(query: string, chipsLength: number): boolean {
+  return query.trim().length > 0 && chipsLength === 0;
+}
+
 /** True when a dormant snapshot still matches the current draft input. */
 export function dormantSnapshotMatches(
   snapshot: Pick<DormantSnapshot, "query" | "chipsLength">,

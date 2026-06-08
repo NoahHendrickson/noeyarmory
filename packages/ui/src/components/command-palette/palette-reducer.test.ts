@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   dormantSnapshotMatches,
+  shouldDeferPreviews,
   splitPreviewTail,
   stripPreviewItems,
   valueSuggestionsToChipItems,
@@ -20,6 +21,17 @@ describe("dormantSnapshotMatches", () => {
 
   it("returns false when chipsLength differs", () => {
     expect(dormantSnapshotMatches({ query: "surr", chipsLength: 0 }, "surr", 1)).toBe(false);
+  });
+});
+
+describe("shouldDeferPreviews", () => {
+  it("returns true for draft query with no chips", () => {
+    expect(shouldDeferPreviews(" surr ", 0)).toBe(true);
+  });
+
+  it("returns false when query is empty or chips are present", () => {
+    expect(shouldDeferPreviews("", 0)).toBe(false);
+    expect(shouldDeferPreviews("surr", 1)).toBe(false);
   });
 });
 
