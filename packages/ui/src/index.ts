@@ -35,6 +35,7 @@ export {
   valueSuggestionsToChipItems,
 } from "./components/command-palette/command-palette";
 export { frostedSurface, type FrostedSurfaceToken } from "./lib/frosted-surface";
+export { FrostedShell, FrostedShellBar } from "./components/frosted-shell";
 export {
   availableCategories,
   categoryIsFull,

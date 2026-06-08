@@ -3,6 +3,7 @@ import { Popover as BasePopover } from "@base-ui/react/popover";
 
 import { frostedSurface } from "../lib/frosted-surface";
 import { cn } from "../lib/utils";
+import { FrostedShellBar } from "./frosted-shell";
 
 const Popover = BasePopover.Root;
 const PopoverTrigger = BasePopover.Trigger;
@@ -48,28 +49,17 @@ function FrostedPopoverPopup({
   ...props
 }: ComponentProps<typeof BasePopover.Popup> & { children?: ReactNode }) {
   return (
-    <BasePopover.Popup
-      data-palette-ignore-close
+    <PopoverPopup
       className={cn(
-        "text-popover-foreground pointer-events-auto relative overflow-hidden border-0 bg-transparent outline-none",
+        "relative overflow-hidden border-0 bg-transparent",
         frostedSurface("shell"),
-        // Opacity-only — scale fights Floating UI positioning and reads as a close hitch.
-        "transition-opacity duration-100 ease-in-out",
-        "data-ending-style:opacity-0",
-        "data-starting-style:opacity-0",
         className,
       )}
       {...props}
     >
-      <div
-        className={cn(
-          "pointer-events-none absolute inset-0 rounded-[inherit]",
-          frostedSurface("bar"),
-        )}
-        aria-hidden
-      />
+      <FrostedShellBar />
       <div className="relative">{children}</div>
-    </BasePopover.Popup>
+    </PopoverPopup>
   );
 }
 

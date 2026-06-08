@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { frostedSurface } from "../lib/frosted-surface";
 import { cn } from "../lib/utils";
 import { Button, type ButtonProps } from "./button";
+import { FrostedShellBar } from "./frosted-shell";
 
 export interface FrostedToolbarButtonProps extends ButtonProps {
   children?: ReactNode;
@@ -23,13 +24,7 @@ function FrostedToolbarButton({ className, children, ...props }: FrostedToolbarB
       )}
       {...props}
     >
-      <span
-        className={cn(
-          "pointer-events-none absolute inset-0 rounded-[inherit]",
-          frostedSurface("bar"),
-        )}
-        aria-hidden
-      />
+      <FrostedShellBar as="span" />
       <span className="relative">{children}</span>
     </Button>
   );
