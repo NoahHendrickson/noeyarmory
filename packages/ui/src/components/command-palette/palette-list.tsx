@@ -78,7 +78,7 @@ export function PaletteList({
           onScroll={onScroll}
         >
           {renderMode === "results" && resultsHeader != null && (
-            <div className="bg-card/35 sticky top-0 z-10 -mx-1.5 border-b border-border/40 px-3 py-1.5 backdrop-blur-xl">
+            <div className="bg-card/55 sticky top-0 z-10 -mx-1.5 border-b border-border/40 px-3 py-1.5 backdrop-blur-xl">
               {resultsHeader}
             </div>
           )}
@@ -87,7 +87,7 @@ export function PaletteList({
               className={
                 plainPanelHeader
                   ? "px-3 pb-2"
-                  : "bg-card/35 sticky top-0 z-10 -mx-1.5 border-b border-border/40 px-3 py-1.5 backdrop-blur-xl"
+                  : "bg-card/55 sticky top-0 z-10 -mx-1.5 border-b border-border/40 px-3 py-1.5 backdrop-blur-xl"
               }
             >
               {panelHeader}
@@ -139,7 +139,7 @@ export function PaletteList({
           )}
         </div>
         {panelFooter != null && (open || panelClosing) && (
-          <div className="border-t border-border/40 bg-card/35 shrink-0 backdrop-blur-xl">
+          <div className="border-t border-border/40 bg-card/55 shrink-0 backdrop-blur-xl">
             {panelFooter}
           </div>
         )}

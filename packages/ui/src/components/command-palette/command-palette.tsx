@@ -575,7 +575,7 @@ export function CommandPalette({
         )}
       >
         <div
-          className="pointer-events-none absolute inset-0 rounded-[inherit] bg-card/35 backdrop-blur-xl"
+          className="pointer-events-none absolute inset-0 rounded-[inherit] bg-card/55 backdrop-blur-xl"
           aria-hidden
         />
         <div className="relative flex flex-col">

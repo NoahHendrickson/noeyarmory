@@ -7,7 +7,7 @@ loadEnv({ path: resolve(process.cwd(), "../../.env") });
 
 const nextConfig: NextConfig = {
   // @repo/ui is consumed as TypeScript source; let Next compile it.
-  transpilePackages: ["@repo/ui", "@repo/destiny", "shaders"],
+  transpilePackages: ["@repo/ui", "@repo/destiny"],
   images: {
     // Weapon + perk icons are served from Bungie's CDN.
     remotePatterns: [{ protocol: "https", hostname: "www.bungie.net" }],
