@@ -32,7 +32,13 @@ export {
   type PaletteItem,
   PANEL_TRANSITION_MS,
   searchValueSuggestions,
+  valueSuggestionsToChipItems,
 } from "./components/command-palette/command-palette";
+export {
+  frostedSurface,
+  frostedSurfaceTokens,
+  type FrostedSurfaceToken,
+} from "./lib/frosted-surface";
 export {
   availableCategories,
   categoryIsFull,

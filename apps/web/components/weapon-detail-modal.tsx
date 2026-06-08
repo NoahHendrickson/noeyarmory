@@ -5,6 +5,7 @@ import {
   Button,
   cn,
   Dialog,
+  frostedSurface,
   DialogBackdrop,
   DialogClose,
   DialogPopup,
@@ -14,10 +15,6 @@ import {
 import type { WeaponDoc, WeaponDpsEntry } from "@repo/destiny";
 
 import { WeaponDetailView } from "./weapon-detail";
-
-/** Match CommandPalette shell — frosted card over the app background. */
-const glassPanel =
-  "border border-border bg-card/35 shadow-lg shadow-black/25 backdrop-blur-xl rounded-2xl";
 
 /** Weapon detail in a modal — the primary in-app path from a search result. */
 export function WeaponDetailModal({
@@ -55,7 +52,7 @@ export function WeaponDetailModal({
                 size="default"
                 aria-label="Back"
                 className={cn(
-                  "self-start rounded-full border border-border bg-card/55 text-foreground shadow-sm backdrop-blur-xl",
+                  frostedSurface("pill", "self-start rounded-full text-foreground"),
                   "hover:bg-card/70 hover:text-foreground",
                 )}
               />
@@ -64,7 +61,7 @@ export function WeaponDetailModal({
             <ArrowLeft className="size-4" />
             Back
           </DialogClose>
-          <div className={cn("min-h-0 flex-1 overflow-y-auto p-4 sm:p-6", glassPanel)}>
+          <div className={cn("min-h-0 flex-1 overflow-y-auto rounded-2xl p-4 sm:p-6", frostedSurface("panel"))}>
             {weapon ? (
               <WeaponDetailView
                 weapon={weapon}
