@@ -141,7 +141,8 @@ export function customFilterCategory(filters: CustomWeaponFilter[]): PaletteCate
   };
 }
 
-function allPerkNames(cols: ReturnType<typeof collectColumnPerks>): string[] {
+/** Distinct perk names across trait + origin columns — feeds the perk-name fuzzy index. */
+export function allPerkNames(cols: ReturnType<typeof collectColumnPerks>): string[] {
   const names = new Set<string>();
   for (const list of [cols.trait1, cols.trait2, cols.originTrait]) {
     for (const perk of list) names.add(perk.name);
@@ -149,24 +150,14 @@ function allPerkNames(cols: ReturnType<typeof collectColumnPerks>): string[] {
   return [...names];
 }
 
-/** Facet options for a weapon list — memoize on `[weapons]` to share across category builds. */
-export function weaponFacets(weapons: WeaponSummary[]): ReturnType<typeof collectFacets> {
-  return collectFacets(weapons);
-}
-
-/** Perk-name fuzzy index — memoize on `[weaponColumnPerks]`; independent of facets/customFilters. */
-export function weaponPerkFuse(
-  weaponColumnPerks: ReturnType<typeof collectColumnPerks>,
-): ReturnType<typeof createPerkNameFuse> {
-  return createPerkNameFuse(allPerkNames(weaponColumnPerks));
-}
-
 export function buildWeaponCategories(
   weapons: WeaponSummary[],
   weaponColumnPerks: ReturnType<typeof collectColumnPerks>,
   customFilters: CustomWeaponFilter[],
-  facets: ReturnType<typeof collectFacets> = weaponFacets(weapons),
-  perkFuse: ReturnType<typeof createPerkNameFuse> = weaponPerkFuse(weaponColumnPerks),
+  facets: ReturnType<typeof collectFacets> = collectFacets(weapons),
+  perkFuse: ReturnType<typeof createPerkNameFuse> = createPerkNameFuse(
+    allPerkNames(weaponColumnPerks),
+  ),
 ): PaletteCategory[] {
   return [
     perkCategory("trait1", "Trait 1", weaponColumnPerks.trait1, perkFuse),
@@ -186,7 +177,9 @@ export function buildWeaponCategories(
 
 export function buildComposerCategories(
   weaponColumnPerks: ReturnType<typeof collectColumnPerks>,
-  perkFuse: ReturnType<typeof createPerkNameFuse> = weaponPerkFuse(weaponColumnPerks),
+  perkFuse: ReturnType<typeof createPerkNameFuse> = createPerkNameFuse(
+    allPerkNames(weaponColumnPerks),
+  ),
 ): PaletteCategory[] {
   return [perkCategory("trait", "Trait", mergeTraitPerkOptions(weaponColumnPerks), perkFuse)];
 }

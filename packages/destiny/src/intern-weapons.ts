@@ -18,6 +18,15 @@ function withPerksLower(summary: WeaponSummary): WeaponSummary {
   return { ...summary, perksLower: summary.perks.map(lower) };
 }
 
+/**
+ * `JSON.stringify` replacer that omits the re-derivable `perksLower` field from the
+ * serialized index — it's a lowercased duplicate of `perks`, rebuilt at load by
+ * {@link normalizeWeaponIndex}. Shared by `generate.ts`, `write-sample-indexes.ts`,
+ * and the round-trip tests so every on-disk producer emits the same shape.
+ */
+export const stripPerksLowerReplacer = (key: string, value: unknown): unknown =>
+  key === "perksLower" ? undefined : value;
+
 function isLegacyColumn(
   column: InternedPerkColumn | PerkColumn,
 ): column is PerkColumn {
@@ -239,7 +248,9 @@ export function normalizeWeaponIndex(raw: {
       version: raw.version,
       generatedAt: raw.generatedAt,
       perks: [],
-      weapons: raw.weapons as WeaponSummary[],
+      // Already-interned summaries: still re-derive `perksLower` (stripped on disk)
+      // so this exit path honors the WeaponSummary contract like the others.
+      weapons: (raw.weapons as WeaponSummary[]).map(withPerksLower),
       weaponsByPerkName: {},
       damageTypes: raw.damageTypes ?? [],
       weaponTypes: raw.weaponTypes ?? [],

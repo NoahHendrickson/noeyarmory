@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { memo } from "react";
+import { memo, useCallback } from "react";
 import type { ReactNode } from "react";
 import {
   cn,
@@ -273,6 +273,7 @@ const PerkTile = memo(function PerkTile({
 /** One weapon perk column: vertical stack of perk icons (light.gg-style). */
 export function PerkColumnView({
   column,
+  columnIndex,
   linkPerks = true,
   highlightedPerks,
   selectedPerkHash,
@@ -282,17 +283,30 @@ export function PerkColumnView({
   clarityDescriptions,
 }: {
   column: PerkColumn;
+  /** This column's position in the weapon; passed back to the stable parent handlers. */
+  columnIndex: number;
   linkPerks?: boolean;
   /** Lowercase perk names from the community DPS benchmark build. */
   highlightedPerks?: ReadonlySet<string>;
   selectedPerkHash?: number;
-  onSelectPerk?: (perk: PerkRef) => void;
-  onHoverPerk?: (perk: PerkRef) => void;
+  onSelectPerk?: (columnIndex: number, perk: PerkRef) => void;
+  onHoverPerk?: (columnIndex: number, perk: PerkRef) => void;
   onHoverEnd?: () => void;
   clarityDescriptions?: ClarityDescriptionMap | null;
 }) {
   const contextDescriptions = useClarityDescriptions();
   const descriptions = clarityDescriptions ?? contextDescriptions;
+
+  // Bind this column's index into stable per-tile handlers so memo(PerkTile) holds
+  // across parent re-renders (hover-preview / selection churn in the detail modal).
+  const handleSelect = useCallback(
+    (perk: PerkRef) => onSelectPerk?.(columnIndex, perk),
+    [onSelectPerk, columnIndex],
+  );
+  const handleHover = useCallback(
+    (perk: PerkRef) => onHoverPerk?.(columnIndex, perk),
+    [onHoverPerk, columnIndex],
+  );
 
   return (
     <div className="flex flex-col gap-2 pt-2 pb-1.5">
@@ -303,8 +317,8 @@ export function PerkColumnView({
           linkPerks={linkPerks}
           highlighted={highlightedPerks?.has(perk.name.toLowerCase())}
           selected={selectedPerkHash === perk.hash}
-          onSelect={onSelectPerk}
-          onHover={onHoverPerk}
+          onSelect={onSelectPerk ? handleSelect : undefined}
+          onHover={onHoverPerk ? handleHover : undefined}
           onHoverEnd={onHoverEnd}
           clarityDescriptions={descriptions}
         />

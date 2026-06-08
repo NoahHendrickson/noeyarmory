@@ -18,7 +18,12 @@ import {
   type PaletteValueOption,
   type PillSelectOption,
 } from "@repo/ui";
-import { collectColumnPerks, type WeaponSort } from "@repo/destiny";
+import {
+  collectColumnPerks,
+  collectFacets,
+  createPerkNameFuse,
+  type WeaponSort,
+} from "@repo/destiny";
 
 import { useArmorActions } from "../hooks/use-armor-actions";
 import { useArmorSearchResults } from "../hooks/use-armor-search-results";
@@ -34,10 +39,9 @@ import {
   CUSTOM_FILTER_TRAIT_CATEGORY_IDS,
 } from "../lib/palette/constants";
 import {
+  allPerkNames,
   buildComposerCategories,
   buildWeaponCategories,
-  weaponFacets,
-  weaponPerkFuse,
 } from "../lib/palette/weapon-categories";
 import type { PaletteResultsMode } from "../lib/palette/results-mode";
 import { useOwnedArmor } from "../lib/use-owned-armor";
@@ -144,8 +148,11 @@ export function HomeSearch({
   // Facets depend only on weapons; the perk fuse only on the column perks. Memoizing
   // them apart from customFilters avoids rebuilding the fuzzy index when a custom
   // filter is edited (buildWeaponCategories would otherwise recompute both every call).
-  const facets = useMemo(() => weaponFacets(weapons), [weapons]);
-  const perkFuse = useMemo(() => weaponPerkFuse(weaponColumnPerks), [weaponColumnPerks]);
+  const facets = useMemo(() => collectFacets(weapons), [weapons]);
+  const perkFuse = useMemo(
+    () => createPerkNameFuse(allPerkNames(weaponColumnPerks)),
+    [weaponColumnPerks],
+  );
 
   const weaponCategories = useMemo(
     () => buildWeaponCategories(weapons, weaponColumnPerks, customFilters, facets, perkFuse),

@@ -5,6 +5,8 @@ import {
   buildPerkMapFromCatalog,
   enrichAmmoGenerationFromDetails,
   internWeaponCatalog,
+  normalizeWeaponIndex,
+  stripPerksLowerReplacer,
 } from "./intern-weapons";
 import type { PerkRef, WeaponDetailFields, WeaponDoc } from "./types";
 import {
@@ -36,9 +38,7 @@ describe("on-disk perksLower round-trip", () => {
   // generate.ts strips `perksLower` from the serialized index; normalizeWeaponIndex
   // (via buildWeaponIndexLookups) must re-derive it so search functions keep working.
   const onDisk = JSON.parse(
-    JSON.stringify(sampleIndex, (key, value: unknown) =>
-      key === "perksLower" ? undefined : value,
-    ),
+    JSON.stringify(sampleIndex, stripPerksLowerReplacer),
   ) as typeof sampleIndex;
 
   test("serialized index omits perksLower", () => {
@@ -58,6 +58,26 @@ describe("on-disk perksLower round-trip", () => {
     const perkName = sample.perks[0]!;
     const result = filterWeapons(weapons, { perks: [perkName] }, perks);
     expect(result.map((w) => w.hash)).toContain(sample.hash);
+  });
+
+  test("normalizeWeaponIndex re-derives perksLower on the no-legacy fallback path", () => {
+    // Interned (non-legacy) summaries with perksLower stripped AND no perks catalog /
+    // weaponsByPerkName drives normalizeWeaponIndex's `legacy.length === 0` fallback,
+    // which must still honor the WeaponSummary contract by re-deriving perksLower.
+    const stripped = JSON.parse(
+      JSON.stringify(sampleIndex, stripPerksLowerReplacer),
+    ) as typeof sampleIndex;
+    const normalized = normalizeWeaponIndex({
+      version: stripped.version,
+      generatedAt: stripped.generatedAt,
+      weapons: stripped.weapons,
+    });
+    // perks: [] confirms we took the fallback branch, not the interned fast path.
+    expect(normalized.perks).toEqual([]);
+    expect(normalized.weapons).toHaveLength(sampleSummaries.length);
+    for (const w of normalized.weapons) {
+      expect(w.perksLower).toEqual(w.perks.map((p) => p.toLowerCase()));
+    }
   });
 });
 

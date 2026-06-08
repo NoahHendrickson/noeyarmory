@@ -5,6 +5,7 @@ import { config as loadEnv } from "dotenv";
 
 import { buildArmorIndex } from "./build-armor-index";
 import { buildAmmoTypeCatalog, buildWeaponIndex } from "./build-index";
+import { stripPerksLowerReplacer } from "./intern-weapons";
 import { downloadDestinyIconDefinitions, downloadManifest } from "./manifest";
 import { writeSampleIndexes } from "./write-sample-indexes";
 
@@ -36,10 +37,7 @@ async function main(): Promise<void> {
   mkdirSync(dirname(weaponsFile), { recursive: true });
   // Drop `perksLower` from the on-disk index — it's a lowercased duplicate of
   // `perks`, re-derived at load by normalizeWeaponIndex. Saves payload + parse time.
-  writeFileSync(
-    weaponsFile,
-    JSON.stringify(index, (key, value: unknown) => (key === "perksLower" ? undefined : value)),
-  );
+  writeFileSync(weaponsFile, JSON.stringify(index, stripPerksLowerReplacer));
   writeFileSync(weaponsDetailFile, JSON.stringify(detailIndex));
   console.log(`✓ Wrote ${index.weapons.length} weapons → ${weaponsFile}`);
   console.log(`✓ Wrote ${Object.keys(detailIndex.details).length} weapon details → ${weaponsDetailFile}`);
