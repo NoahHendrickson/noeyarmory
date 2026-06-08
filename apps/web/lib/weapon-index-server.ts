@@ -44,6 +44,13 @@ export function getWeaponSummary(hash: number): WeaponSummary | undefined {
   return getWeaponIndex().byHash.get(hash);
 }
 
+/** Resolve a submitted perk name to its canonical lowercase index key, if known. */
+export function getCanonicalPerkName(name: string): string | undefined {
+  const key = name.trim().toLowerCase();
+  if (!key) return undefined;
+  return key in getWeaponIndex().weaponsByPerkNameRecord ? key : undefined;
+}
+
 /** Full weapon doc — merges browse summary with detail fields. */
 export function getWeaponDoc(hash: number): WeaponDoc | undefined {
   const { byHash, perks } = getWeaponIndex();

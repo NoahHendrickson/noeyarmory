@@ -50,10 +50,14 @@ import { ArmorResultRow } from "./armor-result-row";
 import { PopularWeapons } from "./popular-weapons";
 import { WeaponDetailModal } from "./weapon-detail-modal";
 import { WeaponResultRow } from "./weapon-result-row";
+import { trackPerkCommit } from "../lib/track-perk-commit";
 import { trackWeaponView } from "../lib/track-weapon-view";
 import { WeaponModeIcon } from "./icons/weapon-mode-icon";
 
 type Mode = "weapon" | "armor";
+
+/** Palette categories whose options are perks, tracked for perk popularity. */
+const PERK_FILTER_CATEGORIES = new Set(["trait1", "trait2", "originTrait"]);
 
 const WEAPON_MODE_LABEL = (
   <span className="inline-flex items-center gap-1.5">
@@ -345,6 +349,9 @@ export function HomeSearch({
         ];
       });
       if (added) {
+        if (PERK_FILTER_CATEGORIES.has(categoryId)) {
+          trackPerkCommit(option.label, "filter");
+        }
         recordSearch(mode, "", [
           {
             categoryId,
