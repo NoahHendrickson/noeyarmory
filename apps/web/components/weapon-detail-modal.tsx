@@ -5,6 +5,7 @@ import {
   Button,
   cn,
   Dialog,
+  frostedSurface,
   DialogBackdrop,
   DialogClose,
   DialogPopup,
@@ -15,18 +16,16 @@ import type { WeaponDoc, WeaponDpsEntry } from "@repo/destiny";
 
 import { WeaponDetailView } from "./weapon-detail";
 
-/** Match CommandPalette shell — frosted card over the app background. */
-const glassPanel =
-  "border border-border bg-card/35 shadow-lg shadow-black/25 backdrop-blur-xl rounded-2xl";
-
 /** Weapon detail in a modal — the primary in-app path from a search result. */
 export function WeaponDetailModal({
+  open,
   weapon,
   loading,
   dps,
   highlightedBuildPerks,
   onClose,
 }: {
+  open: boolean;
   weapon: WeaponDoc | null;
   loading: boolean;
   dps?: WeaponDpsEntry;
@@ -35,16 +34,23 @@ export function WeaponDetailModal({
 }) {
   return (
     <Dialog
-      open={weapon != null || loading}
-      onOpenChange={(open) => {
-        if (!open) onClose();
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) onClose();
       }}
     >
       <DialogPortal>
-        <DialogBackdrop className="bg-black/10 backdrop-blur-none" />
+        <DialogBackdrop
+          className={cn(
+            "bg-black/10 backdrop-blur-none transition-none",
+            "data-[starting-style]:opacity-100 data-[ending-style]:opacity-100",
+          )}
+        />
         <DialogPopup
           className={cn(
             "relative flex max-h-[85vh] w-full max-w-5xl flex-col gap-2 overflow-hidden border-0 bg-transparent p-0 shadow-none backdrop-blur-none",
+            "transition-none motion-reduce:transition-none",
+            "data-[starting-style]:opacity-100 data-[ending-style]:opacity-100",
           )}
         >
           <DialogTitle className="sr-only">{weapon?.name ?? "Loading weapon"}</DialogTitle>
@@ -55,7 +61,7 @@ export function WeaponDetailModal({
                 size="default"
                 aria-label="Back"
                 className={cn(
-                  "self-start rounded-full border border-border bg-card/55 text-foreground shadow-sm backdrop-blur-xl",
+                  frostedSurface("pill", "self-start rounded-full text-foreground"),
                   "hover:bg-card/70 hover:text-foreground",
                 )}
               />
@@ -64,7 +70,7 @@ export function WeaponDetailModal({
             <ArrowLeft className="size-4" />
             Back
           </DialogClose>
-          <div className={cn("min-h-0 flex-1 overflow-y-auto p-4 sm:p-6", glassPanel)}>
+          <div className={cn("min-h-0 flex-1 overflow-y-auto rounded-2xl p-4 sm:p-6", frostedSurface("panel"))}>
             {weapon ? (
               <WeaponDetailView
                 weapon={weapon}
@@ -76,11 +82,11 @@ export function WeaponDetailModal({
               <div className="grid min-h-[22rem] place-items-center px-10 py-16">
                 <p className="text-muted-foreground text-sm">Loading weapon…</p>
               </div>
-            ) : (
+            ) : open ? (
               <div className="grid min-h-[22rem] place-items-center px-10 py-16">
                 <p className="text-muted-foreground text-sm">Weapon not found.</p>
               </div>
-            )}
+            ) : null}
           </div>
         </DialogPopup>
       </DialogPortal>

@@ -9,6 +9,7 @@
 @source "../app";
 @source "../components";
 @source "../../../packages/ui/src/components";
+@source "../../../packages/ui/src/lib";
 
 @layer base {
   * {

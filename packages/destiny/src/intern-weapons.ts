@@ -12,6 +12,21 @@ import { AMMO_GENERATION_STAT_HASH } from "./weapon-stats";
 
 const lower = (s: string) => s.toLowerCase();
 
+/** Ensure a summary carries `perksLower`, deriving it from `perks` when absent. */
+function withPerksLower(summary: WeaponSummary): WeaponSummary {
+  if (Array.isArray(summary.perksLower)) return summary;
+  return { ...summary, perksLower: summary.perks.map(lower) };
+}
+
+/**
+ * `JSON.stringify` replacer that omits the re-derivable `perksLower` field from the
+ * serialized index — it's a lowercased duplicate of `perks`, rebuilt at load by
+ * {@link normalizeWeaponIndex}. Shared by `generate.ts`, `write-sample-indexes.ts`,
+ * and the round-trip tests so every on-disk producer emits the same shape.
+ */
+export const stripPerksLowerReplacer = (key: string, value: unknown): unknown =>
+  key === "perksLower" ? undefined : value;
+
 function isLegacyColumn(
   column: InternedPerkColumn | PerkColumn,
 ): column is PerkColumn {
@@ -218,7 +233,8 @@ export function normalizeWeaponIndex(raw: {
       version: raw.version,
       generatedAt: raw.generatedAt,
       perks: raw.perks,
-      weapons: raw.weapons as WeaponSummary[],
+      // `perksLower` is omitted from the serialized index — derive it once here.
+      weapons: (raw.weapons as WeaponSummary[]).map(withPerksLower),
       weaponsByPerkName: raw.weaponsByPerkName,
       damageTypes: raw.damageTypes ?? [],
       weaponTypes: raw.weaponTypes ?? [],
@@ -232,7 +248,9 @@ export function normalizeWeaponIndex(raw: {
       version: raw.version,
       generatedAt: raw.generatedAt,
       perks: [],
-      weapons: raw.weapons as WeaponSummary[],
+      // Already-interned summaries: still re-derive `perksLower` (stripped on disk)
+      // so this exit path honors the WeaponSummary contract like the others.
+      weapons: (raw.weapons as WeaponSummary[]).map(withPerksLower),
       weaponsByPerkName: {},
       damageTypes: raw.damageTypes ?? [],
       weaponTypes: raw.weaponTypes ?? [],

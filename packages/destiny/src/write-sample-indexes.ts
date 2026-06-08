@@ -6,7 +6,7 @@ import { sampleAmmoTypes } from "./fixtures/sample-ammo-types";
 import { sampleDamageTypes } from "./fixtures/sample-damage-types";
 import { sampleWeaponTypes } from "./fixtures/sample-weapon-types";
 import { sampleWeapons } from "./fixtures/sample-weapons";
-import { internWeaponCatalog } from "./intern-weapons";
+import { internWeaponCatalog, stripPerksLowerReplacer } from "./intern-weapons";
 import type { ArmorIndex, WeaponIndex } from "./types";
 import { sampleStatGroup } from "./weapon-stats";
 
@@ -50,7 +50,8 @@ export function writeSampleIndexes(
   const armorIndex = buildSampleArmorIndex();
 
   mkdirSync(dirname(weaponsFile), { recursive: true });
-  writeFileSync(weaponsFile, JSON.stringify(weaponIndex));
+  // Match production shape (generate.ts) — strip the re-derivable `perksLower`.
+  writeFileSync(weaponsFile, JSON.stringify(weaponIndex, stripPerksLowerReplacer));
   writeFileSync(weaponsDetailFile, JSON.stringify(detailWithStatGroups));
   writeFileSync(armorFile, JSON.stringify(armorIndex));
 

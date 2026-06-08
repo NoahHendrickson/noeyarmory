@@ -151,7 +151,8 @@ export function customFilterCategory(filters: CustomWeaponFilter[]): PaletteCate
   };
 }
 
-function allPerkNames(cols: ReturnType<typeof collectColumnPerks>): string[] {
+/** Distinct perk names across trait + origin columns — feeds the perk-name fuzzy index. */
+export function allPerkNames(cols: ReturnType<typeof collectColumnPerks>): string[] {
   const names = new Set<string>();
   for (const list of [cols.trait1, cols.trait2, cols.originTrait]) {
     for (const perk of list) names.add(perk.name);
@@ -163,9 +164,11 @@ export function buildWeaponCategories(
   weapons: WeaponSummary[],
   weaponColumnPerks: ReturnType<typeof collectColumnPerks>,
   customFilters: CustomWeaponFilter[],
+  facets: ReturnType<typeof collectFacets> = collectFacets(weapons),
+  perkFuse: ReturnType<typeof createPerkNameFuse> = createPerkNameFuse(
+    allPerkNames(weaponColumnPerks),
+  ),
 ): PaletteCategory[] {
-  const facets = collectFacets(weapons);
-  const perkFuse = createPerkNameFuse(allPerkNames(weaponColumnPerks));
   const [trait1Id, trait2Id, originTraitId] = WEAPON_PERK_FILTER_CATEGORY_IDS;
   return [
     perkCategory(trait1Id, "Trait 1", weaponColumnPerks.trait1, perkFuse),
@@ -185,7 +188,9 @@ export function buildWeaponCategories(
 
 export function buildComposerCategories(
   weaponColumnPerks: ReturnType<typeof collectColumnPerks>,
+  perkFuse: ReturnType<typeof createPerkNameFuse> = createPerkNameFuse(
+    allPerkNames(weaponColumnPerks),
+  ),
 ): PaletteCategory[] {
-  const perkFuse = createPerkNameFuse(allPerkNames(weaponColumnPerks));
   return [perkCategory("trait", "Trait", mergeTraitPerkOptions(weaponColumnPerks), perkFuse)];
 }

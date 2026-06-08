@@ -2,9 +2,11 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { memo, useCallback } from "react";
 import type { ReactNode } from "react";
 import {
   cn,
+  frostedSurface,
   Tooltip,
   TooltipPortal,
   TooltipPopup,
@@ -23,10 +25,6 @@ import {
   hasClarityOrBungieTooltip,
   useClarityDescriptions,
 } from "../lib/clarity-provider";
-
-/** Match weapon detail modal / command palette frosted surfaces. */
-const glassTooltipBase =
-  "relative overflow-hidden border border-border bg-card/35 p-0 shadow-lg shadow-black/25 backdrop-blur-xl";
 
 function perkTooltipMaxWidth(clarityLines: ClarityLine[] | undefined): string {
   if (!clarityLines?.length) return "max-w-md";
@@ -111,7 +109,7 @@ function PerkTooltipContent({
 }
 
 /** One perk icon tile (light.gg-style): outline when rollable, grey when retired. */
-function PerkTile({
+const PerkTile = memo(function PerkTile({
   perk,
   linkPerks,
   size = "md",
@@ -259,7 +257,11 @@ function PerkTile({
           }}
         >
           <TooltipPopup
-            className={cn(glassTooltipBase, perkTooltipMaxWidth(clarityLines), "pointer-events-none")}
+            className={cn(
+              frostedSurface("panel", "relative overflow-hidden p-0"),
+              perkTooltipMaxWidth(clarityLines),
+              "pointer-events-none",
+            )}
           >
             <PerkTooltipContent perk={perk} tiers={tiers} clarityLines={clarityLines} />
           </TooltipPopup>
@@ -267,11 +269,12 @@ function PerkTile({
       </TooltipPortal>
     </Tooltip>
   );
-}
+});
 
 /** One weapon perk column: vertical stack of perk icons (light.gg-style). */
 export function PerkColumnView({
   column,
+  columnIndex,
   linkPerks = true,
   highlightedPerks,
   selectedPerkHash,
@@ -281,17 +284,30 @@ export function PerkColumnView({
   clarityDescriptions,
 }: {
   column: PerkColumn;
+  /** This column's position in the weapon; passed back to the stable parent handlers. */
+  columnIndex: number;
   linkPerks?: boolean;
   /** Lowercase perk names from the community DPS benchmark build. */
   highlightedPerks?: ReadonlySet<string>;
   selectedPerkHash?: number;
-  onSelectPerk?: (perk: PerkRef) => void;
-  onHoverPerk?: (perk: PerkRef) => void;
+  onSelectPerk?: (columnIndex: number, perk: PerkRef) => void;
+  onHoverPerk?: (columnIndex: number, perk: PerkRef) => void;
   onHoverEnd?: () => void;
   clarityDescriptions?: ClarityDescriptionMap | null;
 }) {
   const contextDescriptions = useClarityDescriptions();
   const descriptions = clarityDescriptions ?? contextDescriptions;
+
+  // Bind this column's index into stable per-tile handlers so memo(PerkTile) holds
+  // across parent re-renders (hover-preview / selection churn in the detail modal).
+  const handleSelect = useCallback(
+    (perk: PerkRef) => onSelectPerk?.(columnIndex, perk),
+    [onSelectPerk, columnIndex],
+  );
+  const handleHover = useCallback(
+    (perk: PerkRef) => onHoverPerk?.(columnIndex, perk),
+    [onHoverPerk, columnIndex],
+  );
 
   return (
     <div className="flex flex-col gap-2 pt-2 pb-1.5">
@@ -302,8 +318,8 @@ export function PerkColumnView({
           linkPerks={linkPerks}
           highlighted={highlightedPerks?.has(perk.name.toLowerCase())}
           selected={selectedPerkHash === perk.hash}
-          onSelect={onSelectPerk}
-          onHover={onHoverPerk}
+          onSelect={onSelectPerk ? handleSelect : undefined}
+          onHover={onHoverPerk ? handleHover : undefined}
           onHoverEnd={onHoverEnd}
           clarityDescriptions={descriptions}
         />

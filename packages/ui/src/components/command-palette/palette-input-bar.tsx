@@ -100,7 +100,7 @@ export function PaletteInputBar({
       className={cn(
         "flex min-h-12 items-center justify-between gap-2 border-b pl-3 transition-[border-color] duration-200 ease-out motion-reduce:transition-none sm:h-14 sm:gap-3 sm:pl-[18px]",
         showClearButton ? "pr-6" : "pr-[18px]",
-        open ? "border-border" : "border-transparent",
+        open ? "border-white/16" : "border-transparent",
       )}
       onClick={() => !disabled && !renderBarOverlay && inputRef.current?.focus()}
     >

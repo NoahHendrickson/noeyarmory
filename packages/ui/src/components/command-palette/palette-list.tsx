@@ -1,6 +1,7 @@
 import { ArrowDown, CornerDownLeft, History, ListFilter, X } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
+import { frostedSurface } from "../../lib/frosted-surface";
 import { cn } from "../../lib/utils";
 import { Kbd } from "../kbd";
 import { isSelectableItem, itemKey, PANEL_TRANSITION_MS, splitPreviewTail } from "./palette-reducer";
@@ -87,9 +88,7 @@ export function PaletteList({
 
   const stickyHeaderClass = cn(
     "sticky top-0 z-10 -mx-1.5 px-3 py-1.5 transition-[background-color,backdrop-filter,border-color] duration-150 ease-out motion-reduce:transition-none",
-    stickyHeaderGlass
-      ? "border-b border-border/40 bg-card/55 backdrop-blur-xl"
-      : "border-b border-transparent bg-transparent",
+    stickyHeaderGlass ? frostedSurface("barBordered") : "border-b border-transparent bg-transparent",
   );
 
   function renderRow(item: PaletteItem, index: number, as: "li" | "div" = "li") {
@@ -139,7 +138,7 @@ export function PaletteList({
               className={
                 plainPanelHeader
                   ? "px-3 pb-2"
-                  : "bg-card/55 sticky top-0 z-10 -mx-1.5 border-b border-border/40 px-3 py-1.5 backdrop-blur-xl"
+                  : frostedSurface("barBordered", "sticky top-0 z-10 -mx-1.5 px-3 py-1.5")
               }
             >
               {panelHeader}
@@ -180,7 +179,7 @@ export function PaletteList({
           )}
         </div>
         {panelFooter != null && (open || panelClosing) && (
-          <div className="border-t border-border/40 bg-card/55 shrink-0 backdrop-blur-xl">
+          <div className={frostedSurface("barTop", "shrink-0")}>
             {panelFooter}
           </div>
         )}
@@ -414,7 +413,7 @@ function PaletteListRowContent({
     return (
       <>
         {item.divider && (
-          <div className="border-border/40 -mx-1.5 my-1.5 border-t" role="separator" aria-hidden />
+          <div className="-mx-1.5 my-1.5 border-t border-white/12" role="separator" aria-hidden />
         )}
         {item.label && (
           <div
