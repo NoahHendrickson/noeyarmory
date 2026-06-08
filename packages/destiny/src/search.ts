@@ -228,6 +228,82 @@ export function filterWeaponNames(
   return matches;
 }
 
+const MIN_WEAPON_NAME_QUERY_LENGTH = 2;
+
+function appendUniqueWeapons(
+  seen: Set<number>,
+  target: WeaponSummary[],
+  list: WeaponSummary[],
+): void {
+  for (const weapon of list) {
+    if (!seen.has(weapon.hash)) {
+      seen.add(weapon.hash);
+      target.push(weapon);
+    }
+  }
+}
+
+/** Collect exact name hits plus fuse matches for a text query, deduped. */
+export function weaponsMatchingTextQuery(
+  weapons: WeaponSummary[],
+  fuse: Fuse<WeaponSummary>,
+  query: string,
+  limit: number,
+): WeaponSummary[] {
+  const q = query.trim();
+  if (q.length < MIN_WEAPON_NAME_QUERY_LENGTH) return weapons;
+
+  const seen = new Set<number>();
+  const merged: WeaponSummary[] = [];
+
+  const rankedNames = filterWeaponNames(weapons, q).sort(
+    (a, b) =>
+      a.searchRank - b.searchRank ||
+      b.count - a.count ||
+      a.value.localeCompare(b.value),
+  );
+  for (const { value } of rankedNames) {
+    appendUniqueWeapons(
+      seen,
+      merged,
+      weapons.filter((weapon) => weapon.name === value),
+    );
+  }
+
+  appendUniqueWeapons(
+    seen,
+    merged,
+    fuse.search(q, { limit }).map((result) => result.item),
+  );
+
+  return merged;
+}
+
+/** Sort weapons with exact name matches pinned above the rest; both groups respect `sort`. */
+export function rankWeaponResults(
+  weapons: WeaponSummary[],
+  query: string,
+  sort: WeaponSort,
+  dpsByName?: WeaponDpsLookup,
+): WeaponSummary[] {
+  const q = query.trim();
+  if (q.length < MIN_WEAPON_NAME_QUERY_LENGTH) {
+    return sortWeapons(weapons, sort, dpsByName);
+  }
+
+  const nameMatches = new Set(filterWeaponNames(weapons, q).map((match) => match.value));
+  const nameMatched: WeaponSummary[] = [];
+  const rest: WeaponSummary[] = [];
+  for (const weapon of weapons) {
+    (nameMatches.has(weapon.name) ? nameMatched : rest).push(weapon);
+  }
+
+  return [
+    ...sortWeapons(nameMatched, sort, dpsByName),
+    ...sortWeapons(rest, sort, dpsByName),
+  ];
+}
+
 /** Predict weapon names from a partial query — name-only, ranked best-first. */
 export function suggestWeaponNames(
   weapons: WeaponSummary[],

@@ -83,6 +83,8 @@ export {
   collectPerks,
   collectColumnPerks,
   filterWeaponNames,
+  weaponsMatchingTextQuery,
+  rankWeaponResults,
   suggestWeaponNames,
   buildPerkMap,
   buildWeaponsByPerkName,
@@ -94,6 +96,7 @@ export {
 } from "./search";
 export {
   buildWeaponIndexLookups,
+  refreshWeaponSummaries,
   type WeaponIndexLookups,
 } from "./weapon-index-lookups";
 export {

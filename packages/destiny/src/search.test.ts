@@ -10,10 +10,14 @@ import {
   filterWeaponNames,
   filterWeapons,
   fuzzySearchWeapons,
+  rankWeaponResults,
   sortWeapons,
   suggestWeaponNames,
+  weaponsMatchingTextQuery,
   weaponsWithPerk,
+  createWeaponFuse,
 } from "./search";
+import { buildWeaponIndexLookups, refreshWeaponSummaries } from "./weapon-index-lookups";
 
 const { index: sampleIndex } = internWeaponCatalog(sampleWeapons, "sample");
 const sampleSummaries = sampleIndex.weapons;
@@ -207,6 +211,56 @@ describe("filterWeaponNames", () => {
     const matches = filterWeaponNames(sampleSummaries, "fate");
     expect(matches.some((m) => m.value === "Fatebringer")).toBe(true);
     expect(matches.find((m) => m.value === "Fatebringer")?.searchRank).toBeLessThanOrEqual(1);
+  });
+});
+
+describe("weaponsMatchingTextQuery", () => {
+  test("includes exact name matches before fuse-only matches", () => {
+    const fuse = createWeaponFuse(sampleSummaries);
+    const matches = weaponsMatchingTextQuery(sampleSummaries, fuse, "fate", 20);
+    expect(matches[0]?.name).toBe("Fatebringer");
+  });
+});
+
+describe("rankWeaponResults", () => {
+  test("pins exact name matches above other hits while respecting sort", () => {
+    const summaries = sampleSummaries.map((weapon) => {
+      if (weapon.name === "Fatebringer") return { ...weapon, ammoGeneration: 50 };
+      if (weapon.name === "Sunshot Scout") return { ...weapon, ammoGeneration: 99 };
+      return weapon;
+    });
+    const fuse = createWeaponFuse(summaries);
+    const candidates = weaponsMatchingTextQuery(summaries, fuse, "sun", 20);
+
+    expect(
+      rankWeaponResults(candidates, "sun", "ammo-gen-desc").map((weapon) => weapon.name),
+    ).toEqual(["Sunshot Scout", "Sunlit Fusion"]);
+  });
+
+  test("falls back to sort-only when the query is too short", () => {
+    expect(rankWeaponResults(sampleSummaries, "s", "name").map((w) => w.name)).toEqual(
+      orderedNames(sortWeapons(sampleSummaries, "name")),
+    );
+  });
+});
+
+describe("refreshWeaponSummaries", () => {
+  test("rebuilds byHash after enriching summaries", () => {
+    const lookups = buildWeaponIndexLookups(sampleIndex);
+    const enriched = sampleSummaries.map((weapon) =>
+      weapon.name === "Fatebringer" ? { ...weapon, ammoGeneration: 42 } : weapon,
+    );
+
+    const refreshed = refreshWeaponSummaries(lookups, enriched);
+
+    expect(refreshed.weapons.find((w) => w.name === "Fatebringer")?.ammoGeneration).toBe(42);
+    expect(refreshed.byHash.get(1)?.ammoGeneration).toBe(42);
+    expect(refreshed).not.toBe(lookups);
+  });
+
+  test("returns the same lookups object when weapons are unchanged", () => {
+    const lookups = buildWeaponIndexLookups(sampleIndex);
+    expect(refreshWeaponSummaries(lookups, lookups.weapons)).toBe(lookups);
   });
 });
 

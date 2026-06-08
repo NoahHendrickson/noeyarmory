@@ -6,6 +6,7 @@ import {
   enrichAmmoGenerationFromDetails,
   expandWeapon,
   internWeaponCatalog,
+  refreshWeaponSummaries,
   sampleAmmoTypes,
   sampleDamageTypes,
   sampleStatGroup,
@@ -84,25 +85,7 @@ function applyAmmoGenerationEnrichment(): void {
   if (!moduleCache || !detailCache) return;
 
   const weapons = enrichAmmoGenerationFromDetails(moduleCache.weapons, detailCache);
-  if (weapons === moduleCache.weapons) return;
-
-  const byHash = new Map(weapons.map((weapon) => [weapon.hash, weapon]));
-  const weaponsByPerkName = new Map<string, WeaponSummary[]>();
-  for (const [name, hashes] of Object.entries(moduleCache.weaponsByPerkNameRecord)) {
-    weaponsByPerkName.set(
-      name,
-      hashes
-        .map((hash) => byHash.get(hash))
-        .filter((weapon): weapon is WeaponSummary => weapon != null),
-    );
-  }
-
-  moduleCache = {
-    ...moduleCache,
-    weapons,
-    byHash,
-    weaponsByPerkName,
-  };
+  moduleCache = refreshWeaponSummaries(moduleCache, weapons);
 }
 
 async function seedSampleDetails(): Promise<void> {
@@ -144,6 +127,7 @@ async function ensureDetailCache(): Promise<void> {
 
   if (isSampleCache) {
     await seedSampleDetails();
+    applyAmmoGenerationEnrichment();
     return;
   }
 
