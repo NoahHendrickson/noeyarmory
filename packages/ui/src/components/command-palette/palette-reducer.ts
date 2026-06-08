@@ -1,6 +1,11 @@
 import { rankLabeledOptions } from "@repo/search-rank";
 
-import { MAX_VALUE_SUGGESTIONS, parsePopularity, scanValueSuggestions } from "../../lib/palette-suggestions";
+import {
+  MAX_VALUE_SUGGESTIONS,
+  parsePopularity,
+  scanValueSuggestions,
+  type ValueSuggestion,
+} from "../../lib/palette-suggestions";
 import type {
   DormantSnapshot,
   ListMode,
@@ -16,6 +21,11 @@ import type {
 } from "./types";
 
 export const PANEL_TRANSITION_MS = 200;
+
+/** Draft query with no committed chips — defer preview rows until the open animation settles. */
+export function shouldDeferPreviews(query: string, chipsLength: number): boolean {
+  return query.trim().length > 0 && chipsLength === 0;
+}
 
 /** True when a dormant snapshot still matches the current draft input. */
 export function dormantSnapshotMatches(
@@ -175,17 +185,11 @@ export function draftListMode(
   return listMode("categories", showResults, query, browseFilters, resultsWhileFiltering);
 }
 
-/** Match filter values across all categories (e.g. "surr" → Trait 2 · Surrounded). */
-export function searchValueSuggestions(
+/** Map ranked value suggestions to palette chip-suggestion rows. */
+export function valueSuggestionsToChipItems(
+  suggestions: ValueSuggestion[],
   categories: PaletteCategory[],
-  query: string,
-  chips: PaletteChip[],
-  recentValues?: ReadonlySet<string>,
 ): PaletteItem[] {
-  const suggestions = scanValueSuggestions(categories, query, chips, {
-    limit: MAX_VALUE_SUGGESTIONS,
-    recentValues,
-  });
   const categoryById = new Map(categories.map((c) => [c.id, c] as const));
 
   return suggestions.flatMap((s) => {
@@ -199,6 +203,20 @@ export function searchValueSuggestions(
       },
     ];
   });
+}
+
+/** Match filter values across all categories (e.g. "surr" → Trait 2 · Surrounded). */
+export function searchValueSuggestions(
+  categories: PaletteCategory[],
+  query: string,
+  chips: PaletteChip[],
+  recentValues?: ReadonlySet<string>,
+): PaletteItem[] {
+  const suggestions = scanValueSuggestions(categories, query, chips, {
+    limit: MAX_VALUE_SUGGESTIONS,
+    recentValues,
+  });
+  return valueSuggestionsToChipItems(suggestions, categories);
 }
 
 export function buildValuesModeItems(

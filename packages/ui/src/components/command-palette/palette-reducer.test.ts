@@ -2,9 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import {
   dormantSnapshotMatches,
-  draftListMode,
+  shouldDeferPreviews,
   splitPreviewTail,
   stripPreviewItems,
+  valueSuggestionsToChipItems,
 } from "./palette-reducer";
 import type { PaletteItem } from "./types";
 
@@ -23,14 +24,31 @@ describe("dormantSnapshotMatches", () => {
   });
 });
 
-describe("draftListMode", () => {
-  it("returns categories when draft query only", () => {
-    expect(draftListMode(true, false, "demo", false)).toBe("categories");
+describe("shouldDeferPreviews", () => {
+  it("returns true for draft query with no chips", () => {
+    expect(shouldDeferPreviews(" surr ", 0)).toBe(true);
   });
 
-  it("returns null when not draft query only (idle or chip-only at call site)", () => {
-    expect(draftListMode(false, false, "demo", false)).toBeNull();
-    expect(draftListMode(false, false, "", false)).toBeNull();
+  it("returns false when query is empty or chips are present", () => {
+    expect(shouldDeferPreviews("", 0)).toBe(false);
+    expect(shouldDeferPreviews("surr", 1)).toBe(false);
+  });
+});
+
+describe("valueSuggestionsToChipItems", () => {
+  it("maps suggestions to chipSuggestion rows", () => {
+    const category = { id: "trait1", label: "Trait 1", getValues: () => [] };
+    const items = valueSuggestionsToChipItems(
+      [{ categoryId: "trait1", valueId: "surrounded", value: "Surrounded", hint: "50" }],
+      [category],
+    );
+
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({
+      kind: "chipSuggestion",
+      category,
+      option: { id: "surrounded", label: "Surrounded", hint: "50" },
+    });
   });
 });
 

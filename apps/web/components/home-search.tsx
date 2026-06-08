@@ -12,8 +12,6 @@ import {
   type PaletteAction,
   type PaletteCategory,
   type PaletteChip,
-  type PaletteItem,
-  type PalettePanelState,
   type PaletteRecentItem,
   type PaletteValueOption,
   type PillSelectOption,
@@ -21,11 +19,7 @@ import {
 import { collectColumnPerks, type WeaponSort } from "@repo/destiny";
 
 import { useArmorActions } from "../hooks/use-armor-actions";
-import { useArmorSearchResults } from "../hooks/use-armor-search-results";
-import { usePaletteGhostCompletion } from "../hooks/use-palette-ghost-completion";
-import { usePaletteInlineSuggestions } from "../hooks/use-palette-inline-suggestions";
-import { usePaletteSubmit } from "../hooks/use-palette-submit";
-import { useWeaponSearchResults } from "../hooks/use-weapon-search-results";
+import { useHomeSearchPaletteState } from "../hooks/use-home-search-palette-state";
 import { buildArmorCategories } from "../lib/palette/armor-categories";
 import {
   ARMOR_LOGIN_URL,
@@ -80,16 +74,6 @@ interface CustomFilterComposer {
   perkNames: string[];
 }
 
-function draftPerkChips(perkNames: string[]): PaletteChip[] {
-  return perkNames.map((name) => ({
-    id: `draft:${name.toLowerCase()}`,
-    categoryId: CUSTOM_FILTER_DRAFT_CATEGORY_ID,
-    categoryLabel: "Perk",
-    value: name,
-    valueId: name.toLowerCase(),
-  }));
-}
-
 export function HomeSearch({
   signedIn = false,
   initialMode = "weapon",
@@ -113,18 +97,6 @@ export function HomeSearch({
   } = useOwnedArmor(armorEnabled);
   const { armorAction, runArmorAction, clearArmorAction } = useArmorActions(refetchArmor);
 
-  const [query, setQuery] = useState("");
-  const [chips, setChips] = useState<PaletteChip[]>([]);
-  const [paletteOpen, setPaletteOpen] = useState(false);
-  const [previewUnlocked, setPreviewUnlocked] = useState(false);
-  const [panelState, setPanelState] = useState<PalettePanelState>({
-    panel: "closed",
-    categoryId: null,
-    valueQuery: "",
-  });
-  const handlePanelStateChange = useCallback((state: PalettePanelState) => {
-    setPanelState(state);
-  }, []);
   const [sort, setSort] = useState<WeaponSort>("season-desc");
   const [showAllResults, setShowAllResults] = useState(false);
   const [resultsMode, setResultsMode] = useState<PaletteResultsMode | null>(null);
@@ -156,10 +128,6 @@ export function HomeSearch({
       ? weaponCategories
       : armorCategories;
 
-  const paletteChips = composingCustomFilter
-    ? draftPerkChips(customFilterComposer!.perkNames)
-    : chips;
-
   const recentValues = useMemo(() => {
     const values = new Set<string>();
     for (const search of getRecentForMode(mode)) {
@@ -172,85 +140,48 @@ export function HomeSearch({
     return values;
   }, [getRecentForMode, mode]);
 
-  useEffect(() => {
-    if (!paletteOpen) {
-      setPreviewUnlocked(false);
-      return;
-    }
-    const deferPreviews = query.trim().length > 0 && paletteChips.length === 0;
-    if (!deferPreviews) {
-      setPreviewUnlocked(true);
-      return;
-    }
-    setPreviewUnlocked(false);
-    const timer = setTimeout(() => setPreviewUnlocked(true), PANEL_TRANSITION_MS);
-    return () => clearTimeout(timer);
-  }, [paletteOpen, query, paletteChips.length]);
-
-  const previewsEnabled = paletteOpen && previewUnlocked;
-  const suggestionScanEnabled = paletteOpen && !composingCustomFilter;
-  const inlineSuggestions = usePaletteInlineSuggestions({
-    enabled: suggestionScanEnabled,
-    categories,
-    chips: paletteChips,
-    query,
-    recentValues,
-  });
-
-  const chipSuggestions = useMemo<PaletteItem[] | undefined>(() => {
-    if (!suggestionScanEnabled) return undefined;
-    const categoryById = new Map(categories.map((c) => [c.id, c] as const));
-    return inlineSuggestions.flatMap((s) => {
-      const category = categoryById.get(s.categoryId);
-      if (!category) return [];
-      return [
-        {
-          kind: "chipSuggestion" as const,
-          category,
-          option: { id: s.valueId, label: s.value, hint: s.hint },
-        },
-      ];
-    });
-  }, [suggestionScanEnabled, inlineSuggestions, categories]);
-
   const {
+    query,
+    setQuery,
+    chips,
+    setChips,
+    paletteOpen,
+    setPaletteOpen,
+    setPreviewsReady,
+    previewsEnabled,
+    handlePanelStateChange,
+    chipSuggestions,
+    ghostCompletion,
+    ghostSuffixText,
+    handleSubmit,
+    addChip,
+    paletteChips,
     weaponShown,
     weaponPreviewWeapons,
-    resultCount: weaponResultCount,
-    shownCount: weaponShownCount,
-  } = useWeaponSearchResults({
+    weaponResultCount,
+    weaponShownCount,
+    armorShown,
+    armorPreviewItems,
+    armorResultCount,
+    armorShownCount,
+  } = useHomeSearchPaletteState({
+    mode,
     weapons,
     perks,
-    chips,
+    owned,
     customFilters,
-    query,
-    panelState,
     weaponCategories,
+    categories,
+    composingCustomFilter,
+    draftPerkNames: customFilterComposer?.perkNames ?? [],
     sort,
     dpsByName,
     showAllResults,
-    composingCustomFilter,
-    mode,
     resultsMode,
-    paletteOpen,
-    previewsEnabled,
-    inlineSuggestions,
+    recentValues,
+    recordSearch,
+    setResultsMode,
   });
-
-  const {
-    armorShown,
-    armorPreviewItems,
-    resultCount: armorResultCount,
-    shownCount: armorShownCount,
-  } = useArmorSearchResults(
-    owned,
-    chips,
-    query,
-    showAllResults,
-    paletteOpen,
-    previewsEnabled,
-    inlineSuggestions,
-  );
 
   const resultCount = mode === "weapon" ? weaponResultCount : armorResultCount;
   const shownCount = mode === "weapon" ? weaponShownCount : armorShownCount;
@@ -323,59 +254,6 @@ export function HomeSearch({
     },
     [armorById, armorPreviewById, armorAction, runArmorAction],
   );
-
-  const addChip = useCallback(
-    (categoryId: string, option: PaletteValueOption) => {
-      const category = categories.find((c) => c.id === categoryId);
-      if (!category) return;
-      const id = `${categoryId}:${option.id}`;
-      let added = false;
-      setChips((prev) => {
-        if (prev.some((c) => c.id === id)) return prev;
-        added = true;
-        return [
-          ...prev,
-          {
-            id,
-            categoryId,
-            categoryLabel: category.label,
-            value: option.label,
-            valueId: option.id,
-          },
-        ];
-      });
-      if (added) {
-        recordSearch(mode, "", [
-          {
-            categoryId,
-            categoryLabel: category.label,
-            value: option.label,
-            valueId: option.id,
-          },
-        ]);
-      }
-    },
-    [categories, mode, recordSearch],
-  );
-
-  const { ghostCompletion, ghostSuffix: ghostSuffixText } = usePaletteGhostCompletion({
-    enabled: suggestionScanEnabled,
-    query,
-    mode,
-    inlineSuggestions,
-    weapons,
-    recentValues,
-  });
-
-  const handleSubmit = usePaletteSubmit({
-    query,
-    mode,
-    weapons,
-    composingCustomFilter,
-    addChip,
-    setQuery,
-    setResultsMode,
-  });
 
   const addComposerPerk = useCallback((categoryId: string, option: PaletteValueOption) => {
     if (!CUSTOM_FILTER_TRAIT_CATEGORY_IDS.has(categoryId)) return;
@@ -696,6 +574,7 @@ export function HomeSearch({
             onQueryChange={setQuery}
             onSubmit={handleSubmit}
             onPanelStateChange={handlePanelStateChange}
+            onPreviewsReadyChange={setPreviewsReady}
             showResults={showResults}
             resultsWhileFiltering={resultsWhileFiltering}
             ghostCompletion={paletteOpen ? ghostCompletion : undefined}

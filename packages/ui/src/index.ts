@@ -32,6 +32,7 @@ export {
   type PaletteItem,
   PANEL_TRANSITION_MS,
   searchValueSuggestions,
+  valueSuggestionsToChipItems,
 } from "./components/command-palette/command-palette";
 export {
   availableCategories,
