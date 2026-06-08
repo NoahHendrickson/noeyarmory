@@ -86,6 +86,12 @@ export interface CommandPaletteProps {
   onSubmit?: () => void;
   /** When true and query is empty, the list shows `results` instead of categories. */
   showResults?: boolean;
+  /** When true with `showResults`, keep results mode while the user is still typing. */
+  resultsWhileFiltering?: boolean;
+  /** Full string applied when the user presses Tab to accept ghost completion. */
+  ghostCompletion?: string;
+  /** Muted suffix shown after the typed query (derived from `ghostCompletion`). */
+  ghostSuffix?: string;
   /** Weapon (or other) hits rendered inside the palette list. */
   results?: PaletteResultItem[];
   onSelectResult?: (id: string) => void;
@@ -137,6 +143,8 @@ export interface CommandPaletteProps {
   previewResults?: PaletteResultItem[];
   /** Section label above `previewResults` rows. */
   previewSectionLabel?: string;
+  /** Recent chip/value labels used to boost inline suggestions. */
+  recentValues?: ReadonlySet<string>;
   /** Fired when drill state changes so consumers can compute preview filters. */
   onPanelStateChange?: (state: PalettePanelState) => void;
   className?: string;

@@ -57,6 +57,17 @@ export {
   isLegacyWeaponDoc,
 } from "./intern-weapons";
 export {
+  matchRank,
+  effectiveRank,
+  rankLabeledOptions,
+  ghostSuffix,
+  bestGhostSuffix,
+  createPerkNameFuse,
+  suggestPerkNames,
+  type RankedLabel,
+  type PerkNameEntry,
+} from "./suggest";
+export {
   filterWeapons,
   sortWeapons,
   weaponsWithPerk,
@@ -93,6 +104,7 @@ export {
 } from "./armor-search";
 export {
   collectOwnedArmorFacets,
+  createOwnedArmorFuse,
   filterOwnedArmor,
   searchOwnedArmor,
   sortOwnedArmor,

@@ -335,14 +335,13 @@ export const ClearsQueryOnCategorySelect: Story = {
   },
 };
 
-export const TabMovesSelection: Story = {
+export const ArrowDownMovesSelection: Story = {
   render: () => <Demo />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("combobox"));
     await waitFor(() => expect(canvas.getByRole("option", { name: /Trait 1/ })).toBeInTheDocument());
-    // Trait 1 is active first; Tab moves to Trait 2.
-    await userEvent.keyboard("{Tab}");
+    await userEvent.keyboard("{ArrowDown}");
     const trait2Option = canvas.getByRole("option", { name: /Trait 2/ });
     await expect(trait2Option).toHaveAttribute("aria-selected", "true");
   },
@@ -375,10 +374,40 @@ export const DraftChipWhisperFollowsHighlight: Story = {
     );
     const chipInput = canvas.getByRole("combobox");
     await expect(chipInput).toHaveAttribute("placeholder", "Firefly");
-    await userEvent.keyboard("{Tab}");
+    await userEvent.keyboard("{ArrowDown}");
     await waitFor(() => expect(chipInput).toHaveAttribute("placeholder", "Explosive Payload"));
     await userEvent.hover(canvas.getByRole("option", { name: /Firefly/ }));
     await waitFor(() => expect(chipInput).toHaveAttribute("placeholder", "Firefly"));
+  },
+};
+
+export const TabAcceptsGhostCompletion: Story = {
+  render: () => {
+    const [query, setQuery] = useState("Fire");
+    const [open, setOpen] = useState(true);
+    return (
+      <CommandPalette
+        placeholder="Press F to search"
+        categories={CATEGORIES}
+        chips={[]}
+        open={open}
+        onOpenChange={setOpen}
+        query={query}
+        onQueryChange={setQuery}
+        onAddChip={fn()}
+        onRemoveChip={fn()}
+        ghostCompletion="Firefly"
+        ghostSuffix="fly"
+      />
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const input = canvas.getByRole("combobox");
+    await userEvent.click(input);
+    await expect(input).toHaveValue("Fire");
+    await userEvent.keyboard("{Tab}");
+    await waitFor(() => expect(input).toHaveValue("Firefly"));
   },
 };
 
@@ -665,7 +694,7 @@ export const ShowsPreviewWhileDrilling: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("combobox"));
-    await userEvent.keyboard("{ArrowDown}{ArrowDown}{Enter}");
+    await userEvent.keyboard("{ArrowDown}{Enter}");
     await waitFor(() =>
       expect(canvas.getByLabelText(/filtering by trait 2/i)).toBeInTheDocument(),
     );

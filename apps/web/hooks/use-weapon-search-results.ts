@@ -15,12 +15,13 @@ import {
 } from "@repo/destiny";
 
 import {
-  FUSE_PRE_LIMIT,
   MAX_PREVIEW_RESULTS,
   MAX_RESULTS,
   MAX_SHOW_ALL,
 } from "../lib/palette/constants";
 import { chipsToWeaponFilters, withHypotheticalChip } from "../lib/palette/weapon-filters";
+
+const MIN_TEXT_SEARCH_LENGTH = 2;
 
 export interface UseWeaponSearchResultsParams {
   weapons: WeaponSummary[];
@@ -35,6 +36,8 @@ export interface UseWeaponSearchResultsParams {
   showAllResults: boolean;
   composingCustomFilter: boolean;
   mode: "weapon" | "armor";
+  textResultsMode?: boolean;
+  recentValues?: ReadonlySet<string>;
 }
 
 export function useWeaponSearchResults({
@@ -50,6 +53,8 @@ export function useWeaponSearchResults({
   showAllResults,
   composingCustomFilter,
   mode,
+  textResultsMode = false,
+  recentValues,
 }: UseWeaponSearchResultsParams) {
   const weaponFilters = useMemo(
     () => chipsToWeaponFilters(chips, customFilters),
@@ -62,11 +67,21 @@ export function useWeaponSearchResults({
 
   const weaponResults = useMemo(() => {
     const q = deferredQuery.trim();
-    const base = q
-      ? weaponFuse.search(q, { limit: FUSE_PRE_LIMIT }).map((r) => r.item)
+    const shouldFuse = q.length >= MIN_TEXT_SEARCH_LENGTH && (textResultsMode || q.length > 0);
+    const base = shouldFuse
+      ? weaponFuse.search(q, { limit: textResultsMode ? MAX_SHOW_ALL : 300 }).map((r) => r.item)
       : weapons;
     return sortWeapons(filterWeapons(base, weaponFilters, perks), sort, dpsByName);
-  }, [weaponFuse, weapons, perks, deferredQuery, weaponFilters, sort, dpsByName]);
+  }, [
+    weaponFuse,
+    weapons,
+    perks,
+    deferredQuery,
+    weaponFilters,
+    sort,
+    dpsByName,
+    textResultsMode,
+  ]);
 
   const resultLimit = showAllResults ? MAX_SHOW_ALL : MAX_RESULTS;
   const weaponShown = weaponResults.slice(0, resultLimit);
@@ -75,6 +90,28 @@ export function useWeaponSearchResults({
     if (mode !== "weapon" || composingCustomFilter) return [];
 
     const base = chipsToWeaponFilters(chips, customFilters);
+    const seen = new Set<number>();
+    const merged: WeaponSummary[] = [];
+
+    const appendWeapons = (list: WeaponSummary[]) => {
+      for (const weapon of list) {
+        if (!seen.has(weapon.hash)) {
+          seen.add(weapon.hash);
+          merged.push(weapon);
+        }
+      }
+    };
+
+    const q = deferredQuery.trim();
+    if (q.length >= MIN_TEXT_SEARCH_LENGTH) {
+      const textMatches = filterWeapons(
+        weaponFuse.search(q, { limit: MAX_PREVIEW_RESULTS }).map((r) => r.item),
+        base,
+        perks,
+      );
+      appendWeapons(textMatches);
+    }
+
     let filterSets: WeaponFilters[] = [];
 
     if (
@@ -91,30 +128,24 @@ export function useWeaponSearchResults({
             withHypotheticalChip(base, category.id, option.label, option.id, customFilters),
           );
       }
-    } else if (deferredPanelState.panel === "categories" && deferredQuery.trim()) {
+    } else if (deferredPanelState.panel === "categories" && q) {
       const suggestions = scanValueSuggestions(
         availableCategories(weaponCategories, chips),
-        deferredQuery,
+        q,
         chips,
-        MAX_PREVIEW_RESULTS,
+        { limit: MAX_PREVIEW_RESULTS, recentValues },
       );
       filterSets = suggestions.map((s) =>
         withHypotheticalChip(base, s.categoryId, s.value, s.valueId, customFilters),
       );
     }
 
-    if (filterSets.length === 0) return [];
-
-    const seen = new Set<number>();
-    const merged: WeaponSummary[] = [];
     for (const filters of filterSets) {
-      for (const weapon of filterWeapons(weapons, filters, perks)) {
-        if (!seen.has(weapon.hash)) {
-          seen.add(weapon.hash);
-          merged.push(weapon);
-        }
-      }
+      appendWeapons(filterWeapons(weapons, filters, perks));
     }
+
+    if (merged.length === 0) return [];
+
     return sortWeapons(merged, sort, dpsByName).slice(0, MAX_PREVIEW_RESULTS);
   }, [
     mode,
@@ -128,6 +159,8 @@ export function useWeaponSearchResults({
     perks,
     sort,
     dpsByName,
+    weaponFuse,
+    recentValues,
   ]);
 
   return {

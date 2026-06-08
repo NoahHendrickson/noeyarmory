@@ -2,6 +2,9 @@ import type { PaletteCategory } from "@repo/ui";
 import {
   collectColumnPerks,
   collectFacets,
+  createPerkNameFuse,
+  rankLabeledOptions,
+  suggestPerkNames,
   suggestWeaponNames,
   type FacetOption,
   type ModOption,
@@ -14,6 +17,30 @@ import { CUSTOM_FILTER_CATEGORY_ID } from "./constants";
 
 function formatExamples(labels: string[], limit = 3): string {
   return labels.slice(0, limit).join(", ");
+}
+
+function rankedFacetOptions(
+  options: FacetOption[],
+  q: string,
+  recentValues?: ReadonlySet<string>,
+) {
+  const ql = q.trim();
+  if (!ql) {
+    return options.map((o) => ({ id: o.value.toLowerCase(), label: o.value, hint: String(o.count) }));
+  }
+  return rankLabeledOptions(
+    options.map((o) => ({ label: o.value, popularity: o.count })),
+    ql,
+    options.length,
+    recentValues,
+  ).map(({ label, popularity }) => {
+    const source = options.find((o) => o.value === label);
+    return {
+      id: label.toLowerCase(),
+      label,
+      hint: String(source?.count ?? popularity),
+    };
+  });
 }
 
 export function weaponNameCategory(weapons: WeaponSummary[]): PaletteCategory {
@@ -37,12 +64,7 @@ export function facetCategory(id: string, label: string, options: FacetOption[])
     id,
     label,
     examples: formatExamples(options.map((option) => option.value)),
-    getValues: (q) => {
-      const ql = q.trim().toLowerCase();
-      return options
-        .filter((o) => !ql || o.value.toLowerCase().includes(ql))
-        .map((o) => ({ id: o.value.toLowerCase(), label: o.value, hint: String(o.count) }));
-    },
+    getValues: (q) => rankedFacetOptions(options, q),
   };
 }
 
@@ -50,6 +72,8 @@ export function perkCategory(
   id: string,
   label: string,
   options: PerkOption[] | ModOption[],
+  perkFuse: ReturnType<typeof createPerkNameFuse> | null = null,
+  recentValues?: ReadonlySet<string>,
 ): PaletteCategory {
   return {
     id,
@@ -60,15 +84,29 @@ export function perkCategory(
       2,
     ),
     getValues: (q) => {
-      const ql = q.trim().toLowerCase();
-      return options
-        .filter((o) => !ql || o.name.toLowerCase().includes(ql))
-        .map((o) => ({
+      const ql = q.trim();
+      if (!ql) {
+        return options.map((o) => ({
           id: o.name.toLowerCase(),
           label: o.name,
           hint: String(o.count),
           dimmed: "currentlyCanRoll" in o && o.currentlyCanRoll === false,
         }));
+      }
+      const names = options.map((o) => o.name);
+      const ranked = suggestPerkNames(names, ql, perkFuse, options.length, recentValues);
+      return ranked.map(({ label: perkName }) => {
+        const source = options.find((o) => o.name === perkName);
+        if (!source) {
+          return { id: perkName.toLowerCase(), label: perkName, hint: "0" };
+        }
+        return {
+          id: source.name.toLowerCase(),
+          label: source.name,
+          hint: String(source.count),
+          dimmed: "currentlyCanRoll" in source && source.currentlyCanRoll === false,
+        };
+      });
     },
   };
 }
@@ -97,16 +135,32 @@ export function customFilterCategory(filters: CustomWeaponFilter[]): PaletteCate
       2,
     ),
     getValues: (q) => {
-      const ql = q.trim().toLowerCase();
-      return filters
-        .filter((filter) => !ql || filter.name.toLowerCase().includes(ql))
-        .map((filter) => ({
+      const ql = q.trim();
+      const items = filters.map((filter) => ({
+        label: filter.name,
+        popularity: filter.perkNames.length,
+      }));
+      const ranked = ql
+        ? rankLabeledOptions(items, ql, filters.length)
+        : items.map((item) => ({ ...item, rank: 0 }));
+      return ranked.map(({ label: filterName }) => {
+        const filter = filters.find((f) => f.name === filterName)!;
+        return {
           id: filter.id,
           label: filter.name,
           hint: `${filter.perkNames.length} ${filter.perkNames.length === 1 ? "perk" : "perks"}`,
-        }));
+        };
+      });
     },
   };
+}
+
+function allPerkNames(cols: ReturnType<typeof collectColumnPerks>): string[] {
+  const names = new Set<string>();
+  for (const list of [cols.trait1, cols.trait2, cols.originTrait]) {
+    for (const perk of list) names.add(perk.name);
+  }
+  return [...names];
 }
 
 export function buildWeaponCategories(
@@ -115,9 +169,10 @@ export function buildWeaponCategories(
   customFilters: CustomWeaponFilter[],
 ): PaletteCategory[] {
   const facets = collectFacets(weapons);
+  const perkFuse = createPerkNameFuse(allPerkNames(weaponColumnPerks));
   return [
-    perkCategory("trait1", "Trait 1", weaponColumnPerks.trait1),
-    perkCategory("trait2", "Trait 2", weaponColumnPerks.trait2),
+    perkCategory("trait1", "Trait 1", weaponColumnPerks.trait1, perkFuse),
+    perkCategory("trait2", "Trait 2", weaponColumnPerks.trait2, perkFuse),
     ...(customFilters.length > 0 ? [customFilterCategory(customFilters)] : []),
     facetCategory("type", "Weapon type", facets.type ?? []),
     facetCategory("element", "Element", facets.element ?? []),
@@ -126,7 +181,7 @@ export function buildWeaponCategories(
     facetCategory("frame", "Frame", facets.frame ?? []),
     facetCategory("craftable", "Craftable", facets.craftable ?? []),
     facetCategory("rarity", "Rarity", facets.rarity ?? []),
-    perkCategory("originTrait", "Origin Trait", weaponColumnPerks.originTrait),
+    perkCategory("originTrait", "Origin Trait", weaponColumnPerks.originTrait, perkFuse),
     weaponNameCategory(weapons),
   ];
 }
@@ -134,5 +189,6 @@ export function buildWeaponCategories(
 export function buildComposerCategories(
   weaponColumnPerks: ReturnType<typeof collectColumnPerks>,
 ): PaletteCategory[] {
-  return [perkCategory("trait", "Trait", mergeTraitPerkOptions(weaponColumnPerks))];
+  const perkFuse = createPerkNameFuse(allPerkNames(weaponColumnPerks));
+  return [perkCategory("trait", "Trait", mergeTraitPerkOptions(weaponColumnPerks), perkFuse)];
 }

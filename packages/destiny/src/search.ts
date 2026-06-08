@@ -1,5 +1,7 @@
 import Fuse from "fuse.js";
 
+import { matchRank } from "./suggest";
+
 import type { InternedPerkColumn, PerkRef, WeaponSummary } from "./types";
 import type { WeaponDpsLookup } from "./weapon-dps";
 
@@ -176,11 +178,10 @@ export function weaponsWithPerk(
   return weapons.filter((w) => w.perksLower.includes(target));
 }
 
-function nameMatchRank(nameLower: string, queryLower: string): number | null {
-  if (nameLower === queryLower) return 0;
-  if (nameLower.startsWith(queryLower)) return 1;
-  if (nameLower.includes(queryLower)) return 2;
-  return null;
+function weaponNameRank(nameLower: string, queryLower: string): number | null {
+  const rank = matchRank(nameLower, queryLower);
+  // Weapon names: treat word-boundary same as contains for backward compat
+  return rank != null && rank <= 2 ? rank : rank === 3 ? 2 : null;
 }
 
 /** Predict weapon names from a partial query — name-only, ranked best-first. */
@@ -199,7 +200,7 @@ export function suggestWeaponNames(
 
   const ranked: { name: string; rank: number; count: number }[] = [];
   for (const [name, count] of counts) {
-    const rank = nameMatchRank(name.toLowerCase(), ql);
+    const rank = weaponNameRank(name.toLowerCase(), ql);
     if (rank != null) ranked.push({ name, rank, count });
   }
 
