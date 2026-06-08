@@ -424,10 +424,34 @@ export function CommandPalette({
         break;
       }
       case "Escape":
-        if (open) {
-          e.preventDefault();
-          closePanel();
+        if (!open) break;
+        e.preventDefault();
+
+        if (state.panel === "values" && state.valueQuery !== "") {
+          dispatch({ type: "setValueQuery", value: "" });
+          setHoverIndex(-1);
+          dispatch({ type: "setActive", index: 0 });
+          break;
         }
+
+        if (inputValue.trim() !== "") {
+          if (state.panel === "values") {
+            dispatch({ type: "setValueQuery", value: "" });
+          } else {
+            onQueryChange("");
+          }
+          setHoverIndex(-1);
+          dispatch({ type: "setActive", index: 0 });
+          break;
+        }
+
+        if (state.panel === "values") {
+          dispatch({ type: "back" });
+          setHoverIndex(-1);
+          break;
+        }
+
+        closePanel();
         break;
       case "Backspace":
         if (inputValue === "") {

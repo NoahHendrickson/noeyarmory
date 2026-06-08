@@ -679,3 +679,41 @@ export const ShowsPreviewWhileDrilling: Story = {
     );
   },
 };
+
+export const ProgressiveEscape: Story = {
+  render: () => <Demo />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    let input = canvas.getByRole("combobox");
+
+    await userEvent.click(input);
+    await userEvent.type(input, "slot");
+    expect(input).toHaveValue("slot");
+
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(input).toHaveValue(""));
+    expect(input).toHaveAttribute("aria-expanded", "true");
+
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(input).toHaveAttribute("aria-expanded", "false"));
+
+    await userEvent.keyboard("{ArrowDown}");
+    await waitFor(() => expect(input).toHaveAttribute("aria-expanded", "true"));
+    await waitFor(() => expect(canvas.getByRole("option", { name: /Trait 1/ })).toBeInTheDocument());
+
+    await userEvent.keyboard("{Enter}");
+    await waitFor(() => expect(canvas.getByRole("option", { name: /Firefly/ })).toBeInTheDocument());
+
+    input = canvas.getByRole("combobox");
+    await userEvent.type(input, "fire");
+    expect(input).toHaveValue("fire");
+
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(input).toHaveValue(""));
+    expect(canvas.getByLabelText(/filtering by trait 1/i)).toBeInTheDocument();
+
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(canvas.getByRole("option", { name: /Trait 1/ })).toBeInTheDocument());
+    expect(canvas.queryByLabelText(/filtering by trait 1/i)).toBeNull();
+  },
+};
