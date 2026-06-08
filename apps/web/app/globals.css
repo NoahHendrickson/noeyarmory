@@ -34,4 +34,9 @@
     transform: translate3d(var(--moonfang-x, 0px), var(--moonfang-y, 0px), 0);
     will-change: transform;
   }
+
+  html.cursor-copied-feedback,
+  html.cursor-copied-feedback * {
+    cursor: none !important;
+  }
 }
