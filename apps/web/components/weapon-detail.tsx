@@ -25,6 +25,7 @@ import { ElementIcon } from "./element-icon";
 import { weaponTypeLabel } from "./weapon-result-row";
 import { PerkColumnView } from "./perk-column";
 import { StatBars } from "./stat-bars";
+import { WeaponShareButton } from "./weapon-share-button";
 
 function statsDiffer(a: WeaponStat[], b: WeaponStat[]): boolean {
   const bByHash = new Map(b.map((stat) => [stat.hash, stat.value]));
@@ -183,7 +184,7 @@ export function WeaponDetailView({
 
   return (
     <div>
-      <header className="border-border/50 bg-black/[0.03] -mx-4 -mt-4 flex gap-3 border-b px-4 pb-4 pt-4 backdrop-blur-sm sm:-mx-6 sm:-mt-6 sm:px-6 sm:pb-5 sm:pt-6">
+      <header className="border-border/50 bg-black/[0.03] -mx-4 -mt-4 flex items-start gap-3 border-b px-4 pb-4 pt-4 backdrop-blur-sm sm:-mx-6 sm:-mt-6 sm:px-6 sm:pb-5 sm:pt-6">
         <WeaponThumbnail weapon={weapon} />
         <div className="min-w-0 flex-1">
           <h2 className="text-lg font-bold tracking-tight sm:text-xl">{weapon.name}</h2>
@@ -212,6 +213,7 @@ export function WeaponDetailView({
             {weapon.adept && <Badge>Adept</Badge>}
           </div>
         </div>
+        <WeaponShareButton weaponHash={weapon.hash} />
       </header>
 
       <div className="grid grid-cols-1 gap-6 pt-6 md:grid-cols-[minmax(220px,280px)_max-content]">
