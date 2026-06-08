@@ -81,7 +81,7 @@ function seedDetails(index: WeaponDetailIndex): void {
   statGroupsCache = index.statGroups;
 }
 
-function applyAmmoGenerationEnrichment(): void {
+function enrichSummariesIfReady(): void {
   if (!moduleCache || !detailCache) return;
 
   const weapons = enrichAmmoGenerationFromDetails(moduleCache.weapons, detailCache);
@@ -107,7 +107,7 @@ async function loadWeaponDetails(): Promise<Map<number, WeaponDetailFields>> {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const index = (await res.json()) as WeaponDetailIndex;
         seedDetails(index);
-        applyAmmoGenerationEnrichment();
+        enrichSummariesIfReady();
         return detailCache!;
       } catch {
         detailCache = new Map();
@@ -127,7 +127,7 @@ async function ensureDetailCache(): Promise<void> {
 
   if (isSampleCache) {
     await seedSampleDetails();
-    applyAmmoGenerationEnrichment();
+    enrichSummariesIfReady();
     return;
   }
 
@@ -167,7 +167,6 @@ async function fetchWeaponIndex(): Promise<{ lookups: WeaponIndexLookups; isSamp
         const lookups = buildWeaponIndexLookups(index);
         moduleCache = lookups;
         isSampleCache = false;
-        applyAmmoGenerationEnrichment();
         return moduleCache;
       } catch {
         const { sampleWeapons } = await import("@repo/destiny");
@@ -184,7 +183,7 @@ async function fetchWeaponIndex(): Promise<{ lookups: WeaponIndexLookups; isSamp
         });
         moduleCache = lookups;
         isSampleCache = true;
-        applyAmmoGenerationEnrichment();
+        enrichSummariesIfReady();
         return moduleCache;
       } finally {
         loadPromise = null;

@@ -228,7 +228,18 @@ export function filterWeaponNames(
   return matches;
 }
 
-const MIN_WEAPON_NAME_QUERY_LENGTH = 2;
+/** Minimum query length before text search and name-match pinning apply. */
+export const MIN_WEAPON_TEXT_QUERY_LENGTH = 2;
+
+/** Canonical tie-break order for `filterWeaponNames` results across search surfaces. */
+export function sortFilteredWeaponNames(matches: FilteredWeaponName[]): FilteredWeaponName[] {
+  return [...matches].sort(
+    (a, b) =>
+      a.searchRank - b.searchRank ||
+      b.count - a.count ||
+      a.value.localeCompare(b.value),
+  );
+}
 
 function appendUniqueWeapons(
   seen: Set<number>,
@@ -251,17 +262,12 @@ export function weaponsMatchingTextQuery(
   limit: number,
 ): WeaponSummary[] {
   const q = query.trim();
-  if (q.length < MIN_WEAPON_NAME_QUERY_LENGTH) return weapons;
+  if (q.length < MIN_WEAPON_TEXT_QUERY_LENGTH) return weapons;
 
   const seen = new Set<number>();
   const merged: WeaponSummary[] = [];
 
-  const rankedNames = filterWeaponNames(weapons, q).sort(
-    (a, b) =>
-      a.searchRank - b.searchRank ||
-      b.count - a.count ||
-      a.value.localeCompare(b.value),
-  );
+  const rankedNames = sortFilteredWeaponNames(filterWeaponNames(weapons, q));
   for (const { value } of rankedNames) {
     appendUniqueWeapons(
       seen,
@@ -279,6 +285,25 @@ export function weaponsMatchingTextQuery(
   return merged;
 }
 
+function sortNameMatchedWeapons(
+  weapons: WeaponSummary[],
+  query: string,
+  sort: WeaponSort,
+  dpsByName?: WeaponDpsLookup,
+): WeaponSummary[] {
+  if (sort !== "name") return sortWeapons(weapons, sort, dpsByName);
+
+  const rankByName = new Map(
+    filterWeaponNames(weapons, query).map((match) => [match.value, match.searchRank]),
+  );
+  return [...weapons].sort(
+    (a, b) =>
+      (rankByName.get(a.name) ?? Number.MAX_SAFE_INTEGER) -
+        (rankByName.get(b.name) ?? Number.MAX_SAFE_INTEGER) ||
+      a.name.localeCompare(b.name),
+  );
+}
+
 /** Sort weapons with exact name matches pinned above the rest; both groups respect `sort`. */
 export function rankWeaponResults(
   weapons: WeaponSummary[],
@@ -287,7 +312,7 @@ export function rankWeaponResults(
   dpsByName?: WeaponDpsLookup,
 ): WeaponSummary[] {
   const q = query.trim();
-  if (q.length < MIN_WEAPON_NAME_QUERY_LENGTH) {
+  if (q.length < MIN_WEAPON_TEXT_QUERY_LENGTH) {
     return sortWeapons(weapons, sort, dpsByName);
   }
 
@@ -299,7 +324,7 @@ export function rankWeaponResults(
   }
 
   return [
-    ...sortWeapons(nameMatched, sort, dpsByName),
+    ...sortNameMatchedWeapons(nameMatched, q, sort, dpsByName),
     ...sortWeapons(rest, sort, dpsByName),
   ];
 }
@@ -313,14 +338,9 @@ export function suggestWeaponNames(
   const ql = query.trim().toLowerCase();
   if (!ql) return [];
 
-  const filtered = filterWeaponNames(weapons, query);
-  const ranked = filtered
-    .map((entry) => ({ name: entry.value, rank: entry.searchRank, count: entry.count }))
-    .sort(
-      (a, b) => a.rank - b.rank || a.name.localeCompare(b.name) || b.count - a.count,
-    );
-
-  return ranked.slice(0, limit).map(({ name, count }) => ({ value: name, count }));
+  return sortFilteredWeaponNames(filterWeaponNames(weapons, query))
+    .slice(0, limit)
+    .map(({ value, count }) => ({ value, count }));
 }
 
 /** Build a reusable Fuse index for fuzzy name/type/perk search. */

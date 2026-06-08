@@ -5,8 +5,8 @@ import type { PaletteCategory, PaletteChip, PalettePanelState } from "@repo/ui";
 import { availableCategories, scanValueSuggestions } from "@repo/ui";
 import {
   createWeaponFuse,
-  filterWeaponNames,
   filterWeapons,
+  MIN_WEAPON_TEXT_QUERY_LENGTH,
   rankWeaponResults,
   weaponsMatchingTextQuery,
   type PerkRef,
@@ -23,8 +23,6 @@ import {
   MAX_SHOW_ALL,
 } from "../lib/palette/constants";
 import { chipsToWeaponFilters, withHypotheticalChip } from "../lib/palette/weapon-filters";
-
-const MIN_TEXT_SEARCH_LENGTH = 2;
 
 export interface UseWeaponSearchResultsParams {
   weapons: WeaponSummary[];
@@ -72,7 +70,7 @@ export function useWeaponSearchResults({
   const weaponResults = useMemo(() => {
     const q = deferredQuery.trim();
     const base =
-      textSearchActive && q.length >= MIN_TEXT_SEARCH_LENGTH
+      textSearchActive && q.length >= MIN_WEAPON_TEXT_QUERY_LENGTH
         ? weaponsMatchingTextQuery(weapons, weaponFuse, q, MAX_SHOW_ALL)
         : weapons;
     const filtered = filterWeapons(base, weaponFilters, perks);
@@ -99,20 +97,10 @@ export function useWeaponSearchResults({
     };
 
     const q = deferredQuery.trim();
-    if (q.length >= MIN_TEXT_SEARCH_LENGTH) {
-      const rankedNames = filterWeaponNames(weapons, q).sort(
-        (a, b) =>
-          a.searchRank - b.searchRank ||
-          b.count - a.count ||
-          a.value.localeCompare(b.value),
-      );
-      for (const { value } of rankedNames) {
-        appendWeapons(weapons.filter((weapon) => weapon.name === value));
-      }
-
+    if (q.length >= MIN_WEAPON_TEXT_QUERY_LENGTH) {
       appendWeapons(
         filterWeapons(
-          weaponFuse.search(q, { limit: MAX_PREVIEW_RESULTS }).map((r) => r.item),
+          weaponsMatchingTextQuery(weapons, weaponFuse, q, MAX_PREVIEW_RESULTS),
           base,
           perks,
         ),

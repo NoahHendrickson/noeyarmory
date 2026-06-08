@@ -93,6 +93,10 @@ export function scanValueSuggestions(
       if (applied.has(`${category.id}:${option.id}`)) continue;
       const baseRank = resolveMatchRank(option.label, q, option.searchRank);
       if (baseRank == null) continue;
+      const ql = q.toLowerCase();
+      if (category.omitWeakInlineMatches && !option.label.toLowerCase().startsWith(ql)) {
+        continue;
+      }
       scored.push({
         suggestion: {
           categoryId: category.id,

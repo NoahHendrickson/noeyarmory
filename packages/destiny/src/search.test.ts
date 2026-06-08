@@ -1,8 +1,12 @@
 import { describe, expect, test } from "vitest";
 
 import { sampleWeapons } from "./fixtures/sample-weapons";
-import { buildPerkMapFromCatalog, internWeaponCatalog } from "./intern-weapons";
-import type { PerkRef, WeaponDoc } from "./types";
+import {
+  buildPerkMapFromCatalog,
+  enrichAmmoGenerationFromDetails,
+  internWeaponCatalog,
+} from "./intern-weapons";
+import type { PerkRef, WeaponDetailFields, WeaponDoc } from "./types";
 import {
   collectColumnPerks,
   collectFacets,
@@ -13,10 +17,12 @@ import {
   rankWeaponResults,
   sortWeapons,
   suggestWeaponNames,
+  sortFilteredWeaponNames,
   weaponsMatchingTextQuery,
   weaponsWithPerk,
   createWeaponFuse,
 } from "./search";
+import { AMMO_GENERATION_STAT_HASH } from "./weapon-stats";
 import { buildWeaponIndexLookups, refreshWeaponSummaries } from "./weapon-index-lookups";
 
 const { index: sampleIndex } = internWeaponCatalog(sampleWeapons, "sample");
@@ -220,6 +226,18 @@ describe("weaponsMatchingTextQuery", () => {
     const matches = weaponsMatchingTextQuery(sampleSummaries, fuse, "fate", 20);
     expect(matches[0]?.name).toBe("Fatebringer");
   });
+
+  test("respects the same chip filters as full results", () => {
+    const fuse = createWeaponFuse(sampleSummaries);
+    const candidates = weaponsMatchingTextQuery(sampleSummaries, fuse, "fate", 20);
+
+    expect(
+      filterWeapons(candidates, { element: ["Solar"] }, samplePerks).map((weapon) => weapon.name),
+    ).toEqual([]);
+    expect(
+      filterWeapons(candidates, { element: ["Arc"] }, samplePerks).map((weapon) => weapon.name),
+    ).toEqual(["Fatebringer"]);
+  });
 });
 
 describe("rankWeaponResults", () => {
@@ -241,6 +259,40 @@ describe("rankWeaponResults", () => {
     expect(rankWeaponResults(sampleSummaries, "s", "name").map((w) => w.name)).toEqual(
       orderedNames(sortWeapons(sampleSummaries, "name")),
     );
+  });
+
+  test("preserves search relevance within the name-matched bucket when sorting by name", () => {
+    const fuse = createWeaponFuse(sampleSummaries);
+    const candidates = weaponsMatchingTextQuery(sampleSummaries, fuse, "sun", 20);
+    const expectedNameOrder = sortFilteredWeaponNames(filterWeaponNames(sampleSummaries, "sun"))
+      .map((match) => match.value)
+      .filter((name) => candidates.some((weapon) => weapon.name === name));
+
+    expect(
+      rankWeaponResults(candidates, "sun", "name")
+        .filter((weapon) => expectedNameOrder.includes(weapon.name))
+        .map((weapon) => weapon.name),
+    ).toEqual(expectedNameOrder);
+  });
+});
+
+describe("enrichAmmoGenerationFromDetails", () => {
+  test("returns the same summaries array when nothing changes", () => {
+    const details = new Map<number, WeaponDetailFields>([
+      [
+        1,
+        {
+          hash: 1,
+          stats: [{ hash: AMMO_GENERATION_STAT_HASH, name: "Ammo Generation", value: 42 }],
+        },
+      ],
+    ]);
+
+    const enriched = sampleSummaries.map((weapon) =>
+      weapon.name === "Fatebringer" ? { ...weapon, ammoGeneration: 42 } : weapon,
+    );
+
+    expect(enrichAmmoGenerationFromDetails(enriched, details)).toBe(enriched);
   });
 });
 

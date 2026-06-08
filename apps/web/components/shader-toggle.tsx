@@ -1,6 +1,7 @@
 "use client";
 
-import { Check } from "@phosphor-icons/react";
+import { Check } from "lucide-react";
+
 import { cn } from "@repo/ui";
 
 import { useShaderPreference } from "../lib/shader-preference";
@@ -49,7 +50,7 @@ export function ShaderToggle() {
           )}
         >
           {enabled && !disabled ? (
-            <Check weight="bold" className="size-2.5 text-primary-foreground" aria-hidden />
+            <Check className="size-2.5 text-primary-foreground" strokeWidth={3} aria-hidden />
           ) : null}
         </span>
       </span>
