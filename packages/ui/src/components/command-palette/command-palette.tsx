@@ -15,8 +15,8 @@ import {
   filterCategories,
   shouldIgnoreSearchShortcut,
 } from "../../lib/palette-suggestions";
-import { frostedSurface } from "../../lib/frosted-surface";
 import { cn } from "../../lib/utils";
+import { FrostedShell } from "../frosted-shell";
 import { PaletteInputBar } from "./palette-input-bar";
 import { PaletteList } from "./palette-list";
 import { resolveEscapeStep } from "./progressive-escape";
@@ -592,21 +592,8 @@ export function CommandPalette({
         className,
       )}
     >
-      <div
-        className={cn(
-          "relative overflow-hidden",
-          frostedSurface("shell"),
-          open ? "rounded-[12px]" : "rounded-[1.75rem]",
-        )}
-      >
-        <div
-          className={cn(
-            "pointer-events-none absolute inset-0 rounded-[inherit]",
-            frostedSurface("bar"),
-          )}
-          aria-hidden
-        />
-        <div className="relative flex flex-col">
+      <FrostedShell className={open ? "rounded-[12px]" : "rounded-[1.75rem]"}>
+        <div className="flex flex-col">
           <PaletteInputBar
             open={open}
             disabled={disabled}
@@ -665,7 +652,7 @@ export function CommandPalette({
             renderResult={renderResult}
           />
         </div>
-      </div>
+      </FrostedShell>
     </div>
   );
 }
