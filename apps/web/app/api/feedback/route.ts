@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 
-import { createFeedbackIssue, isFeedbackConfigured, type FeedbackType } from "../../../lib/github-issues";
+import {
+  buildGitHubNewIssueUrl,
+  createFeedbackIssue,
+  isFeedbackConfigured,
+  type FeedbackType,
+} from "../../../lib/github-issues";
 import { createRateLimiter } from "../../../lib/rate-limit";
 import { isSameOriginRequest } from "../../../lib/request-guards";
 
@@ -112,11 +117,11 @@ export async function POST(request: Request) {
   };
 
   if (!isFeedbackConfigured()) {
-    console.error("[feedback] GITHUB_TOKEN is not set. See docs/feedback-setup.md.");
-    return NextResponse.json(
-      { ok: false, error: "Feedback is not available right now. Please try again later." },
-      { status: 503 },
-    );
+    return NextResponse.json({
+      ok: true,
+      manual: true,
+      issueUrl: buildGitHubNewIssueUrl({ type: payload.type, title, body, metadata }),
+    });
   }
 
   try {

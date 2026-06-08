@@ -66,6 +66,7 @@ export function FeedbackDialog({
   const [submitState, setSubmitState] = useState<SubmitState>(defaultSubmitState);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [issueUrl, setIssueUrl] = useState<string | null>(defaultIssueUrl);
+  const [manualSubmit, setManualSubmit] = useState(false);
 
   function resetForm() {
     setType(defaultType);
@@ -75,6 +76,7 @@ export function FeedbackDialog({
     setSubmitState(defaultSubmitState);
     setErrorMessage(null);
     setIssueUrl(defaultIssueUrl);
+    setManualSubmit(false);
   }
 
   function handleOpenChange(nextOpen: boolean) {
@@ -109,6 +111,7 @@ export function FeedbackDialog({
       const data = (await response.json()) as {
         ok?: boolean;
         issueUrl?: string | null;
+        manual?: boolean;
         error?: string;
       };
 
@@ -118,8 +121,15 @@ export function FeedbackDialog({
         return;
       }
 
+      const nextIssueUrl = data.issueUrl ?? null;
+      const isManual = data.manual === true && nextIssueUrl !== null;
+      if (data.manual === true && nextIssueUrl) {
+        window.open(nextIssueUrl, "_blank", "noopener,noreferrer");
+      }
+
       setSubmitState("success");
-      setIssueUrl(data.issueUrl ?? null);
+      setIssueUrl(nextIssueUrl);
+      setManualSubmit(isManual);
     } catch {
       setSubmitState("error");
       setErrorMessage("Could not reach the server. Please try again.");
@@ -173,18 +183,41 @@ export function FeedbackDialog({
                     </PopoverClose>
                   </div>
                   <PopoverDescription className={headerDescriptionClass}>
-                    Your {type === "bug" ? "bug report" : "feature request"} was submitted.
-                    {issueUrl && (
+                    {manualSubmit ? (
                       <>
-                        {" "}
-                        <a
-                          href={issueUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-primary underline-offset-4 hover:underline"
-                        >
-                          View on GitHub
-                        </a>
+                        We opened GitHub in a new tab with your{" "}
+                        {type === "bug" ? "bug report" : "feature request"} pre-filled. Sign in
+                        there and click <strong>Create</strong> to finish submitting.
+                        {issueUrl && (
+                          <>
+                            {" "}
+                            <a
+                              href={issueUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-primary underline-offset-4 hover:underline"
+                            >
+                              Open GitHub again
+                            </a>
+                          </>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        Your {type === "bug" ? "bug report" : "feature request"} was submitted.
+                        {issueUrl && (
+                          <>
+                            {" "}
+                            <a
+                              href={issueUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-primary underline-offset-4 hover:underline"
+                            >
+                              View on GitHub
+                            </a>
+                          </>
+                        )}
                       </>
                     )}
                   </PopoverDescription>
