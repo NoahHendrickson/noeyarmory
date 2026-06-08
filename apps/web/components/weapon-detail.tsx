@@ -16,6 +16,7 @@ import {
 import { useWeaponBuild } from "../lib/use-weapon-build";
 import { useWeaponDps } from "../lib/use-weapon-dps";
 import { useStatGroups, useWeaponDetail, useWeapons } from "../lib/weapons-context";
+import { trackPerkCommit } from "../lib/track-perk-commit";
 import { trackWeaponView } from "../lib/track-weapon-view";
 import { bungieIcon, RARITY_RING } from "../lib/bungie";
 import { AmmoIcon } from "./ammo-icon";
@@ -122,6 +123,19 @@ export function WeaponDetailView({
 
   const clearHoverPreview = useCallback(() => setHoverPreview(null), []);
 
+  // Stable across renders (deps are stable) so PerkColumnView can forward them to
+  // memo(PerkTile) without busting the memo on every hover/selection re-render.
+  const handleHoverPerk = useCallback(
+    (columnIndex: number, perk: PerkRef) => {
+      if (perk.statMods?.length) {
+        setHoverPreview({ columnIndex, perk });
+      } else {
+        clearHoverPreview();
+      }
+    },
+    [clearHoverPreview],
+  );
+
   useEffect(() => {
     setHoverPreview(null);
   }, [weapon.hash]);
@@ -221,6 +235,7 @@ export function WeaponDetailView({
                     <PerkColumnView
                       key={`${column.kind}-${columnIndex}`}
                       column={column}
+                      columnIndex={columnIndex}
                       linkPerks={canSelect ? false : linkPerks}
                       highlightedPerks={highlightedPerks}
                       selectedPerkHash={
@@ -228,22 +243,15 @@ export function WeaponDetailView({
                       }
                       onSelectPerk={
                         canSelect
-                          ? (perk) => {
-                              build.togglePerk(columnIndex, perk);
-                            }
-                          : undefined
-                      }
-                      onHoverPerk={
-                        canSelect
-                          ? (perk) => {
-                              if (perk.statMods?.length) {
-                                setHoverPreview({ columnIndex, perk });
-                              } else {
-                                clearHoverPreview();
+                          ? (colIndex, perk) => {
+                              if (!build.isSelected(colIndex, perk.hash)) {
+                                trackPerkCommit(perk.name, "build");
                               }
+                              build.togglePerk(colIndex, perk);
                             }
                           : undefined
                       }
+                      onHoverPerk={canSelect ? handleHoverPerk : undefined}
                       onHoverEnd={canSelect ? clearHoverPreview : undefined}
                     />
                   );

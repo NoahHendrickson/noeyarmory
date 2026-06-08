@@ -111,16 +111,22 @@ function columnPerks(column: InternedPerkColumn | undefined, perks: PerkRef[]): 
     .filter((perk): perk is PerkRef => perk != null);
 }
 
-/** True if `column` can roll any of `names` (OR within; empty/undefined = no constraint). */
-function columnCanRoll(
+/**
+ * True if `column` can roll any of the (already-lowercased) `wanted` names.
+ * Empty `wanted` = no constraint. Avoids allocating a Set per weapon by testing
+ * the column's perks against the caller-precomputed `wanted` set directly.
+ */
+function columnRollsAny(
   column: InternedPerkColumn | undefined,
-  names: string[] | undefined,
+  wanted: Set<string>,
   perks: PerkRef[],
 ): boolean {
-  if (!names || names.length === 0) return true;
+  if (wanted.size === 0) return true;
   if (!column) return false;
-  const rollable = new Set(columnPerks(column, perks).map((perk) => lower(perk.name)));
-  return names.some((name) => rollable.has(lower(name)));
+  return column.perkIndices.some((index) => {
+    const perk = perks[index];
+    return perk != null && wanted.has(lower(perk.name));
+  });
 }
 
 /** Filter weapons by attribute facets, position-aware trait columns, and required perks. */
@@ -133,6 +139,11 @@ export function filterWeapons(
   const customPerkGroups = (filters.customPerkGroups ?? [])
     .map((group) => group.map(lower).filter(Boolean))
     .filter((group) => group.length > 0);
+  // Lowercase the (tiny) filter name lists once, not per weapon×column.
+  const trait1Wanted = new Set((filters.trait1 ?? []).map(lower));
+  const trait2Wanted = new Set((filters.trait2 ?? []).map(lower));
+  const originWanted = new Set((filters.originTrait ?? []).map(lower));
+  const needsOwned = requiredPerks.length > 0 || customPerkGroups.length > 0;
   return weapons.filter((w) => {
     if (!matchesFacet(w.name, filters.name)) return false;
     if (!matchesFacet(w.element, filters.element)) return false;
@@ -142,27 +153,20 @@ export function filterWeapons(
     if (!matchesFacet(w.slot, filters.slot)) return false;
     if (filters.frame?.length && !matchesFacet(w.frame ?? "", filters.frame)) return false;
     if (!matchesCraftable(w.craftable, filters.craftable)) return false;
-    if (filters.trait1?.length || filters.trait2?.length) {
+    if (trait1Wanted.size || trait2Wanted.size) {
       const traits = traitColumns(w.columns);
-      if (!columnCanRoll(traits[0], filters.trait1, perks)) return false;
-      if (!columnCanRoll(traits[1], filters.trait2, perks)) return false;
+      if (!columnRollsAny(traits[0], trait1Wanted, perks)) return false;
+      if (!columnRollsAny(traits[1], trait2Wanted, perks)) return false;
     }
     if (
-      filters.originTrait?.length &&
-      !columnCanRoll(
-        w.columns.find((c) => c.kind === "Origin Trait"),
-        filters.originTrait,
-        perks,
-      )
+      originWanted.size &&
+      !columnRollsAny(w.columns.find((c) => c.kind === "Origin Trait"), originWanted, perks)
     ) {
       return false;
     }
-    if (requiredPerks.length) {
+    if (needsOwned) {
       const owned = new Set(w.perksLower);
       if (!requiredPerks.every((p) => owned.has(p))) return false;
-    }
-    if (customPerkGroups.length) {
-      const owned = new Set(w.perksLower);
       if (!customPerkGroups.every((group) => group.some((p) => owned.has(p)))) return false;
     }
     return true;

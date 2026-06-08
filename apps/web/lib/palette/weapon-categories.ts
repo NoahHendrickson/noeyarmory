@@ -14,6 +14,16 @@ import {
 import type { CustomWeaponFilter } from "../use-custom-weapon-filters";
 import { CUSTOM_FILTER_CATEGORY_ID } from "./constants";
 
+/** Palette category IDs whose option values are weapon perks (trait + origin columns). */
+export const WEAPON_PERK_FILTER_CATEGORY_IDS = ["trait1", "trait2", "originTrait"] as const;
+
+const PERK_FILTER_CATEGORY_ID_SET: ReadonlySet<string> = new Set(WEAPON_PERK_FILTER_CATEGORY_IDS);
+
+/** True for palette categories whose selected values are weapon perks (tracked for popularity). */
+export function isWeaponPerkFilterCategory(id: string): boolean {
+  return PERK_FILTER_CATEGORY_ID_SET.has(id);
+}
+
 function formatExamples(labels: string[], limit = 3): string {
   return labels.slice(0, limit).join(", ");
 }
@@ -141,7 +151,8 @@ export function customFilterCategory(filters: CustomWeaponFilter[]): PaletteCate
   };
 }
 
-function allPerkNames(cols: ReturnType<typeof collectColumnPerks>): string[] {
+/** Distinct perk names across trait + origin columns — feeds the perk-name fuzzy index. */
+export function allPerkNames(cols: ReturnType<typeof collectColumnPerks>): string[] {
   const names = new Set<string>();
   for (const list of [cols.trait1, cols.trait2, cols.originTrait]) {
     for (const perk of list) names.add(perk.name);
@@ -153,12 +164,15 @@ export function buildWeaponCategories(
   weapons: WeaponSummary[],
   weaponColumnPerks: ReturnType<typeof collectColumnPerks>,
   customFilters: CustomWeaponFilter[],
+  facets: ReturnType<typeof collectFacets> = collectFacets(weapons),
+  perkFuse: ReturnType<typeof createPerkNameFuse> = createPerkNameFuse(
+    allPerkNames(weaponColumnPerks),
+  ),
 ): PaletteCategory[] {
-  const facets = collectFacets(weapons);
-  const perkFuse = createPerkNameFuse(allPerkNames(weaponColumnPerks));
+  const [trait1Id, trait2Id, originTraitId] = WEAPON_PERK_FILTER_CATEGORY_IDS;
   return [
-    perkCategory("trait1", "Trait 1", weaponColumnPerks.trait1, perkFuse),
-    perkCategory("trait2", "Trait 2", weaponColumnPerks.trait2, perkFuse),
+    perkCategory(trait1Id, "Trait 1", weaponColumnPerks.trait1, perkFuse),
+    perkCategory(trait2Id, "Trait 2", weaponColumnPerks.trait2, perkFuse),
     ...(customFilters.length > 0 ? [customFilterCategory(customFilters)] : []),
     facetCategory("type", "Weapon type", facets.type ?? []),
     facetCategory("element", "Element", facets.element ?? []),
@@ -167,14 +181,16 @@ export function buildWeaponCategories(
     facetCategory("frame", "Frame", facets.frame ?? [], { omitWeakInlineMatches: true }),
     facetCategory("craftable", "Craftable", facets.craftable ?? []),
     facetCategory("rarity", "Rarity", facets.rarity ?? []),
-    perkCategory("originTrait", "Origin Trait", weaponColumnPerks.originTrait, perkFuse),
+    perkCategory(originTraitId, "Origin Trait", weaponColumnPerks.originTrait, perkFuse),
     weaponNameCategory(weapons),
   ];
 }
 
 export function buildComposerCategories(
   weaponColumnPerks: ReturnType<typeof collectColumnPerks>,
+  perkFuse: ReturnType<typeof createPerkNameFuse> = createPerkNameFuse(
+    allPerkNames(weaponColumnPerks),
+  ),
 ): PaletteCategory[] {
-  const perkFuse = createPerkNameFuse(allPerkNames(weaponColumnPerks));
   return [perkCategory("trait", "Trait", mergeTraitPerkOptions(weaponColumnPerks), perkFuse)];
 }

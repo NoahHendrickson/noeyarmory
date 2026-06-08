@@ -43,10 +43,13 @@ When you are ready to ship **Popular lately**, add `POPULAR_WEAPONS_ENABLED=true
 ## How it works
 
 - Opening a weapon from search, a popular card, or `/weapon/[hash]` sends a fire-and-forget `POST /api/events/weapon-view`.
-- Counts are stored in daily Redis sorted sets and aggregated over a rolling 7-day window.
-- `GET /api/popular-weapons` returns the top four when the visibility threshold is met; responses are cached for one hour at the edge.
+- Committing a perk — adding a trait/origin perk as a search filter, or selecting a perk pill on a weapon's detail — sends a fire-and-forget `POST /api/events/perk-commit` keyed by perk name (the trait column is ignored).
+- Counts are stored in daily Redis sorted sets — `popular:day:*` for weapons (member = weapon hash) and `popular:perk:day:*` for perks (member = lowercase perk name) — aggregated over a rolling 7-day window.
+- `GET /api/popular-weapons` returns the top four weapons when the visibility threshold is met; responses are cached for one hour at the edge.
+- Perk commits are captured for a future **Popular perks** view; there is no read endpoint or UI for them yet. `getPopularPerks()` exists for when we surface it.
+- Both weapon and perk tracking share the same on/off flags (`POPULAR_WEAPONS_ENABLED`, `POPULAR_WEAPONS_MOCK`) and Upstash credentials.
 
-No user IDs or cookies are stored — only weapon hash counters.
+No user IDs or cookies are stored — only weapon hash and perk name counters.
 
 ## QA / seeding data
 
@@ -60,6 +63,15 @@ curl -X POST https://localhost:4111/api/events/weapon-view \
 ```
 
 Use real weapon hashes from your generated index. Repeat across at least four weapons until total views ≥ 20, then reload the home page.
+
+Perk commits can be seeded the same way (perk names must exist in the generated index; the server lowercases and validates them):
+
+```bash
+curl -X POST https://localhost:4111/api/events/perk-commit \
+  -H "Content-Type: application/json" \
+  -H "Origin: https://localhost:4111" \
+  -d '{"perkName":"Surrounded","source":"filter"}'
+```
 
 ## Troubleshooting
 

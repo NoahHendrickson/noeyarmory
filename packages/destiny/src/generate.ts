@@ -5,6 +5,7 @@ import { config as loadEnv } from "dotenv";
 
 import { buildArmorIndex } from "./build-armor-index";
 import { buildAmmoTypeCatalog, buildWeaponIndex } from "./build-index";
+import { stripPerksLowerReplacer } from "./intern-weapons";
 import { downloadDestinyIconDefinitions, downloadManifest } from "./manifest";
 import { writeSampleIndexes } from "./write-sample-indexes";
 
@@ -34,7 +35,9 @@ async function main(): Promise<void> {
   console.log("Flattening weapons…");
   const { index, detailIndex } = buildWeaponIndex(defs, version, ammoTypes);
   mkdirSync(dirname(weaponsFile), { recursive: true });
-  writeFileSync(weaponsFile, JSON.stringify(index));
+  // Drop `perksLower` from the on-disk index — it's a lowercased duplicate of
+  // `perks`, re-derived at load by normalizeWeaponIndex. Saves payload + parse time.
+  writeFileSync(weaponsFile, JSON.stringify(index, stripPerksLowerReplacer));
   writeFileSync(weaponsDetailFile, JSON.stringify(detailIndex));
   console.log(`✓ Wrote ${index.weapons.length} weapons → ${weaponsFile}`);
   console.log(`✓ Wrote ${Object.keys(detailIndex.details).length} weapon details → ${weaponsDetailFile}`);
