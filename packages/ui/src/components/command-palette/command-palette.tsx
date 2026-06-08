@@ -15,6 +15,7 @@ import {
   filterCategories,
   shouldIgnoreSearchShortcut,
 } from "../../lib/palette-suggestions";
+import { frostedSurface } from "../../lib/frosted-surface";
 import { cn } from "../../lib/utils";
 import { PaletteInputBar } from "./palette-input-bar";
 import { PaletteList } from "./palette-list";
@@ -52,7 +53,11 @@ export type {
   PaletteValueOption,
 } from "./types";
 
-export { PANEL_TRANSITION_MS, searchValueSuggestions } from "./palette-reducer";
+export {
+  PANEL_TRANSITION_MS,
+  searchValueSuggestions,
+  valueSuggestionsToChipItems,
+} from "./palette-reducer";
 
 /**
  * A data-agnostic command palette: a pill input hosting filter chips, with a
@@ -709,7 +714,10 @@ export function CommandPalette({
         )}
       >
         <div
-          className="pointer-events-none absolute inset-0 rounded-[inherit] bg-card/55 backdrop-blur-xl"
+          className={cn(
+            "pointer-events-none absolute inset-0 rounded-[inherit]",
+            frostedSurface("bar"),
+          )}
           aria-hidden
         />
         <div className="relative flex flex-col">

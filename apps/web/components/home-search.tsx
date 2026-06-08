@@ -9,6 +9,7 @@ import {
   Input,
   PANEL_TRANSITION_MS,
   PillSelect,
+  valueSuggestionsToChipItems,
   type PaletteAction,
   type PaletteCategory,
   type PaletteChip,
@@ -199,18 +200,7 @@ export function HomeSearch({
 
   const chipSuggestions = useMemo<PaletteItem[] | undefined>(() => {
     if (!suggestionScanEnabled) return undefined;
-    const categoryById = new Map(categories.map((c) => [c.id, c] as const));
-    return inlineSuggestions.flatMap((s) => {
-      const category = categoryById.get(s.categoryId);
-      if (!category) return [];
-      return [
-        {
-          kind: "chipSuggestion" as const,
-          category,
-          option: { id: s.valueId, label: s.value, hint: s.hint },
-        },
-      ];
-    });
+    return valueSuggestionsToChipItems(inlineSuggestions, categories);
   }, [suggestionScanEnabled, inlineSuggestions, categories]);
 
   const {

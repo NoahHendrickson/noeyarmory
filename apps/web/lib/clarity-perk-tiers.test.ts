@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import type { ClarityLine } from "./clarity-types";
+import enlightenedActionFixture from "./fixtures/enlightened-action-clarity.json";
+import type { ClarityDescriptionMap, ClarityLine } from "./clarity-types";
 import { getClarityDisplayLines, getClarityPerkTiers } from "./clarity-perk-tiers";
 
 const ENLIGHTENED_BASE = 3828510309;
@@ -40,10 +41,8 @@ describe("getClarityDisplayLines", () => {
     expect(tail?.linesContent?.some((part) => part.text?.includes("50🠚55"))).toBe(true);
   });
 
-  it("resolves Enlightened Action enhanced insight when alternateHashes is set", async () => {
-    const dim = (await fetch(
-      "https://database-clarity.github.io/Live-Clarity-Database/descriptions/dim.json",
-    ).then((r) => r.json())) as Record<string, { hash: number; name: string; descriptions: { en?: ClarityLine[] } }>;
+  it("resolves Enlightened Action enhanced insight when alternateHashes is set", () => {
+    const dim = enlightenedActionFixture as ClarityDescriptionMap;
 
     const tiers = getClarityPerkTiers(dim, {
       hash: ENLIGHTENED_BASE,

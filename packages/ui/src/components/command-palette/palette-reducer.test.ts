@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   dormantSnapshotMatches,
-  draftListMode,
   splitPreviewTail,
   stripPreviewItems,
+  valueSuggestionsToChipItems,
 } from "./palette-reducer";
 import type { PaletteItem } from "./types";
 
@@ -23,14 +23,29 @@ describe("dormantSnapshotMatches", () => {
   });
 });
 
-describe("draftListMode", () => {
-  it("returns categories when draft query only", () => {
-    expect(draftListMode(true, false, "demo", false)).toBe("categories");
+describe("valueSuggestionsToChipItems", () => {
+  it("maps suggestions to chipSuggestion rows", () => {
+    const category = { id: "trait1", label: "Trait 1", getValues: () => [] };
+    const items = valueSuggestionsToChipItems(
+      [{ categoryId: "trait1", valueId: "surrounded", value: "Surrounded", hint: "50" }],
+      [category],
+    );
+
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({
+      kind: "chipSuggestion",
+      category,
+      option: { id: "surrounded", label: "Surrounded", hint: "50" },
+    });
   });
 
-  it("returns null when not draft query only (idle or chip-only at call site)", () => {
-    expect(draftListMode(false, false, "demo", false)).toBeNull();
-    expect(draftListMode(false, false, "", false)).toBeNull();
+  it("drops suggestions for unknown categories", () => {
+    expect(
+      valueSuggestionsToChipItems(
+        [{ categoryId: "missing", valueId: "x", value: "X" }],
+        [{ id: "trait1", label: "Trait 1", getValues: () => [] }],
+      ),
+    ).toEqual([]);
   });
 });
 
