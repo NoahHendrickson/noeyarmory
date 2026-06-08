@@ -39,30 +39,48 @@ function WeaponDpsAttribution() {
   );
 }
 
-function WeaponDpsMetricTooltip({
+function WeaponDpsBuildDetails({ buildDescription }: { buildDescription: string }) {
+  if (!buildDescription) return null;
+
+  return (
+    <p className="text-muted-foreground text-xs leading-relaxed">
+      <span className="text-foreground font-medium">Benchmark build: </span>
+      {buildDescription}
+    </p>
+  );
+}
+
+export function WeaponDpsMetricTooltip({
   label,
   description,
+  buildDescription,
+  tooltipSide = "left",
+  valueClassName = "inline-flex cursor-help underline decoration-dotted decoration-muted-foreground/50 underline-offset-2",
   children,
 }: {
   label: string;
   description: string;
+  buildDescription: string;
+  tooltipSide?: "left" | "right" | "top" | "bottom";
+  valueClassName?: string;
   children: string;
 }) {
   return (
     <Tooltip>
       <TooltipTrigger
         delay={0}
-        render={<span className="inline-flex cursor-help underline decoration-dotted decoration-muted-foreground/50 underline-offset-2" />}
+        render={<span className={valueClassName} />}
         onClick={(event) => event.stopPropagation()}
       >
         {children}
       </TooltipTrigger>
       <TooltipPortal>
-        <TooltipPositioner side="left" align="center">
-          <TooltipPopup className="max-w-xs">
+        <TooltipPositioner side={tooltipSide} align="center">
+          <TooltipPopup className="max-w-sm">
             <div className="space-y-1">
               <div className="font-semibold">{label}</div>
               <p className="text-muted-foreground text-xs leading-relaxed">{description}</p>
+              <WeaponDpsBuildDetails buildDescription={buildDescription} />
               <WeaponDpsDisclaimer />
               <WeaponDpsAttribution />
             </div>
@@ -82,6 +100,7 @@ export function WeaponDpsLabel({ entry }: { entry: WeaponDpsEntry }) {
       <WeaponDpsMetricTooltip
         label="Total damage"
         description={`Estimated total damage from the ${WEAPON_DPS_SHEET_NAME} boss-DPS benchmark for this weapon's optimal community build.`}
+        buildDescription={entry.buildDescription}
       >
         {total}
       </WeaponDpsMetricTooltip>
@@ -89,6 +108,7 @@ export function WeaponDpsLabel({ entry }: { entry: WeaponDpsEntry }) {
       <WeaponDpsMetricTooltip
         label="DPS"
         description={`Estimated sustained damage per second from the ${WEAPON_DPS_SHEET_NAME} benchmark build.`}
+        buildDescription={entry.buildDescription}
       >
         {dps}
       </WeaponDpsMetricTooltip>

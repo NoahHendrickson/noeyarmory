@@ -13,6 +13,8 @@ export interface WeaponDpsEntry {
   totalDamage: number | null;
   /** Trait perks from the sheet's benchmark build for this weapon. */
   buildPerks: string[];
+  /** Perks, mods, and buffs from the sheet row's Name column. */
+  buildDescription: string;
 }
 
 export interface WeaponDpsCatalogEntry {
@@ -54,6 +56,28 @@ export function matchSheetRowToWeapon(
     if (rawLower.includes(name.toLowerCase())) return name;
   }
   return undefined;
+}
+
+/** Human-readable build details from the sheet Name cell (perks, mods, buffs). */
+export function formatBuildDescription(rawName: string, weaponName: string): string {
+  let text = rawName.trim().replace(/\r\n/g, "\n");
+  const parenPattern = new RegExp(`\\s*\\(${escapeRegExp(weaponName)}\\)`, "i");
+  text = text.replace(parenPattern, "");
+
+  const lines = text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (lines.length > 1 && lines[0]?.toLowerCase() === weaponName.toLowerCase()) {
+    lines.shift();
+  }
+
+  return lines.join(" · ");
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 /** Trait perks from the sheet build string that exist on a weapon variant. */
@@ -170,9 +194,10 @@ export function buildWeaponDpsIndex(
     if (!weaponName) continue;
 
     const buildPerks = extractTraitPerksFromRow(rawName, variantsForWeapon(catalog, weaponName));
+    const buildDescription = formatBuildDescription(rawName, weaponName);
     const existing = byName[weaponName];
     if (!existing || dps > existing.dps) {
-      byName[weaponName] = { dps, totalDamage, buildPerks };
+      byName[weaponName] = { dps, totalDamage, buildPerks, buildDescription };
     }
   }
 

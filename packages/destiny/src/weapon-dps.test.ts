@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import {
   buildWeaponDpsIndex,
   extractTraitPerksFromRow,
+  formatBuildDescription,
   formatWeaponDpsLabel,
   formatWeaponDpsParts,
   matchSheetRowToWeapon,
@@ -53,6 +54,23 @@ describe("matchSheetRowToWeapon", () => {
   });
 });
 
+describe("formatBuildDescription", () => {
+  test("joins multiline sheet rows and strips the weapon name", () => {
+    expect(
+      formatBuildDescription(
+        "High-impact bow\nHeavy Bolts, Envious Arsenal + High Ground (A Good Shout), Moebius Quiver",
+        "A Good Shout",
+      ),
+    ).toBe("High-impact bow · Heavy Bolts, Envious Arsenal + High Ground, Moebius Quiver");
+  });
+
+  test("drops a leading line that is only the weapon name", () => {
+    expect(
+      formatBuildDescription("Leviathan's Breath\nArcher's Tempo, Moebius Quiver", "Leviathan's Breath"),
+    ).toBe("Archer's Tempo, Moebius Quiver");
+  });
+});
+
 describe("extractTraitPerksFromRow", () => {
   test("matches trait perks mentioned in the sheet build string", () => {
     expect(
@@ -93,20 +111,25 @@ describe("buildWeaponDpsIndex", () => {
       totalDamage: 60_000,
       dps: 5855,
       buildPerks: ["Elemental Honing", "Envious Arsenal"],
+      buildDescription: "Adaptive rocket launcherEnvious Arsenal + Elemental Honing x5",
     });
   });
 });
 
 describe("formatWeaponDpsParts", () => {
   test("formats total and DPS separately", () => {
-    expect(formatWeaponDpsParts({ totalDamage: 64_773, dps: 7476, buildPerks: [] })).toEqual({
+    expect(
+      formatWeaponDpsParts({ totalDamage: 64_773, dps: 7476, buildPerks: [], buildDescription: "" }),
+    ).toEqual({
       total: "64,773",
       dps: "7,476",
     });
   });
 
   test("uses INF when total damage is unknown", () => {
-    expect(formatWeaponDpsParts({ totalDamage: null, dps: 5000, buildPerks: [] })).toEqual({
+    expect(
+      formatWeaponDpsParts({ totalDamage: null, dps: 5000, buildPerks: [], buildDescription: "" }),
+    ).toEqual({
       total: "INF",
       dps: "5,000",
     });
@@ -115,13 +138,17 @@ describe("formatWeaponDpsParts", () => {
 
 describe("formatWeaponDpsLabel", () => {
   test("formats total and DPS with a slash", () => {
-    expect(formatWeaponDpsLabel({ totalDamage: 64_773, dps: 7476, buildPerks: [] })).toBe(
+    expect(
+      formatWeaponDpsLabel({ totalDamage: 64_773, dps: 7476, buildPerks: [], buildDescription: "" }),
+    ).toBe(
       "64,773 / 7,476",
     );
   });
 
   test("uses INF when total damage is unknown", () => {
-    expect(formatWeaponDpsLabel({ totalDamage: null, dps: 5000, buildPerks: [] })).toBe(
+    expect(
+      formatWeaponDpsLabel({ totalDamage: null, dps: 5000, buildPerks: [], buildDescription: "" }),
+    ).toBe(
       "INF / 5,000",
     );
   });

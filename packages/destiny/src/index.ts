@@ -141,6 +141,7 @@ export {
 export {
   buildWeaponDpsIndex,
   extractTraitPerksFromRow,
+  formatBuildDescription,
   formatWeaponDpsLabel,
   formatWeaponDpsParts,
   matchSheetRowToWeapon,

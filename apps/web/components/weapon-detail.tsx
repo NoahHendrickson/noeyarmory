@@ -7,6 +7,7 @@ import { Badge, cn } from "@repo/ui";
 import {
   computeWeaponStats,
   formatWeaponDpsParts,
+  WEAPON_DPS_SHEET_NAME,
   type PerkRef,
   type WeaponDoc,
   type WeaponDpsEntry,
@@ -26,6 +27,7 @@ import { weaponTypeLabel } from "./weapon-result-row";
 import { PerkColumnView } from "./perk-column";
 import { StatBars } from "./stat-bars";
 import { WeaponShareButton } from "./weapon-share-button";
+import { WeaponDpsMetricTooltip } from "./weapon-dps-label";
 
 function statsDiffer(a: WeaponStat[], b: WeaponStat[]): boolean {
   const bByHash = new Map(b.map((stat) => [stat.hash, stat.value]));
@@ -72,16 +74,34 @@ function WeaponThumbnail({ weapon }: { weapon: WeaponDoc }) {
 function WeaponDpsSummary({ entry }: { entry: WeaponDpsEntry }) {
   const { total, dps } = formatWeaponDpsParts(entry);
   const hasBenchmarkPerks = entry.buildPerks.length > 0;
+  const valueClassName =
+    "tabular-nums font-medium cursor-help underline decoration-dotted decoration-muted-foreground/50 underline-offset-2";
 
   return (
     <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-xs">
       <div className="flex items-baseline gap-1.5">
         <span className="text-muted-foreground">Total Damage</span>
-        <span className="tabular-nums font-medium">{total}</span>
+        <WeaponDpsMetricTooltip
+          label="Total damage"
+          description={`Estimated total damage from the ${WEAPON_DPS_SHEET_NAME} boss-DPS benchmark for this weapon's optimal community build.`}
+          buildDescription={entry.buildDescription}
+          tooltipSide="top"
+          valueClassName={valueClassName}
+        >
+          {total}
+        </WeaponDpsMetricTooltip>
       </div>
       <div className="flex items-baseline gap-1.5">
         <span className="text-muted-foreground">DPS</span>
-        <span className="tabular-nums font-medium">{dps}</span>
+        <WeaponDpsMetricTooltip
+          label="DPS"
+          description={`Estimated sustained damage per second from the ${WEAPON_DPS_SHEET_NAME} benchmark build.`}
+          buildDescription={entry.buildDescription}
+          tooltipSide="top"
+          valueClassName={valueClassName}
+        >
+          {dps}
+        </WeaponDpsMetricTooltip>
         {hasBenchmarkPerks && (
           <span
             className="text-3xl text-amber-400 font-medium leading-none"

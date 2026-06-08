@@ -542,8 +542,8 @@ describe("sortWeapons", () => {
 
   test("highest DPS first, weapons without DPS last", () => {
     const dpsByName = new Map([
-      ["Fatebringer", { dps: 3000, totalDamage: 30_000, buildPerks: [] }],
-      ["Stormcharge", { dps: 5000, totalDamage: 50_000, buildPerks: [] }],
+      ["Fatebringer", { dps: 3000, totalDamage: 30_000, buildPerks: [], buildDescription: "" }],
+      ["Stormcharge", { dps: 5000, totalDamage: 50_000, buildPerks: [], buildDescription: "" }],
     ]);
 
     expect(orderedNames(sortWeapons(sampleSummaries, "dps-desc", dpsByName))).toEqual([
