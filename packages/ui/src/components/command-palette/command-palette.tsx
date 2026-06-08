@@ -422,6 +422,9 @@ export function CommandPalette({
     if (!open) return;
     dispatch({ type: "setActive", index: firstSelectableIndex(items) });
     setHoverIndex(-1);
+    // Intentionally omit `items` — its reference churns when unrelated palette deps
+    // change (e.g. preview rows while in results mode), which would reset selection
+    // on every render and break arrow-key / hover navigation.
   }, [
     open,
     mode,
@@ -434,7 +437,6 @@ export function CommandPalette({
     previewOrderKey,
     actionsOrderKey,
     recentOrderKey,
-    items,
   ]);
 
   useLayoutEffect(() => {

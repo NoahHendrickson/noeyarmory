@@ -1,5 +1,5 @@
 import { ArrowDown, CornerDownLeft, History, ListFilter, X } from "lucide-react";
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { cn } from "../../lib/utils";
 import { Kbd } from "../kbd";
@@ -64,6 +64,34 @@ export function PaletteList({
     [renderItems],
   );
 
+  const [stickyHeaderGlass, setStickyHeaderGlass] = useState(false);
+
+  const syncStickyHeaderGlass = useCallback(() => {
+    setStickyHeaderGlass((scrollRef.current?.scrollTop ?? 0) > 0);
+  }, [scrollRef]);
+
+  const handleScroll = useCallback(() => {
+    onScroll();
+    syncStickyHeaderGlass();
+  }, [onScroll, syncStickyHeaderGlass]);
+
+  useEffect(() => {
+    if (!open || renderMode !== "results") setStickyHeaderGlass(false);
+  }, [open, renderMode]);
+
+  useLayoutEffect(() => {
+    if (open && renderMode === "results" && resultsHeader != null) {
+      syncStickyHeaderGlass();
+    }
+  }, [open, renderMode, resultsHeader, results.length, syncStickyHeaderGlass]);
+
+  const stickyHeaderClass = cn(
+    "sticky top-0 z-10 -mx-1.5 px-3 py-1.5 transition-[background-color,backdrop-filter,border-color] duration-150 ease-out motion-reduce:transition-none",
+    stickyHeaderGlass
+      ? "border-b border-border/40 bg-card/55 backdrop-blur-xl"
+      : "border-b border-transparent bg-transparent",
+  );
+
   function renderRow(item: PaletteItem, index: number, as: "li" | "div" = "li") {
     return (
       <PaletteListRow
@@ -101,12 +129,10 @@ export function PaletteList({
             renderMode === "results" && resultsHeader != null ? "pb-1.5" : "py-1.5",
             panelFooter != null && "pb-0",
           )}
-          onScroll={onScroll}
+          onScroll={handleScroll}
         >
           {renderMode === "results" && resultsHeader != null && (
-            <div className="bg-card/55 sticky top-0 z-10 -mx-1.5 border-b border-border/40 px-3 py-1.5 backdrop-blur-xl">
-              {resultsHeader}
-            </div>
+            <div className={stickyHeaderClass}>{resultsHeader}</div>
           )}
           {renderMode !== "results" && panelHeader != null && (
             <div

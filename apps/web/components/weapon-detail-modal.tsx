@@ -52,9 +52,12 @@ export function WeaponDetailModal({
             render={
               <Button
                 variant="ghost"
-                size="sm"
+                size="default"
                 aria-label="Back"
-                className="text-muted-foreground hover:text-foreground self-start"
+                className={cn(
+                  "self-start rounded-full border border-border bg-card/55 text-foreground shadow-sm backdrop-blur-xl",
+                  "hover:bg-card/70 hover:text-foreground",
+                )}
               />
             }
           >
