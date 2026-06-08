@@ -1,8 +1,22 @@
 {
   "source": "https://docs.google.com/spreadsheets/d/1_5wtBjRYHHxuF4oJKDb_iOGZs-wTkzB6RYbnyNLbuz4/edit?gid=1356041045",
   "sheet": "Sustained",
-  "syncedAt": "2026-06-07T03:09:56.108Z",
+  "syncedAt": "2026-06-08T21:31:29.581Z",
   "byName": {
+    "A Good Shout": {
+      "dps": 19464,
+      "totalDamage": 181990,
+      "buildPerks": [
+        "Envious Arsenal",
+        "Heavy Bolts",
+        "High Ground"
+      ]
+    },
+    "Leviathan's Breath": {
+      "dps": 9116,
+      "totalDamage": 157965,
+      "buildPerks": []
+    },
     "Crux Termination IV": {
       "dps": 7476,
       "totalDamage": 64773,
@@ -102,14 +116,6 @@
         "Surrounded"
       ]
     },
-    "Submersion": {
-      "dps": 4001,
-      "totalDamage": null,
-      "buildPerks": [
-        "Aggregate Charge",
-        "Charged Bolts"
-      ]
-    },
     "Relentless": {
       "dps": 3838,
       "totalDamage": 115614,
@@ -128,17 +134,20 @@
       "totalDamage": 35782,
       "buildPerks": []
     },
+    "Submersion": {
+      "dps": 3731,
+      "totalDamage": null,
+      "buildPerks": [
+        "Aggregate Charge",
+        "Heavy Bolts"
+      ]
+    },
     "Lord of Wolves": {
       "dps": 3686,
       "totalDamage": 75300,
       "buildPerks": [
         "Release the Wolves"
       ]
-    },
-    "Leviathan's Breath": {
-      "dps": 3646,
-      "totalDamage": 63186,
-      "buildPerks": []
     },
     "Deathbringer": {
       "dps": 3626,
