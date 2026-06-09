@@ -7,6 +7,10 @@ import {
 } from "./palette-reducer";
 import type { ClosingSnapshot, DormantSnapshot, ListMode, PaletteItem } from "./types";
 
+function snapshotContainsPreviewResults(items: PaletteItem[]): boolean {
+  return items.some((item) => item.kind === "section" && item.id === "preview");
+}
+
 export interface UsePaletteAnimationParams {
   open: boolean;
   query: string;
@@ -30,6 +34,7 @@ export function usePaletteAnimation({
   const openingFingerprintRef = useRef<Pick<DormantSnapshot, "query" | "chipsLength"> | null>(
     null,
   );
+  const openingSnapshotHasPreviewResultsRef = useRef(false);
 
   const clearOpenAnimationTimer = useCallback(() => {
     clearTimeout(openAnimationTimerRef.current);
@@ -39,6 +44,7 @@ export function usePaletteAnimation({
   const clearOpeningSnapshot = useCallback(() => {
     setOpeningSnapshot(null);
     openingFingerprintRef.current = null;
+    openingSnapshotHasPreviewResultsRef.current = false;
   }, []);
 
   const finishOpenAnimation = useCallback(
@@ -70,13 +76,28 @@ export function usePaletteAnimation({
     const dormant = dormantSnapshotRef.current;
     if (!dormant || !dormantSnapshotMatches(dormant, query, chipsLength)) {
       dormantSnapshotRef.current = null;
+      openingSnapshotHasPreviewResultsRef.current = false;
       return;
     }
     setOpeningSnapshot({ mode: dormant.mode, items: [...dormant.items] });
     openingFingerprintRef.current = { query: dormant.query, chipsLength: dormant.chipsLength };
-    if (shouldDeferPreviews(query, chipsLength)) setPreviewsMounted(false);
-    startPreviewDeferTimer();
-  }, [invalidateDormantSnapshot, query, chipsLength, startPreviewDeferTimer]);
+    openingSnapshotHasPreviewResultsRef.current =
+      shouldDeferPreviews(query, chipsLength) && snapshotContainsPreviewResults(dormant.items);
+    if (shouldDeferPreviews(query, chipsLength)) {
+      if (openingSnapshotHasPreviewResultsRef.current) {
+        clearOpenAnimationTimer();
+      } else {
+        setPreviewsMounted(false);
+        startPreviewDeferTimer();
+      }
+    }
+  }, [
+    invalidateDormantSnapshot,
+    query,
+    chipsLength,
+    clearOpenAnimationTimer,
+    startPreviewDeferTimer,
+  ]);
 
   const beginCloseAnimation = useCallback(
     (currentMode: ListMode | null, currentItems: PaletteItem[]) => {
@@ -114,6 +135,13 @@ export function usePaletteAnimation({
       return;
     }
     if (!shouldDeferPreviews(query, chipsLength)) {
+      openingSnapshotHasPreviewResultsRef.current = false;
+      setPreviewsMounted(true);
+      return;
+    }
+    if (openingSnapshotHasPreviewResultsRef.current) {
+      openingSnapshotHasPreviewResultsRef.current = false;
+      clearOpenAnimationTimer();
       setPreviewsMounted(true);
       return;
     }
