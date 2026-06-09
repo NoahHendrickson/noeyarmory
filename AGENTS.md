@@ -6,7 +6,7 @@ Guidance for cloud agents working in this repository.
 
 ### Environment bootstrap
 
-Cloud agents load `.cursor/environment.json`, which runs `scripts/ensure-cloud-env.sh` before `pnpm install`. That script:
+Cloud agents load `.cursor/environment.json`, which runs `scripts/ensure-cloud-env.sh`, then `pnpm install`, then Playwright Chromium for `@repo/ui` Storybook browser tests. The bootstrap script:
 
 - Activates **Node 24** from `.nvmrc` (the VM default at `/exec-daemon/node` is Node 22)
 - Normalizes `origin` owner casing to `NoahHendrickson` when the remote already points at this repo (preserves HTTPS auth tokens and SSH URLs)
@@ -68,7 +68,7 @@ The command palette is keyboard-driven: press **F** to focus search, then type a
 ### Tests
 
 - `@repo/destiny` tests are pure Vitest (no browser).
-- `@repo/ui` includes Storybook browser tests via Playwright. After a fresh clone, install browsers once:
+- `@repo/ui` includes Storybook browser tests via Playwright. Cloud agents install Chromium during `.cursor/environment.json` bootstrap; locally after a fresh clone:
 
   ```bash
   cd packages/ui && pnpm exec playwright install chromium
