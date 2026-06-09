@@ -21,6 +21,7 @@ import {
   collectFacets,
   createPerkNameFuse,
   type WeaponSort,
+  type WeaponSummary,
 } from "@repo/destiny";
 
 import { useArmorActions } from "../hooks/use-armor-actions";
@@ -237,6 +238,13 @@ export function HomeSearch({
       new Map(weaponPreviewWeapons.map((weapon) => [String(weapon.hash), weapon] as const)),
     [weaponPreviewWeapons],
   );
+  const lastWeaponPreviewByIdRef = useRef<ReadonlyMap<string, WeaponSummary>>(new Map());
+
+  useEffect(() => {
+    if (weaponPreviewById.size > 0) {
+      lastWeaponPreviewByIdRef.current = weaponPreviewById;
+    }
+  }, [weaponPreviewById]);
 
   const armorById = useMemo(
     () => new Map(armorShown.map((armor) => [armor.instanceId, armor] as const)),
@@ -245,7 +253,8 @@ export function HomeSearch({
 
   const renderWeaponResult = useCallback(
     (id: string) => {
-      const weapon = weaponById.get(id) ?? weaponPreviewById.get(id);
+      const weapon =
+        weaponById.get(id) ?? weaponPreviewById.get(id) ?? lastWeaponPreviewByIdRef.current.get(id);
       if (!weapon) return null;
       return (
         <WeaponResultRow

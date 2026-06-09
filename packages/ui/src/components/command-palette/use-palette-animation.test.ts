@@ -82,4 +82,53 @@ describe("usePaletteAnimation", () => {
 
     vi.useRealTimers();
   });
+
+  it("keeps previews ready when reopening a dormant snapshot with preview rows", () => {
+    vi.useFakeTimers();
+    const onPreviewsReadyChange = vi.fn();
+    const category: PaletteCategory = {
+      id: "trait1",
+      label: "Trait 1",
+      getValues: () => [],
+    };
+    const items: PaletteItem[] = [
+      {
+        kind: "chipSuggestion",
+        category,
+        option: { id: "surrounded", label: "Surrounded" },
+      },
+      { kind: "section", id: "preview-divider", divider: true },
+      { kind: "section", id: "preview", label: "Results" },
+      { kind: "result", result: { id: "menotti-c" } },
+    ];
+
+    const { result, rerender } = renderHook(
+      ({ open }) =>
+        usePaletteAnimation({
+          open,
+          query: "surrounded",
+          chipsLength: 0,
+          onPreviewsReadyChange,
+        }),
+      { initialProps: { open: false } },
+    );
+
+    act(() => {
+      result.current.beginCloseAnimation("categories", items);
+      result.current.seedOpeningSnapshot();
+    });
+    rerender({ open: true });
+
+    expect(result.current.previewResultsForItems).toBe(true);
+    expect(result.current.openingSnapshot?.items).toEqual(items);
+
+    act(() => {
+      vi.advanceTimersByTime(PANEL_TRANSITION_MS);
+    });
+
+    expect(result.current.previewResultsForItems).toBe(true);
+    expect(onPreviewsReadyChange).toHaveBeenLastCalledWith(true);
+
+    vi.useRealTimers();
+  });
 });
