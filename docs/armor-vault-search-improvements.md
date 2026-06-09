@@ -1,209 +1,156 @@
-# Owned armor vault search — improvements plan
+# Owned armor vault search — plan
 
-**Created:** 2026-06-09  
-**Priority:** User cares about **searching owned armor** (vault + characters + equipped). **Owned weapon rolls are out of scope.**
+**Updated:** 2026-06-09  
+**User priority:** Fast search, fast results, smooth scrolling in armor mode. **Not** new filter dimensions beyond **Location**.
 
-**UX constraint:** Same command palette + chip model as today (`?mode=armor` on `/`). No new layouts or query languages.
+**UX constraint:** Keep command palette + chips. No layout redesign.
 
-**Relation to destiny.report research:** That work targets the **manifest weapon catalog** only. destiny.report has no armor or vault features. Performance patterns (worker, deferred search) may apply to armor later if lists grow large; the main wins here are **new filter fields** on data we already fetch.
+**Out of scope (explicit):** Mod filters, slot, rarity, type, owner character ID, stat-threshold chips, owned weapon vault, DIM query strings.
+
+**Keep as-is:** Stat bars in results (`ArmorStatsSubtitle` on Armor 3.0 pieces) — user likes showing stats; no change required unless perf tuning touches that component.
 
 ---
 
 ## What exists today
 
-### Flow
-
-1. User signs in (Bungie OAuth) → armor mode on home page.
-2. `GET /api/armor` (`apps/web/app/api/armor/route.ts`) calls `getOwnedArmor()` in `bungie-profile.ts`.
-3. Profile components: vault (`profileInventory`), character inventories, equipped gear.
-4. Each piece is joined with `armor.json` for definitions + Armor 3.0 roll data (set, archetype, stats, mods).
-5. Client caches in `use-owned-armor.ts`; search runs in `use-armor-search-results.ts`.
-
-### Palette categories (armor mode)
-
-| Category | Field | Notes |
-|----------|-------|-------|
-| Class | `classType` | Titan / Hunter / Warlock |
-| Set bonus | `setName` | Armor 3.0 only in facet counts |
-| Archetype | `archetype` | Armor 3.0 only |
-| Tertiary stat | `tertiaryStat` | Armor 3.0 only |
-| Tunable stat | `tunableStat` | Armor 3.0 only |
-
-### Text search (`searchOwnedArmor`)
-
-Fuse + `matchRank` over: `name`, `classType`, `setName`, `archetype`, `tertiaryStat`, `tunableStat`.
-
-### Actions
-
-Equip / move from vault — `ArmorResultRow` + `/api/armor/equip`, `/api/armor/transfer`.
+1. Sign in → `/?mode=armor` → `GET /api/armor` → cached in `use-owned-armor.ts`.
+2. Palette categories: Class, Set bonus, Archetype, Tertiary stat, Tunable stat.
+3. Text search: `searchOwnedArmor` + fuse over name/class/set/archetype/stats labels.
+4. Results: `ArmorResultRow` — icon, name, **stat subtitle**, Equip / Move buttons.
+5. Cap: 50 results default, 200 max (`MAX_SHOW_ALL`).
 
 ---
 
-## Gaps (data already on `OwnedArmorItem`, not searchable)
+## Only new filter: Location
 
-From `apps/web/lib/armor-types.ts` and API mapping:
+Add one palette category:
 
-| Field | Example values | Search value |
-|-------|----------------|--------------|
-| `rolledMods[]` | `{ name: "Harmonic Siphon", … }` | **High** — "which pieces have X mod?" |
-| `slot` | Helmet, Gauntlets, Chest, Legs, Class Item | **High** — slot-specific farming |
-| `location` | `vault` \| `inventory` \| `equipped` | **High** — vault-only view |
-| `rarity` | Legendary, Exotic | Medium |
-| `stats[]` | `{ name: "Mobility", value: 18 }` | **High** — stat threshold builds |
-| `type` | Duplicate of slot label in practice | Low (redundant with slot) |
-| `ownerCharacterId` | Bungie character id | Medium — "on my Hunter" needs character list |
+| Category id | Label | Chip values |
+|-------------|-------|-------------|
+| `location` | Location | Vault, On character, Equipped |
 
-**Known doc/code mismatch:** AGENTS.md notes mods are returned but not in search/palette — still true.
-
----
-
-## Recommended improvements (phased)
-
-### Phase A — Mod filter (highest user value)
-
-**Goal:** Chip category **Mod** — piece must roll **all** selected mods (AND), matching weapon multi-perk behavior.
+Maps to `OwnedArmorItem.location`: `vault` | `inventory` | `equipped`.
 
 **Touch:**
 
-- `packages/destiny/src/owned-armor-search.ts`
-  - Extend `OwnedArmorSearchItem` with `modNames?: string[]` (lowercased names at map time, or compute in filter)
-  - Extend `OwnedArmorFilters` with `mods?: string[]`
-  - `filterOwnedArmor`: require every selected mod name ∈ piece's rolled mod names
-  - `collectOwnedArmorFacets`: new `mods` facet from union of all `rolledMods[].name` across owned set
-  - `createOwnedArmorFuse` / `armorSearchFields`: add mod names to fuse keys and text rank
-- `apps/web/lib/palette/armor-categories.ts` — `perkCategory`-style mod picker (reuse pattern from weapon perks)
-- `apps/web/lib/armor-types.ts` — ensure client maps mods consistently (already does)
-- `packages/destiny/src/owned-armor-search.test.ts` — AND mod filter, facet counts
+- `packages/destiny/src/owned-armor-search.ts` — `OwnedArmorFilters.location`, `filterOwnedArmor`, `collectOwnedArmorFacets`
+- `apps/web/lib/palette/armor-categories.ts`
+- `packages/destiny/src/owned-armor-search.test.ts`
 
-**Palette:** New category id `mods`, label **Mod**, `getValues` searches mod names from facets.
-
-**Verify:** Sign in, chip `Mod: Harmonic Siphon`, only matching pieces; two mod chips = AND.
+**Do not** add mods/slot/rarity/type/ownerCharacterId to search, fuse keys, or facets.
 
 ---
 
-### Phase B — Slot, location, rarity
+## Performance — primary focus
 
-**Goal:** Common inventory questions without text search.
+Armor rows are **heavier** than weapon rows (stat subtitle + two action buttons + images). The palette **does not virtualize** result lists — it renders up to 200 DOM rows (`packages/ui/.../palette-list.tsx`).
 
-**Touch:** same files as Phase A.
+### Likely bottlenecks
 
-| Category id | Label | Filter field |
-|-------------|-------|--------------|
-| `slot` | Slot | `slot` |
-| `location` | Location | `location` — chips: Vault, On character, Equipped |
-| `rarity` | Rarity | `rarity` |
+| Area | File | Issue |
+|------|------|--------|
+| Search on main thread | `use-armor-search-results.ts` | `filterOwnedArmor` + fuse every deferred query change |
+| Preview while typing | same | Multiple `filterOwnedArmor` + `searchOwnedArmor` per keystroke when inline suggestions fire |
+| Facet rebuild | `buildArmorCategories(owned)` | Full `collectOwnedArmorFacets` scan when `owned` reference changes |
+| Fuse rebuild | `createOwnedArmorFuse(owned)` | Rebuilt when `owned` array updates |
+| Result DOM | `palette-list.tsx` | No virtualization; armor rows taller than weapons |
+| Row render | `armor-result-row.tsx` | `ArmorStatsSubtitle`, dual buttons, Next `Image` per row |
 
-**Display labels for location chips:**
+### Recommended work (ordered)
 
-| `location` value | Chip label |
-|------------------|------------|
-| `vault` | Vault |
-| `inventory` | On character |
-| `equipped` | Equipped |
+#### 1. Profile first
 
-**Verify:** Vault-only chip shows only `location === "vault"`; equip/transfer still works on results.
+Chrome DevTools → Performance, 6× CPU throttle, armor mode:
 
----
+- Type in palette with chips active
+- Scroll results list with 50–200 items
+- Note long tasks >50ms
 
-### Phase C — Stat threshold chips (Armor 3.0)
+#### 2. Preview path (quick wins)
 
-**Goal:** Find pieces with e.g. Mobility ≥ 20, Resilience ≥ 10.
+`apps/web/hooks/use-armor-search-results.ts` — mirror weapon optimizations:
 
-**Options (pick one in implementation):**
+- Cap preview filter passes (Firefox already has lower limits in `constants.ts`; consider uniform cap)
+- Skip preview when query unchanged (stable chip hash)
+- Avoid re-running full `searchOwnedArmor(owned, …)` when only chip suggestions change — filter from current result set when possible
 
-1. **Per-stat category** — chip `Mobility ≥ 20` (numeric picker or preset buckets)
-2. **Single "Stat" category** — two-step: pick stat name, then threshold bucket
+#### 3. Memoize facets + fuse
 
-**Touch:**
+- Cache `collectOwnedArmorFacets(owned)` keyed by `owned.length` + stable signature (or compute once in `use-owned-armor` after fetch)
+- Only rebuild `armorFuse` when owned armor actually changes, not on unrelated parent re-renders
 
-- Extend `OwnedArmorSearchItem` / filters with `statMin?: Record<string, number>` or `statThresholds?: { stat: string; min: number }[]`
-- `filterOwnedArmor`: for Armor 3.0 pieces, compare `stats[]`; legacy armor skips or fails stat filters
-- Facets: only offer stats that appear on owned Armor 3.0 pieces
+#### 4. Virtualize armor results (if scroll janks)
 
-**Open question:** Buckets (`≥10`, `≥15`, `≥20`) vs free numeric input — buckets match existing facet chip UX.
+Weapons use `VirtualizedWeaponGrid` on perk pages; **palette results do not**.
 
-**Verify:** Tests with fixture stats; in-game spot-check one high-stat roll.
+Options (pick smallest that fixes scroll):
 
----
+- Add optional virtualized results mode to `PaletteList` when `results.length > N`
+- Or armor-specific slimmer row variant for list density (keep stats subtitle; defer button layout cost)
 
-### Phase D — Character / class location (optional)
+#### 5. Row-level perf
 
-**Goal:** "Equipped on Hunter" vs "Hunter armor in vault".
+- Confirm `ArmorResultRow` stays `memo`'d with stable `actionState` references
+- `ArmorStatsSubtitle` — avoid unnecessary re-renders; keep stat display
+- Consider lazy-loading Bungie icons for off-screen rows if virtualizer added
 
-**Needs:**
+#### 6. Worker (optional)
 
-- Expose character class per `ownerCharacterId` (API could add `ownerClassType` when `location !== "vault"`)
-- Or chip **Class** already filters armor class — combine with **Location: Equipped**
+If main-thread search still blocks after 1–4: move `filterOwnedArmor` + fuse search to shared worker (same pattern as weapon catalog plan in `destiny-report-research.md`). Armor lists are usually smaller than manifest — try steps 2–4 first.
 
-Lower priority than A–C unless user asks.
+#### 7. API / payload (optional)
 
----
-
-### Phase E — Performance (only if needed)
-
-Armor list size is typically hundreds of instances, not thousands of manifest rows. Unlikely to need WASM trigram.
-
-If profiling shows lag (large vaults + preview loop):
-
-- Mirror weapon preview caps in `use-armor-search-results.ts` (already similar structure)
-- Optional: run `filterOwnedArmor` + fuse in shared search worker alongside weapons
-
-**Skip until user reports sluggish armor palette.**
+`GET /api/armor` still returns `rolledMods` for display if needed elsewhere — **do not** index or search them. If payload size matters, mods could be stripped from API later (separate decision; not required for search perf).
 
 ---
 
 ## Code map
 
 ```
-Server
-  apps/web/lib/bungie-profile.ts       # getOwnedArmor, profile + armor.json join
-  apps/web/app/api/armor/route.ts      # JSON shape → OwnedArmorItem
+Search
+  packages/destiny/src/owned-armor-search.ts
+  apps/web/hooks/use-armor-search-results.ts
+  apps/web/lib/palette/armor-categories.ts
 
-Client data
-  apps/web/lib/use-owned-armor.ts      # fetch + module cache
-  apps/web/lib/armor-types.ts          # OwnedArmorItem
-
-Search engine
-  packages/destiny/src/owned-armor-search.ts   # filter, search, facets, fuse
-  apps/web/hooks/use-armor-search-results.ts   # palette results + preview
-  apps/web/lib/palette/armor-categories.ts     # buildArmorCategories
-  apps/web/lib/palette/weapon-filters.ts       # chipsToArmorFilters
+Data
+  apps/web/lib/use-owned-armor.ts
+  apps/web/app/api/armor/route.ts
+  apps/web/lib/bungie-profile.ts
 
 UI
-  apps/web/components/home-search.tsx          # armor mode toggle
-  apps/web/components/armor-result-row.tsx     # row + equip/transfer
+  apps/web/components/home-search.tsx
+  apps/web/components/armor-result-row.tsx
+  apps/web/components/armor-stats-subtitle.tsx
+  packages/ui/src/components/command-palette/palette-list.tsx
+
+Constants
+  apps/web/lib/palette/constants.ts
 ```
 
 ---
 
-## Explicit non-goals
+## Suggested first task for agent
 
-- Owned **weapon** vault search (`docs/vault-search-plan.md`) — user does not want this
-- Public browse of full armor catalog (`armor-search.ts` exists in package; no web UI)
-- DIM-style query strings
-- Changing palette interaction model
-
----
-
-## Suggested first task
-
-**Phase A (mod filter)** — data is already on every piece; highest impact for vault armor theorycrafting.
-
-Then **Phase B** (slot + location + rarity) in the same PR or follow-up.
+1. Add **Location** chip filter (small, user-approved).
+2. Profile armor palette; implement preview caps + facet/fuse memoization.
+3. If scroll still janks at 50+ results → virtualize palette results or slim row render path.
 
 ---
 
-## Verify checklist
+## Verify
 
 ```bash
-source scripts/ensure-cloud-env.sh
 pnpm --filter @repo/destiny exec vitest run src/owned-armor-search.test.ts
 pnpm typecheck
 ```
 
-Manual (requires Bungie dev app + `.env`):
+Manual: sign in, armor mode, filter Location: Vault, scroll 50+ results, type with chips — no visible stutter.
 
-1. Sign in → armor mode
-2. Add mod chip → results match equipped/vault mods
-3. Add Location: Vault → only vault pieces
-4. Equip / move still works on filtered row
+---
+
+## Non-goals
+
+- Mod / slot / rarity / type / character filters
+- Stat threshold search chips (stats **display** in rows is fine)
+- Owned weapon vault
+- Palette UX redesign

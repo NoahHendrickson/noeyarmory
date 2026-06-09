@@ -75,11 +75,13 @@ Full checklists → [`destiny-report-research.md`](./destiny-report-research.md)
 
 ## 5. Armor vault plan (user priority)
 
-**Not from destiny.report** — our own gap analysis.
+**Not from destiny.report.** Focus: **performance** (search, results, scrolling). One small filter add: **Location** (Vault / On character / Equipped).
 
-**Suggested first task (armor):** Phase A — **Mod** chip filter (`rolledMods` already in API).
+**Do not add:** mod, slot, rarity, type, or owner-character filters. Keep stat display in result rows.
 
-Phases B–E → [`armor-vault-search-improvements.md`](./armor-vault-search-improvements.md).
+**Suggested first task (armor):** Profile armor palette → preview/facet memoization → Location chip → virtualize results if scroll janks.
+
+Details → [`armor-vault-search-improvements.md`](./armor-vault-search-improvements.md).
 
 ---
 
