@@ -92,6 +92,8 @@ export interface WeaponFilters {
   craftable?: string[];
   /** OR within; exact case-insensitive weapon name match. */
   name?: string[];
+  /** When set, keep only adept (`true`) or non-adept (`false`) weapons. */
+  adept?: boolean;
 }
 
 const lower = (s: string) => s.toLowerCase();
@@ -164,6 +166,7 @@ export function filterWeapons(
     if (!matchesFacet(w.slot, filters.slot)) return false;
     if (filters.frame?.length && !matchesFacet(w.frame ?? "", filters.frame)) return false;
     if (!matchesCraftable(w.craftable, filters.craftable)) return false;
+    if (filters.adept != null && w.adept !== filters.adept) return false;
     if (trait1Wanted.size || trait2Wanted.size) {
       const traits = traitColumns(w.columns);
       if (!columnRollsAny(traits[0], trait1Wanted, perks)) return false;
