@@ -90,11 +90,14 @@ export {
   suggestWeaponNames,
   buildPerkMap,
   buildWeaponsByPerkName,
+  buildWeaponNameIndex,
   type WeaponSort,
   type WeaponFilters,
   type FacetOption,
   type PerkOption,
   type ColumnPerkOptions,
+  type WeaponNameIndex,
+  type PopularityLookup,
 } from "./search";
 export {
   buildWeaponIndexLookups,

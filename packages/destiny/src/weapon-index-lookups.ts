@@ -7,6 +7,7 @@ import type {
   WeaponSummary,
   WeaponTypeRef,
 } from "./types";
+import { buildWeaponNameIndex, type WeaponNameIndex } from "./weapon-name-index";
 
 /** Precomputed lookups over a weapon index for O(1) hash/perk resolution. */
 export interface WeaponIndexLookups {
