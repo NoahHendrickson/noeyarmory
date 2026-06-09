@@ -3,16 +3,21 @@
 import { useDeferredValue, useMemo } from "react";
 import type { PaletteCategory, PaletteChip, PalettePanelState, ValueSuggestion } from "@repo/ui";
 import {
+  createLruCache,
   createWeaponFuse,
   filterWeaponNames,
   filterWeapons,
+  mergeWeaponFilters,
   MIN_WEAPON_TEXT_QUERY_LENGTH,
+  planWeaponTextSearch,
   rankWeaponResults,
   sortFilteredWeaponNames,
   weaponsMatchingTextQuery,
   type PerkRef,
+  type PopularityLookup,
   type WeaponDpsEntry,
   type WeaponFilters,
+  type WeaponNameIndex,
   type WeaponSort,
   type WeaponSummary,
 } from "@repo/destiny";
@@ -23,6 +28,8 @@ import {
   MAX_SHOW_ALL,
 } from "../lib/palette/constants";
 import { chipsToWeaponFilters, withHypotheticalChip } from "../lib/palette/weapon-filters";
+import { useSearchPopularity } from "../lib/use-search-popularity";
+import { useWeapons } from "../lib/weapons-context";
 import { usePalettePreviewInput } from "./use-palette-preview-input";
 
 export interface UseWeaponSearchResultsParams {
@@ -50,18 +57,19 @@ function weaponsForPreviewQuery(
   weaponFuse: ReturnType<typeof createWeaponFuse>,
   query: string,
   limit: number,
+  nameIndex: WeaponNameIndex,
 ): WeaponSummary[] {
   const q = query.trim();
   if (q.length < MIN_WEAPON_TEXT_QUERY_LENGTH) return weapons;
 
-  const exact = sortFilteredWeaponNames(filterWeaponNames(weapons, q)).find(
+  const exact = sortFilteredWeaponNames(filterWeaponNames(weapons, q, nameIndex)).find(
     (match) => match.searchRank === 0 && match.value.toLowerCase() === q.toLowerCase(),
   );
   if (exact) {
-    return weapons.filter((weapon) => weapon.name === exact.value);
+    return nameIndex.byName.get(exact.value) ?? weapons.filter((weapon) => weapon.name === exact.value);
   }
 
-  return weaponsMatchingTextQuery(weapons, weaponFuse, q, limit);
+  return weaponsMatchingTextQuery(weapons, weaponFuse, q, limit, nameIndex);
 }
 
 export function useWeaponSearchResults({
@@ -87,21 +95,52 @@ export function useWeaponSearchResults({
     [chips, customFilters],
   );
 
-  const weaponFuse = useMemo(() => createWeaponFuse(weapons), [weapons]);
+  // Shared, build-once fuse + name index (B1/A1) — never rebuilt per hook/keystroke.
+  const { weaponFuse, nameIndex } = useWeapons();
+  const popularity: PopularityLookup = useSearchPopularity();
   const deferredQuery = useDeferredValue(query);
   const { previewQuery, previewPanelState, previewInlineSuggestions, previewResultLimit } =
     usePalettePreviewInput(query, panelState, inlineSuggestions);
   const textSearchActive = resultsMode === "text";
 
+  // Cross-render result cache (B4): rebuilt whenever the underlying catalog,
+  // popularity signal, or perk pool changes so cached lists can never go stale.
+  const resultCache = useMemo(
+    () => createLruCache<string, WeaponSummary[]>(32),
+    [weapons, nameIndex, popularity, perks],
+  );
+
   const weaponResults = useMemo(() => {
-    const q = deferredQuery.trim();
-    const base =
-      textSearchActive && q.length >= MIN_WEAPON_TEXT_QUERY_LENGTH
-        ? weaponsMatchingTextQuery(weapons, weaponFuse, q, MAX_SHOW_ALL)
-        : weapons;
-    const filtered = filterWeapons(base, weaponFilters, perks);
-    return rankWeaponResults(filtered, q, sort, dpsByName);
-  }, [weaponFuse, weapons, perks, deferredQuery, weaponFilters, sort, dpsByName, textSearchActive]);
+    const raw = deferredQuery.trim();
+    // Parse keyword syntax once; non-text mode has neither keywords nor free text.
+    const plan = textSearchActive ? planWeaponTextSearch(deferredQuery) : null;
+    const mergedFilters = plan ? mergeWeaponFilters(weaponFilters, plan.filters) : weaponFilters;
+    const searchText = plan?.searchText ?? "";
+
+    const cacheKey = `${textSearchActive ? "t" : "f"}|${sort}|${raw}|${JSON.stringify(mergedFilters)}`;
+    const cached = resultCache.get(cacheKey);
+    if (cached) return cached;
+
+    const base = searchText
+      ? weaponsMatchingTextQuery(weapons, weaponFuse, searchText, MAX_SHOW_ALL, nameIndex)
+      : weapons;
+    const filtered = filterWeapons(base, mergedFilters, perks);
+    const ranked = rankWeaponResults(filtered, searchText, sort, dpsByName, nameIndex, popularity);
+    resultCache.set(cacheKey, ranked);
+    return ranked;
+  }, [
+    weaponFuse,
+    weapons,
+    perks,
+    deferredQuery,
+    weaponFilters,
+    sort,
+    dpsByName,
+    textSearchActive,
+    nameIndex,
+    popularity,
+    resultCache,
+  ]);
 
   const resultLimit = showAllResults ? MAX_SHOW_ALL : MAX_RESULTS;
   const weaponShown = weaponResults.slice(0, resultLimit);
@@ -123,6 +162,8 @@ export function useWeaponSearchResults({
     };
 
     const q = previewQuery.trim();
+    // Parse the draft query once; reused for the text base and result ranking.
+    const plan = planWeaponTextSearch(previewQuery);
     let filterSets: WeaponFilters[] = [];
 
     if (
@@ -150,18 +191,22 @@ export function useWeaponSearchResults({
         appendWeapons(filterWeapons(weapons, filters, perks));
       }
     } else if (q.length >= MIN_WEAPON_TEXT_QUERY_LENGTH) {
-      appendWeapons(
-        filterWeapons(
-          weaponsForPreviewQuery(weapons, weaponFuse, q, previewResultLimit),
-          base,
-          perks,
-        ),
-      );
+      // Keyword filters (element:solar, is:adept, …) narrow; free text searches.
+      // Empty searchText means "filters only" → start from the whole catalog.
+      const previewFilters = mergeWeaponFilters(base, plan.filters);
+      const textBase = plan.searchText
+        ? weaponsForPreviewQuery(weapons, weaponFuse, plan.searchText, previewResultLimit, nameIndex)
+        : weapons;
+      appendWeapons(filterWeapons(textBase, previewFilters, perks));
     }
 
     if (candidates.length === 0) return [];
 
-    return rankWeaponResults(candidates, q, sort, dpsByName).slice(0, previewResultLimit);
+    const rankQuery = plan.searchText || q;
+    return rankWeaponResults(candidates, rankQuery, sort, dpsByName, nameIndex, popularity).slice(
+      0,
+      previewResultLimit,
+    );
   }, [
     previewsEnabled,
     mode,
@@ -177,6 +222,8 @@ export function useWeaponSearchResults({
     sort,
     dpsByName,
     weaponFuse,
+    nameIndex,
+    popularity,
     previewInlineSuggestions,
   ]);
 

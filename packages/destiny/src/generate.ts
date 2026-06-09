@@ -7,6 +7,7 @@ import { buildArmorIndex } from "./build-armor-index";
 import { buildAmmoTypeCatalog, buildWeaponIndex } from "./build-index";
 import { stripPerksLowerReplacer } from "./intern-weapons";
 import { downloadDestinyIconDefinitions, downloadManifest } from "./manifest";
+import { serializeWeaponFuseIndex } from "./search";
 import { writeSampleIndexes } from "./write-sample-indexes";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -34,6 +35,8 @@ async function main(): Promise<void> {
   const ammoTypes = buildAmmoTypeCatalog(iconDefs);
   console.log("Flattening weapons…");
   const { index, detailIndex } = buildWeaponIndex(defs, version, ammoTypes);
+  // Ship a prebuilt fuse.js index so the browser skips the cold-load tokenization pass.
+  index.fuseIndex = serializeWeaponFuseIndex(index.weapons);
   mkdirSync(dirname(weaponsFile), { recursive: true });
   // Drop `perksLower` from the on-disk index — it's a lowercased duplicate of
   // `perks`, re-derived at load by normalizeWeaponIndex. Saves payload + parse time.

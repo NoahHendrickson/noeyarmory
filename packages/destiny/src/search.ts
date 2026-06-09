@@ -2,8 +2,19 @@ import Fuse from "fuse.js";
 
 import { matchRank } from "@repo/search-rank";
 
-import type { InternedPerkColumn, PerkRef, WeaponSummary } from "./types";
+import type { InternedPerkColumn, PerkRef, SerializedWeaponFuseIndex, WeaponSummary } from "./types";
 import type { WeaponDpsLookup } from "./weapon-dps";
+import type { WeaponNameIndex } from "./weapon-name-index";
+
+export type { WeaponNameIndex } from "./weapon-name-index";
+export { buildWeaponNameIndex } from "./weapon-name-index";
+
+/** Optional name→popularity score (higher = more sought-after) used as a ranking tiebreak. */
+export type PopularityLookup = ReadonlyMap<string, number>;
+
+function popularityOf(name: string, popularity?: PopularityLookup): number {
+  return popularity?.get(name.toLowerCase()) ?? 0;
+}
 
 export type WeaponSort =
   | "name"
@@ -81,6 +92,8 @@ export interface WeaponFilters {
   craftable?: string[];
   /** OR within; exact case-insensitive weapon name match. */
   name?: string[];
+  /** When set, keep only adept (`true`) or non-adept (`false`) weapons. */
+  adept?: boolean;
 }
 
 const lower = (s: string) => s.toLowerCase();
@@ -153,6 +166,7 @@ export function filterWeapons(
     if (!matchesFacet(w.slot, filters.slot)) return false;
     if (filters.frame?.length && !matchesFacet(w.frame ?? "", filters.frame)) return false;
     if (!matchesCraftable(w.craftable, filters.craftable)) return false;
+    if (filters.adept != null && w.adept !== filters.adept) return false;
     if (trait1Wanted.size || trait2Wanted.size) {
       const traits = traitColumns(w.columns);
       if (!columnRollsAny(traits[0], trait1Wanted, perks)) return false;
@@ -210,36 +224,64 @@ export interface FilteredWeaponName {
   searchRank: number;
 }
 
-/** Flat weapon-name matches for palette ranking — no sort (caller ranks). */
+function rankNames(
+  names: string[],
+  namesLower: string[],
+  countByName: Map<string, number>,
+  ql: string,
+): FilteredWeaponName[] {
+  const matches: FilteredWeaponName[] = [];
+  for (let i = 0; i < names.length; i++) {
+    const rank = weaponNameRank(namesLower[i]!, ql);
+    if (rank != null) {
+      const value = names[i]!;
+      matches.push({ value, count: countByName.get(value) ?? 1, searchRank: rank });
+    }
+  }
+  return matches;
+}
+
+/**
+ * Flat weapon-name matches for palette ranking — no sort (caller ranks).
+ *
+ * Pass a prebuilt {@link WeaponNameIndex} (recommended for keystroke-rate calls)
+ * to skip rebuilding the name→count map and re-lowercasing every name. Without
+ * one, counts are derived inline for backward compatibility.
+ */
 export function filterWeaponNames(
   weapons: WeaponSummary[],
   query: string,
+  index?: WeaponNameIndex,
 ): FilteredWeaponName[] {
   const ql = query.trim().toLowerCase();
   if (!ql) return [];
+
+  if (index) return rankNames(index.names, index.namesLower, index.countByName, ql);
 
   const counts = new Map<string, number>();
   for (const w of weapons) {
     counts.set(w.name, (counts.get(w.name) ?? 0) + 1);
   }
-
-  const matches: FilteredWeaponName[] = [];
-  for (const [name, count] of counts) {
-    const rank = weaponNameRank(name.toLowerCase(), ql);
-    if (rank != null) matches.push({ value: name, count, searchRank: rank });
-  }
-
-  return matches;
+  const names = [...counts.keys()];
+  const namesLower = names.map((name) => name.toLowerCase());
+  return rankNames(names, namesLower, counts, ql);
 }
 
 /** Minimum query length before text search and name-match pinning apply. */
 export const MIN_WEAPON_TEXT_QUERY_LENGTH = 2;
 
-/** Canonical tie-break order for `filterWeaponNames` results across search surfaces. */
-export function sortFilteredWeaponNames(matches: FilteredWeaponName[]): FilteredWeaponName[] {
+/**
+ * Canonical tie-break order for `filterWeaponNames` results across search surfaces.
+ * With a {@link PopularityLookup}, popularity breaks ties before the catalog count.
+ */
+export function sortFilteredWeaponNames(
+  matches: FilteredWeaponName[],
+  popularity?: PopularityLookup,
+): FilteredWeaponName[] {
   return [...matches].sort(
     (a, b) =>
       a.searchRank - b.searchRank ||
+      popularityOf(b.value, popularity) - popularityOf(a.value, popularity) ||
       b.count - a.count ||
       a.value.localeCompare(b.value),
   );
@@ -264,6 +306,7 @@ export function weaponsMatchingTextQuery(
   fuse: Fuse<WeaponSummary>,
   query: string,
   limit: number,
+  index?: WeaponNameIndex,
 ): WeaponSummary[] {
   const q = query.trim();
   if (q.length < MIN_WEAPON_TEXT_QUERY_LENGTH) return weapons;
@@ -271,13 +314,11 @@ export function weaponsMatchingTextQuery(
   const seen = new Set<number>();
   const merged: WeaponSummary[] = [];
 
-  const rankedNames = sortFilteredWeaponNames(filterWeaponNames(weapons, q));
+  const rankedNames = sortFilteredWeaponNames(filterWeaponNames(weapons, q, index));
   for (const { value } of rankedNames) {
-    appendUniqueWeapons(
-      seen,
-      merged,
-      weapons.filter((weapon) => weapon.name === value),
-    );
+    // O(1) expansion via the prebuilt name index; fall back to a scan otherwise.
+    const named = index?.byName.get(value) ?? weapons.filter((weapon) => weapon.name === value);
+    appendUniqueWeapons(seen, merged, named);
   }
 
   appendUniqueWeapons(
@@ -294,33 +335,41 @@ function sortNameMatchedWeapons(
   query: string,
   sort: WeaponSort,
   dpsByName?: WeaponDpsLookup,
+  index?: WeaponNameIndex,
+  popularity?: PopularityLookup,
 ): WeaponSummary[] {
   if (sort !== "name") return sortWeapons(weapons, sort, dpsByName);
 
   const rankByName = new Map(
-    filterWeaponNames(weapons, query).map((match) => [match.value, match.searchRank]),
+    filterWeaponNames(weapons, query, index).map((match) => [match.value, match.searchRank]),
   );
   return [...weapons].sort(
     (a, b) =>
       (rankByName.get(a.name) ?? Number.MAX_SAFE_INTEGER) -
         (rankByName.get(b.name) ?? Number.MAX_SAFE_INTEGER) ||
+      popularityOf(b.name, popularity) - popularityOf(a.name, popularity) ||
       a.name.localeCompare(b.name),
   );
 }
 
-/** Sort weapons with exact name matches pinned above the rest; both groups respect `sort`. */
+/**
+ * Sort weapons with exact name matches pinned above the rest; both groups respect `sort`.
+ * An optional {@link PopularityLookup} breaks ties so more sought-after weapons surface first.
+ */
 export function rankWeaponResults(
   weapons: WeaponSummary[],
   query: string,
   sort: WeaponSort,
   dpsByName?: WeaponDpsLookup,
+  index?: WeaponNameIndex,
+  popularity?: PopularityLookup,
 ): WeaponSummary[] {
   const q = query.trim();
   if (q.length < MIN_WEAPON_TEXT_QUERY_LENGTH) {
     return sortWeapons(weapons, sort, dpsByName);
   }
 
-  const nameMatches = new Set(filterWeaponNames(weapons, q).map((match) => match.value));
+  const nameMatches = new Set(filterWeaponNames(weapons, q, index).map((match) => match.value));
   const nameMatched: WeaponSummary[] = [];
   const rest: WeaponSummary[] = [];
   for (const weapon of weapons) {
@@ -328,36 +377,61 @@ export function rankWeaponResults(
   }
 
   return [
-    ...sortNameMatchedWeapons(nameMatched, q, sort, dpsByName),
+    ...sortNameMatchedWeapons(nameMatched, q, sort, dpsByName, index, popularity),
     ...sortWeapons(rest, sort, dpsByName),
   ];
 }
 
-/** Predict weapon names from a partial query — name-only, ranked best-first. */
+/**
+ * Predict weapon names from a partial query — name-only, ranked best-first.
+ * Ties (same match rank) prefer higher popularity, then more catalog copies, then alpha.
+ */
 export function suggestWeaponNames(
   weapons: WeaponSummary[],
   query: string,
   limit = 20,
+  index?: WeaponNameIndex,
+  popularity?: PopularityLookup,
 ): FacetOption[] {
   const ql = query.trim().toLowerCase();
   if (!ql) return [];
 
-  return sortFilteredWeaponNames(filterWeaponNames(weapons, query))
+  return sortFilteredWeaponNames(filterWeaponNames(weapons, query, index), popularity)
     .slice(0, limit)
     .map(({ value, count }) => ({ value, count }));
 }
 
-/** Build a reusable Fuse index for fuzzy name/type/perk search. */
-export function createWeaponFuse(weapons: WeaponSummary[]): Fuse<WeaponSummary> {
-  return new Fuse(weapons, {
-    keys: [
-      { name: "name", weight: 3 },
-      { name: "type", weight: 1 },
-      { name: "perks", weight: 1 },
-    ],
-    threshold: 0.3,
-    ignoreLocation: true,
-  });
+const WEAPON_FUSE_KEYS = [
+  { name: "name", weight: 3 },
+  { name: "type", weight: 1 },
+  { name: "perks", weight: 1 },
+];
+
+const WEAPON_FUSE_OPTIONS = {
+  keys: WEAPON_FUSE_KEYS,
+  threshold: 0.3,
+  ignoreLocation: true,
+} as const;
+
+/**
+ * Build a reusable Fuse index for fuzzy name/type/perk search.
+ *
+ * Pass a `serializedIndex` (from {@link serializeWeaponFuseIndex}, e.g. emitted
+ * at generate time) to skip the client-side tokenization pass on cold load.
+ */
+export function createWeaponFuse(
+  weapons: WeaponSummary[],
+  serializedIndex?: SerializedWeaponFuseIndex,
+): Fuse<WeaponSummary> {
+  if (serializedIndex) {
+    return new Fuse(weapons, WEAPON_FUSE_OPTIONS, Fuse.parseIndex<WeaponSummary>(serializedIndex));
+  }
+  return new Fuse(weapons, WEAPON_FUSE_OPTIONS);
+}
+
+/** Serialize a prebuilt weapon Fuse index (shipped so clients don't rebuild it). */
+export function serializeWeaponFuseIndex(weapons: WeaponSummary[]): SerializedWeaponFuseIndex {
+  return Fuse.createIndex(WEAPON_FUSE_KEYS, weapons).toJSON();
 }
 
 /** Convenience fuzzy search (rebuilds the index each call — prefer createWeaponFuse for UIs). */
