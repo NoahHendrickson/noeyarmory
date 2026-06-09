@@ -7,6 +7,7 @@ import {
   createWeaponFuse,
   filterWeaponNames,
   filterWeapons,
+  hasStrongWeaponNameMatch,
   mergeWeaponFilters,
   MIN_WEAPON_TEXT_QUERY_LENGTH,
   planWeaponTextSearch,
@@ -181,9 +182,15 @@ export function useWeaponSearchResults({
           );
       }
     } else if (previewPanelState.panel === "categories" && q) {
-      filterSets = previewInlineSuggestions.map((s) =>
-        withHypotheticalChip(base, s.categoryId, s.value, s.valueId, customFilters),
-      );
+      const nameQuery = plan.searchText || q;
+      const preferNamePreview =
+        previewInlineSuggestions.length > 0 &&
+        hasStrongWeaponNameMatch(weapons, nameQuery, nameIndex);
+      if (!preferNamePreview) {
+        filterSets = previewInlineSuggestions.map((s) =>
+          withHypotheticalChip(base, s.categoryId, s.value, s.valueId, customFilters),
+        );
+      }
     }
 
     if (filterSets.length > 0) {
