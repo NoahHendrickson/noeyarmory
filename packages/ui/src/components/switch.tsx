@@ -7,8 +7,8 @@ function SwitchRoot({ className, ...props }: ComponentProps<typeof BaseSwitch.Ro
   return (
     <BaseSwitch.Root
       className={cn(
-        "peer inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full p-0.5 transition-colors outline-none",
-        "focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+        "peer duration-motion-snappy inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full p-0.5 transition-colors ease-spring-smooth outline-none motion-reduce:transition-none",
+        "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         "data-checked:bg-primary data-unchecked:bg-white/20",
         "data-disabled:cursor-not-allowed data-disabled:opacity-50",
         className,
@@ -23,7 +23,7 @@ function SwitchThumb({ className, ...props }: ComponentProps<typeof BaseSwitch.T
     <BaseSwitch.Thumb
       className={cn(
         "pointer-events-none block size-4 rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.4)] ring-0",
-        "transition-transform duration-200 ease-out",
+        "duration-motion-medium transition-transform ease-spring-snappy motion-reduce:transition-none",
         "data-checked:translate-x-4 data-unchecked:translate-x-0",
         className,
       )}

@@ -65,8 +65,8 @@ function StatValueDisplay({
         <span
           className={
             delta > 0
-              ? `text-emerald-400 font-medium ${deltaClassName}`
-              : `text-red-400/90 font-medium ${deltaClassName}`
+              ? `font-medium text-emerald-400 ${deltaClassName}`
+              : `font-medium text-red-400/90 ${deltaClassName}`
           }
         >
           {delta > 0 ? `+${delta}` : delta}
@@ -90,23 +90,23 @@ function StatBarTrack({
   heightClass: string;
 }) {
   return (
-    <div className={`bg-muted overflow-hidden rounded ${heightClass}`}>
+    <div className={`overflow-hidden rounded bg-muted ${heightClass}`}>
       {showBar && (
         <div className="flex h-full">
           {baseValue != null && delta > 0 ? (
             <>
               <div
-                className="bg-primary h-full shrink-0 transition-[width] duration-200"
+                className="duration-motion-medium h-full shrink-0 bg-primary transition-[width] ease-spring-smooth motion-reduce:transition-none"
                 style={{ width: `${clampBarPercent(baseValue)}%` }}
               />
               <div
-                className="bg-primary/45 h-full shrink-0 transition-[width] duration-200"
+                className="duration-motion-medium h-full shrink-0 bg-primary/45 transition-[width] ease-spring-smooth motion-reduce:transition-none"
                 style={{ width: `${clampBarPercent(delta)}%` }}
               />
             </>
           ) : (
             <div
-              className="bg-primary h-full rounded transition-[width] duration-200"
+              className="duration-motion-medium h-full rounded bg-primary transition-[width] ease-spring-smooth motion-reduce:transition-none"
               style={{ width: `${clampBarPercent(value)}%` }}
             />
           )}
@@ -145,7 +145,7 @@ export function StatBars({
           return (
             <div key={stat.hash} className="min-w-0">
               <div className="flex items-baseline justify-between gap-1 text-xs">
-                <span className="text-muted-foreground truncate" title={stat.name}>
+                <span className="truncate text-muted-foreground" title={stat.name}>
                   {stat.name}
                 </span>
                 <StatValueDisplay value={displayValue} delta={delta} deltaClassName="text-[10px]" />
@@ -175,7 +175,7 @@ export function StatBars({
         const displayValue = baseValue != null && delta !== 0 ? baseValue : stat.value;
         return (
           <div key={stat.hash} className="flex items-center gap-3 text-base">
-            <div className="text-muted-foreground w-24 shrink-0 truncate sm:w-32">{stat.name}</div>
+            <div className="w-24 shrink-0 truncate text-muted-foreground sm:w-32">{stat.name}</div>
             {showBar ? (
               <>
                 <StatBarTrack

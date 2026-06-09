@@ -10,11 +10,11 @@ import type { PaletteCategory, PaletteChip, PaletteItem } from "./types";
 /** Visible Tab keycap hint — rendered inline after the ghost suffix, outside the width sizer. */
 function GhostTabHint() {
   return (
-    <span className="text-muted-foreground/35 ml-1.5 inline-flex shrink-0 items-center gap-0.5 text-[11px] leading-none">
+    <span className="ml-1.5 inline-flex shrink-0 items-center gap-0.5 text-[11px] leading-none text-muted-foreground/35">
       Tab
       <Kbd
         variant="keycap"
-        className="text-muted-foreground/50 h-3.5 min-w-3.5 rounded-[3px] px-0 text-[10px]"
+        className="h-3.5 min-w-3.5 rounded-[3px] px-0 text-[10px] text-muted-foreground/50"
       >
         <ArrowRight className="size-2.5" aria-hidden />
       </Kbd>
@@ -102,14 +102,14 @@ export function PaletteInputBar({
     // eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events
     <div
       className={cn(
-        "flex min-h-12 items-center justify-between gap-2 border-b pl-3 transition-[border-color] duration-200 ease-out motion-reduce:transition-none sm:h-14 sm:gap-3 sm:pl-[18px]",
+        "duration-motion-snappy flex min-h-12 items-center justify-between gap-2 border-b pl-3 transition-[border-color] ease-spring-smooth motion-reduce:transition-none sm:h-14 sm:gap-3 sm:pl-[18px]",
         showClearButton ? "pr-6" : "pr-[18px]",
         open ? "border-white/16" : "border-transparent",
       )}
       onClick={() => !disabled && !renderBarOverlay && inputRef.current?.focus()}
     >
       <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-2.5 overflow-x-auto">
-        <span className="text-muted-foreground flex size-4 shrink-0 items-center justify-center">
+        <span className="flex size-4 shrink-0 items-center justify-center text-muted-foreground">
           {leftAdornment ?? <Search className="size-4" />}
         </span>
 
@@ -147,7 +147,7 @@ export function PaletteInputBar({
                     type="button"
                     variant="ghost"
                     size="iconRound"
-                    className="bg-white text-card hover:bg-white/90 hover:text-card shrink-0"
+                    className="shrink-0 bg-white text-card hover:bg-white/90 hover:text-card"
                     aria-label="Browse filter categories"
                     disabled={disabled}
                     onClick={(e) => {
@@ -162,21 +162,23 @@ export function PaletteInputBar({
                   <div
                     className={cn(
                       "relative shrink-0",
-                      showGhostSizer ? "inline-grid min-w-0" : "inline-flex min-w-[8ch] items-center",
+                      showGhostSizer
+                        ? "inline-grid min-w-0"
+                        : "inline-flex min-w-[8ch] items-center",
                     )}
                   >
                     {showGhostSizer && (
                       <>
                         <span
                           aria-hidden
-                          className="invisible col-start-1 row-start-1 whitespace-pre text-base tracking-body"
+                          className="invisible col-start-1 row-start-1 text-base tracking-body whitespace-pre"
                         >
                           {inputValue}
                           {ghostSuffix}
                         </span>
                         <span
                           aria-hidden
-                          className="pointer-events-none col-start-1 row-start-1 flex items-center whitespace-pre text-base tracking-body"
+                          className="pointer-events-none col-start-1 row-start-1 flex items-center text-base tracking-body whitespace-pre"
                         >
                           <span className="invisible">{inputValue}</span>
                           <span className="text-muted-foreground/50">{ghostSuffix}</span>
@@ -189,8 +191,8 @@ export function PaletteInputBar({
                       type="text"
                       {...(useInputSize ? { size: inputSize } : {})}
                       className={cn(
-                        "placeholder:text-muted-foreground col-start-1 row-start-1 bg-transparent text-base tracking-body outline-none disabled:cursor-not-allowed",
-                        showGhostSizer ? "min-w-0 w-full" : "min-w-[8ch]",
+                        "col-start-1 row-start-1 bg-transparent text-base tracking-body outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed",
+                        showGhostSizer ? "w-full min-w-0" : "min-w-[8ch]",
                         !instantInputSizing && !showGhostSizer && "[field-sizing:content]",
                       )}
                       placeholder={effectivePlaceholder}

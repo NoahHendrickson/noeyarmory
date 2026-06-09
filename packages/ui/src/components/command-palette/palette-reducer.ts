@@ -20,6 +20,7 @@ import type {
   PanelKind,
 } from "./types";
 
+/** Keep in sync with `--motion-duration-snappy` in theme.css. */
 export const PANEL_TRANSITION_MS = 200;
 
 /** Draft query with no committed chips — defer preview rows until the open animation settles. */
@@ -92,9 +93,7 @@ export function splitPreviewTail(items: PaletteItem[]): {
 
 /** Drop preview rows/sections — used for lightweight open/close animation snapshots. */
 export function stripPreviewItems(items: PaletteItem[]): PaletteItem[] {
-  const previewIndex = items.findIndex(
-    (item) => item.kind === "section" && item.id === "preview",
-  );
+  const previewIndex = items.findIndex((item) => item.kind === "section" && item.id === "preview");
   if (previewIndex < 0) return items;
   let start = previewIndex;
   const prev = items[start - 1];

@@ -50,6 +50,14 @@
   --scrollbar-thumb-hover: rgba(255, 255, 255, 0.28);
   --scrollbar-track: transparent;
 
+  /* Motion — spring-like iOS pacing for snappy, interruptible-feeling UI. */
+  --motion-duration-fast: 120ms;
+  --motion-duration-snappy: 200ms;
+  --motion-duration-medium: 280ms;
+  --motion-duration-slow: 360ms;
+  --motion-ease-spring-snappy: cubic-bezier(0.18, 1.18, 0.32, 1);
+  --motion-ease-spring-smooth: cubic-bezier(0.22, 1, 0.36, 1);
+
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
@@ -118,6 +126,13 @@
   --color-filter-chip-element-kinetic: var(--filter-chip-element-kinetic);
   --color-filter-chip-element-foreground: var(--filter-chip-element-foreground);
 
+  --duration-motion-fast: var(--motion-duration-fast);
+  --duration-motion-snappy: var(--motion-duration-snappy);
+  --duration-motion-medium: var(--motion-duration-medium);
+  --duration-motion-slow: var(--motion-duration-slow);
+  --ease-spring-snappy: var(--motion-ease-spring-snappy);
+  --ease-spring-smooth: var(--motion-ease-spring-smooth);
+
   /* Geist — provided by next/font as --font-geist-sans when present, else the
    * @fontsource "Geist Variable" family (loaded in the app layout + Storybook). */
   --font-sans: var(--font-geist-sans, "Geist Variable"), ui-sans-serif, system-ui, sans-serif;
@@ -158,7 +173,7 @@
 
 @layer base {
   html {
-    @apply antialiased tracking-body;
+    @apply tracking-body antialiased;
     text-rendering: optimizeLegibility;
     font-optical-sizing: auto;
   }
@@ -207,4 +222,3 @@
     cursor: not-allowed;
   }
 }
-
