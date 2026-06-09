@@ -6,6 +6,7 @@ import {
   scanValueSuggestions,
   type ValueSuggestion,
 } from "../../lib/palette-suggestions";
+import { motionDurationMs } from "../../lib/motion";
 import type {
   DormantSnapshot,
   ListMode,
@@ -20,8 +21,7 @@ import type {
   PanelKind,
 } from "./types";
 
-/** Keep in sync with `--motion-duration-snappy` in theme.css. */
-export const PANEL_TRANSITION_MS = 200;
+export const PANEL_TRANSITION_MS = motionDurationMs.snappy;
 
 /** Draft query with no committed chips — defer preview rows until the open animation settles. */
 export function shouldDeferPreviews(query: string, chipsLength: number): boolean {

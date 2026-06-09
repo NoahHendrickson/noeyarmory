@@ -1,4 +1,5 @@
 import type { WeaponStat } from "@repo/destiny";
+import { motion } from "@repo/ui";
 
 /** Stats that read as 0–100 bars; others (RPM, charge time, magazine…) show value only. */
 const BAR_STATS = new Set([
@@ -96,17 +97,20 @@ function StatBarTrack({
           {baseValue != null && delta > 0 ? (
             <>
               <div
-                className="h-full shrink-0 bg-primary transition-[width] duration-[var(--motion-duration-medium)] ease-spring-smooth motion-reduce:transition-none"
+                className={motion("mediumSmooth", "h-full shrink-0 bg-primary transition-[width]")}
                 style={{ width: `${clampBarPercent(baseValue)}%` }}
               />
               <div
-                className="h-full shrink-0 bg-primary/45 transition-[width] duration-[var(--motion-duration-medium)] ease-spring-smooth motion-reduce:transition-none"
+                className={motion(
+                  "mediumSmooth",
+                  "h-full shrink-0 bg-primary/45 transition-[width]",
+                )}
                 style={{ width: `${clampBarPercent(delta)}%` }}
               />
             </>
           ) : (
             <div
-              className="h-full rounded bg-primary transition-[width] duration-[var(--motion-duration-medium)] ease-spring-smooth motion-reduce:transition-none"
+              className={motion("mediumSmooth", "h-full rounded bg-primary transition-[width]")}
               style={{ width: `${clampBarPercent(value)}%` }}
             />
           )}

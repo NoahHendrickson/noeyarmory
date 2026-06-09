@@ -15,6 +15,7 @@ import {
   filterCategories,
   shouldIgnoreSearchShortcut,
 } from "../../lib/palette-suggestions";
+import { motion } from "../../lib/motion";
 import { cn } from "../../lib/utils";
 import { FrostedShell } from "../frosted-shell";
 import { PaletteInputBar } from "./palette-input-bar";
@@ -574,7 +575,7 @@ export function CommandPalette({
     >
       <FrostedShell
         className={cn(
-          "transition-[border-radius] duration-[var(--motion-duration-snappy)] ease-spring-snappy motion-reduce:transition-none",
+          motion("snappySpring", "transition-[border-radius]"),
           open ? "rounded-[20px]" : "rounded-[1.75rem]",
         )}
       >

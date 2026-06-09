@@ -2,6 +2,7 @@ import { useRender } from "@base-ui/react/use-render";
 import { mergeProps } from "@base-ui/react/merge-props";
 import type { ReactNode } from "react";
 
+import { motion } from "../lib/motion";
 import { cn } from "../lib/utils";
 
 export interface ResultRowProps extends Omit<useRender.ComponentProps<"button">, "title"> {
@@ -33,7 +34,8 @@ function ResultRow({
     props: mergeProps<"button">(
       {
         className: cn(
-          "hover:bg-white/[0.033] focus-visible:bg-white/[0.033] flex w-full cursor-pointer flex-row items-center gap-3 rounded-lg px-3 py-2 text-left tracking-body transition-[background-color,transform] duration-[var(--motion-duration-fast)] ease-spring-snappy outline-none active:scale-[0.985] disabled:cursor-not-allowed disabled:active:scale-100 motion-reduce:transition-none motion-reduce:active:scale-100",
+          "flex w-full cursor-pointer flex-row items-center gap-3 rounded-lg px-3 py-2 text-left tracking-body outline-none hover:bg-white/[0.033] focus-visible:bg-white/[0.033] disabled:cursor-not-allowed disabled:active:scale-100",
+          motion("pressFeedback"),
           className,
         ),
         children: (

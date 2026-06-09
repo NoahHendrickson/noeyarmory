@@ -126,10 +126,6 @@
   --color-filter-chip-element-kinetic: var(--filter-chip-element-kinetic);
   --color-filter-chip-element-foreground: var(--filter-chip-element-foreground);
 
-  --duration-motion-fast: var(--motion-duration-fast);
-  --duration-motion-snappy: var(--motion-duration-snappy);
-  --duration-motion-medium: var(--motion-duration-medium);
-  --duration-motion-slow: var(--motion-duration-slow);
   --ease-spring-snappy: var(--motion-ease-spring-snappy);
   --ease-spring-smooth: var(--motion-ease-spring-smooth);
 

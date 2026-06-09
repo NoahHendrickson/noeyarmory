@@ -2,6 +2,7 @@ import { ArrowDown, CornerDownLeft, History, ListFilter, X } from "lucide-react"
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { frostedSurface } from "../../lib/frosted-surface";
+import { motion } from "../../lib/motion";
 import { cn } from "../../lib/utils";
 import { Kbd } from "../kbd";
 import { isSelectableItem, itemKey, splitPreviewTail } from "./palette-reducer";
@@ -99,7 +100,8 @@ export function PaletteList({
   }, [open, renderMode, resultsHeader, results.length, syncStickyHeaderGlass]);
 
   const stickyHeaderClass = cn(
-    "sticky top-0 z-10 -mx-1.5 px-3 py-1.5 transition-[background-color,backdrop-filter,border-color] duration-[var(--motion-duration-fast)] ease-spring-smooth motion-reduce:transition-none",
+    "sticky top-0 z-10 -mx-1.5 px-3 py-1.5 transition-[background-color,backdrop-filter,border-color]",
+    motion("fastSmooth"),
     stickyHeaderGlass
       ? frostedSurface("barBordered")
       : "border-b border-transparent bg-transparent",
@@ -129,7 +131,8 @@ export function PaletteList({
   return (
     <div
       className={cn(
-        "grid transition-[grid-template-rows] duration-[var(--motion-duration-snappy)] ease-spring-smooth motion-reduce:transition-none",
+        "grid transition-[grid-template-rows]",
+        motion("snappySmooth"),
         open ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
       )}
       inert={open ? undefined : true}
@@ -271,8 +274,7 @@ function PreviewResultsExpand({
       <div
         className={cn(
           "overflow-hidden",
-          !instantExpand &&
-            "transition-[max-height] duration-[var(--motion-duration-snappy)] ease-spring-smooth motion-reduce:transition-none",
+          !instantExpand && motion("snappySmooth", "transition-[max-height]"),
         )}
         style={{
           maxHeight: expanded ? height : 0,
@@ -338,7 +340,8 @@ function PaletteListRow({
               sectionHasHeaderAction ? "pointer-events-auto" : "pointer-events-none",
             )
           : cn(
-              "flex cursor-pointer items-center justify-between gap-3 px-3 py-1.5 transition-[background-color,transform] duration-[var(--motion-duration-fast)] ease-spring-snappy active:scale-[0.985] motion-reduce:transition-none motion-reduce:active:scale-100",
+              "flex cursor-pointer items-center justify-between gap-3 px-3 py-1.5",
+              motion("pressFeedback"),
               nestBottomCorners ? PALETTE_NESTED_RADIUS : "rounded-[8px]",
             ),
         selected && (item.kind === "result" ? "bg-white/[0.033]" : "bg-white/[0.05]"),
