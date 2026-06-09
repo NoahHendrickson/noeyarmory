@@ -3,6 +3,7 @@
 import { useDeferredValue, useMemo } from "react";
 import type { PaletteCategory, PaletteChip, PalettePanelState, ValueSuggestion } from "@repo/ui";
 import {
+  buildWeaponNameIndex,
   createWeaponFuse,
   filterWeaponNames,
   filterWeapons,
@@ -11,8 +12,10 @@ import {
   sortFilteredWeaponNames,
   weaponsMatchingTextQuery,
   type PerkRef,
+  type PopularityLookup,
   type WeaponDpsEntry,
   type WeaponFilters,
+  type WeaponNameIndex,
   type WeaponSort,
   type WeaponSummary,
 } from "@repo/destiny";
@@ -23,6 +26,7 @@ import {
   MAX_SHOW_ALL,
 } from "../lib/palette/constants";
 import { chipsToWeaponFilters, withHypotheticalChip } from "../lib/palette/weapon-filters";
+import { useSearchPopularity } from "../lib/use-search-popularity";
 import { usePalettePreviewInput } from "./use-palette-preview-input";
 
 export interface UseWeaponSearchResultsParams {
@@ -50,18 +54,19 @@ function weaponsForPreviewQuery(
   weaponFuse: ReturnType<typeof createWeaponFuse>,
   query: string,
   limit: number,
+  nameIndex: WeaponNameIndex,
 ): WeaponSummary[] {
   const q = query.trim();
   if (q.length < MIN_WEAPON_TEXT_QUERY_LENGTH) return weapons;
 
-  const exact = sortFilteredWeaponNames(filterWeaponNames(weapons, q)).find(
+  const exact = sortFilteredWeaponNames(filterWeaponNames(weapons, q, nameIndex)).find(
     (match) => match.searchRank === 0 && match.value.toLowerCase() === q.toLowerCase(),
   );
   if (exact) {
-    return weapons.filter((weapon) => weapon.name === exact.value);
+    return nameIndex.byName.get(exact.value) ?? weapons.filter((weapon) => weapon.name === exact.value);
   }
 
-  return weaponsMatchingTextQuery(weapons, weaponFuse, q, limit);
+  return weaponsMatchingTextQuery(weapons, weaponFuse, q, limit, nameIndex);
 }
 
 export function useWeaponSearchResults({
@@ -88,6 +93,8 @@ export function useWeaponSearchResults({
   );
 
   const weaponFuse = useMemo(() => createWeaponFuse(weapons), [weapons]);
+  const nameIndex = useMemo(() => buildWeaponNameIndex(weapons), [weapons]);
+  const popularity: PopularityLookup = useSearchPopularity();
   const deferredQuery = useDeferredValue(query);
   const { previewQuery, previewPanelState, previewInlineSuggestions, previewResultLimit } =
     usePalettePreviewInput(query, panelState, inlineSuggestions);
@@ -97,11 +104,22 @@ export function useWeaponSearchResults({
     const q = deferredQuery.trim();
     const base =
       textSearchActive && q.length >= MIN_WEAPON_TEXT_QUERY_LENGTH
-        ? weaponsMatchingTextQuery(weapons, weaponFuse, q, MAX_SHOW_ALL)
+        ? weaponsMatchingTextQuery(weapons, weaponFuse, q, MAX_SHOW_ALL, nameIndex)
         : weapons;
     const filtered = filterWeapons(base, weaponFilters, perks);
-    return rankWeaponResults(filtered, q, sort, dpsByName);
-  }, [weaponFuse, weapons, perks, deferredQuery, weaponFilters, sort, dpsByName, textSearchActive]);
+    return rankWeaponResults(filtered, q, sort, dpsByName, nameIndex, popularity);
+  }, [
+    weaponFuse,
+    weapons,
+    perks,
+    deferredQuery,
+    weaponFilters,
+    sort,
+    dpsByName,
+    textSearchActive,
+    nameIndex,
+    popularity,
+  ]);
 
   const resultLimit = showAllResults ? MAX_SHOW_ALL : MAX_RESULTS;
   const weaponShown = weaponResults.slice(0, resultLimit);
@@ -152,7 +170,7 @@ export function useWeaponSearchResults({
     } else if (q.length >= MIN_WEAPON_TEXT_QUERY_LENGTH) {
       appendWeapons(
         filterWeapons(
-          weaponsForPreviewQuery(weapons, weaponFuse, q, previewResultLimit),
+          weaponsForPreviewQuery(weapons, weaponFuse, q, previewResultLimit, nameIndex),
           base,
           perks,
         ),
@@ -161,7 +179,10 @@ export function useWeaponSearchResults({
 
     if (candidates.length === 0) return [];
 
-    return rankWeaponResults(candidates, q, sort, dpsByName).slice(0, previewResultLimit);
+    return rankWeaponResults(candidates, q, sort, dpsByName, nameIndex, popularity).slice(
+      0,
+      previewResultLimit,
+    );
   }, [
     previewsEnabled,
     mode,
@@ -177,6 +198,8 @@ export function useWeaponSearchResults({
     sort,
     dpsByName,
     weaponFuse,
+    nameIndex,
+    popularity,
     previewInlineSuggestions,
   ]);
 

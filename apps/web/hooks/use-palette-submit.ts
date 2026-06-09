@@ -1,10 +1,16 @@
 "use client";
 
-import { useCallback } from "react";
-import { matchRank, suggestWeaponNames, type WeaponSummary } from "@repo/destiny";
+import { useCallback, useMemo } from "react";
+import {
+  buildWeaponNameIndex,
+  matchRank,
+  suggestWeaponNames,
+  type WeaponSummary,
+} from "@repo/destiny";
 import type { PaletteValueOption } from "@repo/ui";
 
 import type { PaletteResultsMode } from "../lib/palette/results-mode";
+import { useSearchPopularity } from "../lib/use-search-popularity";
 
 export interface UsePaletteSubmitParams {
   query: string;
@@ -25,13 +31,16 @@ export function usePaletteSubmit({
   setQuery,
   setResultsMode,
 }: UsePaletteSubmitParams) {
+  const nameIndex = useMemo(() => buildWeaponNameIndex(weapons), [weapons]);
+  const popularity = useSearchPopularity();
+
   return useCallback(() => {
     if (composingCustomFilter) return;
     const q = query.trim();
     if (!q) return;
 
     if (mode === "weapon") {
-      const names = suggestWeaponNames(weapons, q, 1);
+      const names = suggestWeaponNames(weapons, q, 1, nameIndex, popularity);
       const top = names[0];
       if (top) {
         const rank = matchRank(top.value, q);
@@ -48,5 +57,5 @@ export function usePaletteSubmit({
     }
 
     setResultsMode("text");
-  }, [composingCustomFilter, query, mode, weapons, addChip, setQuery, setResultsMode]);
+  }, [composingCustomFilter, query, mode, weapons, nameIndex, popularity, addChip, setQuery, setResultsMode]);
 }
