@@ -401,17 +401,40 @@ export function suggestWeaponNames(
     .map(({ value, count }) => ({ value, count }));
 }
 
-/** Build a reusable Fuse index for fuzzy name/type/perk search. */
-export function createWeaponFuse(weapons: WeaponSummary[]): Fuse<WeaponSummary> {
-  return new Fuse(weapons, {
-    keys: [
-      { name: "name", weight: 3 },
-      { name: "type", weight: 1 },
-      { name: "perks", weight: 1 },
-    ],
-    threshold: 0.3,
-    ignoreLocation: true,
-  });
+const WEAPON_FUSE_KEYS = [
+  { name: "name", weight: 3 },
+  { name: "type", weight: 1 },
+  { name: "perks", weight: 1 },
+];
+
+const WEAPON_FUSE_OPTIONS = {
+  keys: WEAPON_FUSE_KEYS,
+  threshold: 0.3,
+  ignoreLocation: true,
+} as const;
+
+type ParsedFuseIndex = Parameters<typeof Fuse.parseIndex>[0];
+
+/**
+ * Build a reusable Fuse index for fuzzy name/type/perk search.
+ *
+ * Pass a `serializedIndex` (from {@link serializeWeaponFuseIndex}, e.g. emitted
+ * at generate time) to skip the client-side tokenization pass on cold load.
+ */
+export function createWeaponFuse(
+  weapons: WeaponSummary[],
+  serializedIndex?: unknown,
+): Fuse<WeaponSummary> {
+  if (serializedIndex) {
+    const parsed = Fuse.parseIndex<WeaponSummary>(serializedIndex as ParsedFuseIndex);
+    return new Fuse(weapons, WEAPON_FUSE_OPTIONS, parsed);
+  }
+  return new Fuse(weapons, WEAPON_FUSE_OPTIONS);
+}
+
+/** Serialize a prebuilt weapon Fuse index (shipped so clients don't rebuild it). */
+export function serializeWeaponFuseIndex(weapons: WeaponSummary[]): unknown {
+  return Fuse.createIndex(WEAPON_FUSE_KEYS, weapons).toJSON();
 }
 
 /** Convenience fuzzy search (rebuilds the index each call — prefer createWeaponFuse for UIs). */

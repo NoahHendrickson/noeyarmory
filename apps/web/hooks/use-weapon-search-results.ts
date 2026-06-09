@@ -30,6 +30,7 @@ import {
 import { chipsToWeaponFilters, withHypotheticalChip } from "../lib/palette/weapon-filters";
 import { mergeWeaponFilters } from "../lib/palette/merge-weapon-filters";
 import { useSearchPopularity } from "../lib/use-search-popularity";
+import { useWeapons } from "../lib/weapons-context";
 import { usePalettePreviewInput } from "./use-palette-preview-input";
 
 export interface UseWeaponSearchResultsParams {
@@ -99,7 +100,8 @@ export function useWeaponSearchResults({
     [chips, customFilters],
   );
 
-  const weaponFuse = useMemo(() => createWeaponFuse(weapons), [weapons]);
+  // Shared, build-once fuse (prebuilt from the serialized index when shipped).
+  const { weaponFuse } = useWeapons();
   const nameIndex = useMemo(() => buildWeaponNameIndex(weapons), [weapons]);
   const popularity: PopularityLookup = useSearchPopularity();
   const deferredQuery = useDeferredValue(query);

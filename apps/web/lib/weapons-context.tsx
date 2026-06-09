@@ -3,6 +3,7 @@
 import {
   buildDetailIndexFromDocs,
   buildWeaponIndexLookups,
+  createWeaponFuse,
   enrichAmmoGenerationFromDetails,
   expandWeapon,
   internWeaponCatalog,
@@ -43,11 +44,22 @@ export interface WeaponsState {
   byHash: Map<number, WeaponSummary>;
   perkMap: WeaponIndexLookups["perkMap"];
   weaponsByPerkName: WeaponIndexLookups["weaponsByPerkName"];
+  nameIndex: WeaponIndexLookups["nameIndex"];
+  weaponFuse: WeaponIndexLookups["weaponFuse"];
   loading: boolean;
   isSample: boolean;
   version?: string;
   getWeaponDoc: (hash: number) => Promise<WeaponDoc | undefined>;
 }
+
+const emptyLookups = buildWeaponIndexLookups({
+  version: "empty",
+  generatedAt: "",
+  perks: [],
+  weapons: [],
+  weaponsByPerkName: {},
+  damageTypes: [],
+});
 
 const defaultState: WeaponsState = {
   weapons: [],
@@ -58,6 +70,8 @@ const defaultState: WeaponsState = {
   byHash: new Map(),
   perkMap: new Map(),
   weaponsByPerkName: new Map(),
+  nameIndex: emptyLookups.nameIndex,
+  weaponFuse: createWeaponFuse([]),
   loading: true,
   isSample: false,
   getWeaponDoc: async () => undefined,
@@ -148,6 +162,8 @@ function lookupsToState(
     byHash: lookups.byHash,
     perkMap: lookups.perkMap,
     weaponsByPerkName: lookups.weaponsByPerkName,
+    nameIndex: lookups.nameIndex,
+    weaponFuse: lookups.weaponFuse,
     loading: false,
     isSample,
     version: lookups.version,

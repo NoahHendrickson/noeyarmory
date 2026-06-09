@@ -78,6 +78,7 @@ export {
   sortWeapons,
   weaponsWithPerk,
   createWeaponFuse,
+  serializeWeaponFuseIndex,
   fuzzySearchWeapons,
   collectFacets,
   collectPerks,

@@ -1,4 +1,7 @@
+import type Fuse from "fuse.js";
+
 import { buildPerkMapFromCatalog, normalizeWeaponIndex, summariesForPerkName } from "./intern-weapons";
+import { createWeaponFuse } from "./search";
 import type {
   AmmoTypeRef,
   DamageTypeRef,
@@ -21,6 +24,10 @@ export interface WeaponIndexLookups {
   /** Lowercase perk name → weapons that can roll it. */
   weaponsByPerkName: Map<string, WeaponSummary[]>;
   weaponsByPerkNameRecord: Record<string, number[]>;
+  /** Prebuilt name lookup for keystroke-rate autocomplete (built once). */
+  nameIndex: WeaponNameIndex;
+  /** Shared fuzzy index, built once (from the serialized index when present). */
+  weaponFuse: Fuse<WeaponSummary>;
   version?: string;
   generatedAt?: string;
 }
@@ -49,6 +56,8 @@ export function buildWeaponIndexLookups(raw: WeaponIndex): WeaponIndexLookups {
     perkMap: buildPerkMapFromCatalog(index.perks),
     weaponsByPerkName,
     weaponsByPerkNameRecord: index.weaponsByPerkName,
+    nameIndex: buildWeaponNameIndex(index.weapons),
+    weaponFuse: createWeaponFuse(index.weapons, raw.fuseIndex),
     version: index.version,
     generatedAt: index.generatedAt,
   };
@@ -77,6 +86,8 @@ export function refreshWeaponSummaries(
     weapons,
     byHash,
     weaponsByPerkName,
+    nameIndex: buildWeaponNameIndex(weapons),
+    weaponFuse: createWeaponFuse(weapons),
   };
 }
 

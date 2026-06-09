@@ -151,6 +151,8 @@ export interface WeaponIndex {
   weaponTypes?: WeaponTypeRef[];
   /** Ammo type catalog from DestinyIconDefinition HUD icons (Primary / Special / Heavy). */
   ammoTypes?: AmmoTypeRef[];
+  /** Optional prebuilt fuse.js index (serialized) so clients skip the cold-load build. */
+  fuseIndex?: unknown;
 }
 
 export interface WeaponDetailIndex {
