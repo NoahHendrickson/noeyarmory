@@ -613,13 +613,18 @@ export function CommandPalette({
       : undefined,
   };
 
+  const paletteWidthStyle = {
+    "--chip-count": chips.length,
+  } as React.CSSProperties;
+
   return (
     <div
       ref={rootRef}
       data-palette-root
       data-palette-typing={inputValue.trim().length > 0 ? "" : undefined}
+      style={paletteWidthStyle}
       className={cn(
-        "mx-auto w-full min-w-0 max-w-[calc(100vw-2rem)] sm:w-[600px]",
+        "mx-auto w-full min-w-0 max-w-[calc(100vw-2rem)] sm:w-[min(calc(100vw-2rem),calc(640px+var(--chip-count)*96px))] sm:transition-[width] sm:duration-200 sm:ease-out motion-reduce:sm:transition-none",
         className,
       )}
     >
