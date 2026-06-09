@@ -4,6 +4,7 @@ import type { WeaponDpsEntry, WeaponSummary } from "@repo/destiny";
 
 import { CraftableBadge } from "./craftable-badge";
 import { ElementIcon } from "./element-icon";
+import { PinToggleButton } from "./pin-toggle-button";
 import { WeaponDpsLabel } from "./weapon-dps-label";
 import { bungieIcon } from "../lib/bungie";
 
@@ -35,15 +36,33 @@ export const WeaponResultRow = memo(function WeaponResultRow({
   elementIconPath,
   dps,
   onSelect,
+  pinned = false,
+  onTogglePin,
 }: {
   weapon: WeaponResultData;
   /** Bungie manifest icon path for the weapon's damage type. */
   elementIconPath?: string;
   dps?: WeaponDpsEntry;
   onSelect?: () => void;
+  pinned?: boolean;
+  onTogglePin?: () => void;
 }) {
   const icon = bungieIcon(weapon.icon);
   const watermark = bungieIcon(weapon.watermark);
+  const dpsLabel =
+    dps != null ? (
+      <span className="hidden sm:inline-flex">
+        <WeaponDpsLabel entry={dps} />
+      </span>
+    ) : null;
+  const pinButton =
+    onTogglePin != null ? (
+      <PinToggleButton
+        pinned={pinned}
+        label={`${pinned ? "Unpin" : "Pin"} ${weapon.name}`}
+        onToggle={onTogglePin}
+      />
+    ) : null;
 
   return (
     <ResultRow
@@ -91,9 +110,10 @@ export const WeaponResultRow = memo(function WeaponResultRow({
         </span>
       }
       trailing={
-        dps != null ? (
-          <span className="hidden sm:inline-flex">
-            <WeaponDpsLabel entry={dps} />
+        pinButton != null || dpsLabel != null ? (
+          <span className="inline-flex items-center gap-2">
+            {pinButton}
+            {dpsLabel}
           </span>
         ) : undefined
       }
