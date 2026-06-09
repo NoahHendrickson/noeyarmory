@@ -1,25 +1,12 @@
 import { createHash } from "node:crypto";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readdirSync, unlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-export interface GeneratedDataManifestFile {
-  path: string;
-  stablePath: string;
-  hash: string;
-  bytes: number;
-}
-
-export interface GeneratedDataManifest {
-  version: string;
-  generatedAt: string;
-  files: {
-    weapons: GeneratedDataManifestFile;
-    weaponDetails: GeneratedDataManifestFile;
-    armor: GeneratedDataManifestFile;
-  };
-}
-
-export const GENERATED_DATA_MANIFEST_FILENAME = "generated-data.manifest.json";
+import {
+  GENERATED_DATA_MANIFEST_FILENAME,
+  type GeneratedDataManifest,
+  type GeneratedDataManifestFile,
+} from "./generated-data-manifest";
 
 interface WriteGeneratedDataFileOptions {
   dataDir: string;
@@ -29,6 +16,20 @@ interface WriteGeneratedDataFileOptions {
 
 function contentHash(contents: string): string {
   return createHash("sha256").update(contents).digest("hex").slice(0, 16);
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function pruneHashedSiblings(dataDir: string, basename: string, keepFilename: string): void {
+  const hashedSiblingPattern = new RegExp(`^${escapeRegExp(basename)}\\.[0-9a-f]{16}\\.json$`);
+
+  for (const filename of readdirSync(dataDir)) {
+    if (filename !== keepFilename && hashedSiblingPattern.test(filename)) {
+      unlinkSync(join(dataDir, filename));
+    }
+  }
 }
 
 export function writeGeneratedDataFile({
@@ -44,6 +45,7 @@ export function writeGeneratedDataFile({
 
   writeFileSync(join(dataDir, stableFilename), contents);
   writeFileSync(join(dataDir, hashedFilename), contents);
+  pruneHashedSiblings(dataDir, basename, hashedFilename);
 
   return {
     path: `/data/${hashedFilename}`,

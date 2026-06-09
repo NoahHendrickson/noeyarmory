@@ -9,7 +9,7 @@ import {
   generatedDataPath,
   type GeneratedDataKey,
   type GeneratedDataManifest,
-} from "./generated-data";
+} from "@repo/destiny";
 
 let manifestCache: GeneratedDataManifest | null | undefined;
 

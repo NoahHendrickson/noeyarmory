@@ -1,4 +1,5 @@
-export const GENERATED_DATA_MANIFEST_PATH = "/data/generated-data.manifest.json";
+export const GENERATED_DATA_MANIFEST_FILENAME = "generated-data.manifest.json";
+export const GENERATED_DATA_MANIFEST_PATH = `/data/${GENERATED_DATA_MANIFEST_FILENAME}`;
 
 export const DEFAULT_GENERATED_DATA_PATHS = {
   weapons: "/data/weapons.json",
@@ -26,4 +27,13 @@ export function generatedDataPath(
   key: GeneratedDataKey,
 ): string {
   return manifest?.files[key]?.path ?? DEFAULT_GENERATED_DATA_PATHS[key];
+}
+
+export function generatedDataCacheMode(
+  manifest: GeneratedDataManifest | null | undefined,
+  key: GeneratedDataKey,
+): "default" | "force-cache" {
+  return generatedDataPath(manifest, key) === DEFAULT_GENERATED_DATA_PATHS[key]
+    ? "default"
+    : "force-cache";
 }

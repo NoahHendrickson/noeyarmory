@@ -1,6 +1,5 @@
 import "server-only";
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import type { IronSession } from "iron-session";
 import {
   buildArchetypeMap,
@@ -17,6 +16,7 @@ import {
 } from "@repo/destiny";
 
 import { refreshAccessToken, requireEnv } from "./bungie-auth";
+import { generatedDataFilePath } from "./generated-data-server";
 import type { SessionData } from "./session";
 
 const PLATFORM = "https://www.bungie.net/Platform";
@@ -161,7 +161,7 @@ function loadArmorIndex(): {
   archetypeMap: Map<number, string>;
 } {
   if (armorIndexCache) return armorIndexCache;
-  const file = join(process.cwd(), "public", "data", "armor.json");
+  const file = generatedDataFilePath("armor");
   const index = JSON.parse(readFileSync(file, "utf8")) as ArmorIndex;
   armorIndexCache = {
     byHash: new Map(index.armor.map((a) => [a.hash, a])),
