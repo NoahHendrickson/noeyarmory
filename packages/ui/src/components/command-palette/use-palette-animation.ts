@@ -44,11 +44,9 @@ export function usePaletteAnimation({
   const finishOpenAnimation = useCallback(
     (deferPreviews: boolean) => {
       clearOpenAnimationTimer();
-      if (deferPreviews) onPreviewsReadyChange?.(true);
-      clearOpeningSnapshot();
       if (deferPreviews) setPreviewsMounted(true);
     },
-    [clearOpenAnimationTimer, clearOpeningSnapshot, onPreviewsReadyChange],
+    [clearOpenAnimationTimer],
   );
 
   const startPreviewDeferTimer = useCallback(() => {
@@ -159,5 +157,6 @@ export function usePaletteAnimation({
     openingSnapshot,
     seedOpeningSnapshot,
     beginCloseAnimation,
+    clearOpeningSnapshot,
   };
 }

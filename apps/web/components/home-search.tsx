@@ -41,6 +41,7 @@ import type { PaletteResultsMode } from "../lib/palette/results-mode";
 import { useOwnedArmor } from "../lib/use-owned-armor";
 import { useCustomWeaponFilters } from "../lib/use-custom-weapon-filters";
 import {
+  excludeCurrentRecentSearch,
   filterRecentSearches,
   formatRecentSearchLabel,
   useRecentSearches,
@@ -82,13 +83,6 @@ const WEAPON_SORT_OPTIONS: PillSelectOption<WeaponSort>[] = [
 interface CustomFilterComposer {
   name: string;
   perkNames: string[];
-}
-
-function recentChipKey(chips: readonly { categoryId: string; valueId: string }[]): string {
-  return chips
-    .map((chip) => `${chip.categoryId}:${chip.valueId}`)
-    .sort()
-    .join("|");
 }
 
 export function HomeSearch({
@@ -467,17 +461,10 @@ export function HomeSearch({
 
   const recentPaletteItems = useMemo<PaletteRecentItem[]>(() => {
     if (composingCustomFilter) return [];
-    const currentQuery = query.trim().toLowerCase();
-    const currentChipKey = recentChipKey(chips);
     const recents = query.trim()
       ? filterRecentSearches(getRecentForMode(mode), query)
       : getRecentForMode(mode);
-    return recents
-      .filter(
-        (search) =>
-          search.query.trim().toLowerCase() !== currentQuery ||
-          recentChipKey(search.chips) !== currentChipKey,
-      )
+    return excludeCurrentRecentSearch(recents, mode, query, chips)
       .map((search) => ({
         id: search.id,
         label: formatRecentSearchLabel(search.chips, search.query),

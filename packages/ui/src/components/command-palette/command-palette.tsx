@@ -32,6 +32,14 @@ import type { CommandPaletteProps, ListMode, PaletteCategory, PaletteItem } from
 import { usePaletteAnimation } from "./use-palette-animation";
 import { usePaletteListSelection } from "./use-palette-list-selection";
 
+function useStableCallback<TArgs extends unknown[], TResult>(
+  callback: (...args: TArgs) => TResult,
+): (...args: TArgs) => TResult {
+  const callbackRef = useRef(callback);
+  callbackRef.current = callback;
+  return useCallback((...args: TArgs) => callbackRef.current(...args), []);
+}
+
 export type {
   CommandPaletteProps,
   PaletteAction,
@@ -183,6 +191,7 @@ export function CommandPalette({
     openingSnapshot,
     seedOpeningSnapshot,
     beginCloseAnimation,
+    clearOpeningSnapshot,
   } = usePaletteAnimation({
     open,
     query,
@@ -289,6 +298,15 @@ export function CommandPalette({
     ],
   );
 
+  useEffect(() => {
+    if (!open || !openingSnapshot) return;
+    const liveResults = items.filter((item) => item.kind === "result").length;
+    const snapshotResults = openingSnapshot.items.filter((item) => item.kind === "result").length;
+    if (snapshotResults === 0 || liveResults >= snapshotResults) {
+      clearOpeningSnapshot();
+    }
+  }, [open, openingSnapshot, items, clearOpeningSnapshot]);
+
   const renderMode = open
     ? (openingSnapshot?.mode ?? mode)
     : (closingSnapshot?.mode ?? null);
@@ -299,24 +317,23 @@ export function CommandPalette({
     mode: null,
     items: [],
   });
-  const openPanelRef = useRef<() => void>(() => {});
-  const closePanelRef = useRef<() => void>(() => {});
-  latestRenderSnapshotRef.current = { mode: renderMode, items: renderItems };
 
-  function openPanel() {
+  useLayoutEffect(() => {
+    latestRenderSnapshotRef.current = { mode: renderMode, items: renderItems };
+  }, [renderMode, renderItems]);
+
+  const openPanel = useStableCallback(() => {
     seedOpeningSnapshot();
     dispatch({ type: "open" });
     onOpenChange?.(true);
-  }
+  });
 
-  function closePanel() {
+  const closePanel = useStableCallback(() => {
     const snapshot = latestRenderSnapshotRef.current;
     beginCloseAnimation(snapshot.mode, snapshot.items);
     dispatch({ type: "close" });
     onOpenChange?.(false);
-  }
-  openPanelRef.current = openPanel;
-  closePanelRef.current = closePanel;
+  });
 
   const activeIndex =
     state.activeIndex < 0 ? -1 : Math.min(state.activeIndex, Math.max(0, items.length - 1));
@@ -372,7 +389,7 @@ export function CommandPalette({
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (shouldIgnoreSearchShortcut(e.target)) return;
       e.preventDefault();
-      openPanelRef.current();
+      openPanel();
       inputRef.current?.focus();
     }
     document.addEventListener("keydown", onKeyDown);
@@ -393,7 +410,7 @@ export function CommandPalette({
       ) {
         return;
       }
-      closePanelRef.current();
+      closePanel();
     }
     document.addEventListener("pointerdown", onPointerDown);
     return () => document.removeEventListener("pointerdown", onPointerDown);

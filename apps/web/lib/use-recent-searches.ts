@@ -157,6 +157,18 @@ export function filterRecentSearches(searches: RecentSearch[], query: string): R
   });
 }
 
+export function excludeCurrentRecentSearch(
+  searches: RecentSearch[],
+  mode: "weapon" | "armor",
+  query: string,
+  chips: RecentSearchChip[],
+): RecentSearch[] {
+  const current = searchFingerprint(mode, query, chips);
+  return searches.filter(
+    (search) => searchFingerprint(search.mode, search.query, search.chips) !== current,
+  );
+}
+
 export function removeRecentSearch(searches: RecentSearch[], id: string): RecentSearch[] {
   return searches.filter((search) => search.id !== id);
 }
