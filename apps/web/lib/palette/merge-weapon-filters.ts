@@ -39,7 +39,7 @@ export function mergeWeaponFilters(base: WeaponFilters, extra: WeaponFilters): W
   const out: WeaponFilters = { ...base };
 
   for (const key of ARRAY_KEYS) {
-    const merged = mergeArray(base[key] as string[] | undefined, extra[key] as string[] | undefined);
+    const merged = mergeArray(base[key], extra[key]);
     if (merged) out[key] = merged;
   }
 

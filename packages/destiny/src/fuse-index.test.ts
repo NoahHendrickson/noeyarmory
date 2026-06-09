@@ -21,7 +21,7 @@ describe("prebuilt weapon fuse index", () => {
   });
 
   test("serialized index round-trips through JSON", () => {
-    const serialized = JSON.parse(JSON.stringify(serializeWeaponFuseIndex(weapons)));
+    const serialized: unknown = JSON.parse(JSON.stringify(serializeWeaponFuseIndex(weapons)));
     const fuse = createWeaponFuse(weapons, serialized);
     expect(fuse.search("fate").length).toBeGreaterThan(0);
   });
