@@ -1,4 +1,46 @@
-import type { ArmorIndex, NewArmorIndex } from "./types";
+import type { ArmorDoc, ArmorIndex, NewArmorIndex, NewArmorSetGroup } from "./types";
+
+const CLASS_ORDER = ["Titan", "Hunter", "Warlock", "Any"];
+const SLOT_ORDER = ["Helmet", "Gauntlets", "Chest", "Legs", "Class"];
+
+function sortNewArmorPieces(a: ArmorDoc, b: ArmorDoc): number {
+  const classDelta = CLASS_ORDER.indexOf(a.classType) - CLASS_ORDER.indexOf(b.classType);
+  if (classDelta !== 0) return classDelta;
+
+  const slotDelta = SLOT_ORDER.indexOf(a.slot) - SLOT_ORDER.indexOf(b.slot);
+  if (slotDelta !== 0) return slotDelta;
+
+  return a.name.localeCompare(b.name);
+}
+
+export function groupNewArmorBySet(index: NewArmorIndex): NewArmorSetGroup[] {
+  const setsByHash = new Map(index.armor30Sets.map((set) => [set.hash, set]));
+  const groups = new Map<string, NewArmorSetGroup>();
+
+  for (const piece of index.armor) {
+    const key = piece.setHash != null ? `set-${piece.setHash}` : `item-${piece.hash}`;
+    const set = piece.setHash != null ? setsByHash.get(piece.setHash) : undefined;
+    const existing = groups.get(key);
+
+    if (existing) {
+      existing.pieces.push(piece);
+      if (!existing.source && piece.source) existing.source = piece.source;
+      continue;
+    }
+
+    groups.set(key, {
+      key,
+      name: set?.name ?? piece.setName ?? piece.name,
+      source: piece.source,
+      set,
+      pieces: [piece],
+    });
+  }
+
+  return [...groups.values()]
+    .map((group) => ({ ...group, pieces: [...group.pieces].sort(sortNewArmorPieces) }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
 
 export function buildNewArmorIndex(current: ArmorIndex, previous?: ArmorIndex): NewArmorIndex {
   const base = {

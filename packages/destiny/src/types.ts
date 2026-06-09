@@ -229,6 +229,15 @@ export interface ArmorIndex {
   armor30Sets: Armor30SetRef[];
 }
 
+/** A new-armor catalog entry grouped by Armor 3.0 set (or standalone piece). */
+export interface NewArmorSetGroup {
+  key: string;
+  name: string;
+  source?: string;
+  set?: Armor30SetRef;
+  pieces: ArmorDoc[];
+}
+
 /** Armor newly introduced between two generated armor indexes. */
 export interface NewArmorIndex {
   version: string;

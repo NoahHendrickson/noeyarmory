@@ -1,22 +1,16 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import { Badge, cn } from "@repo/ui";
-import type { Armor30SetRef, ArmorDoc, NewArmorIndex } from "@repo/destiny";
+import { Badge } from "@repo/ui";
+import {
+  groupNewArmorBySet,
+  type Armor30SetRef,
+  type ArmorDoc,
+  type NewArmorIndex,
+  type NewArmorSetGroup,
+} from "@repo/destiny";
 
-import { bungieIcon, RARITY_RING } from "../lib/bungie";
-
-const CLASS_ORDER = ["Titan", "Hunter", "Warlock", "Any"];
-const SLOT_ORDER = ["Helmet", "Gauntlets", "Chest", "Legs", "Class"];
-
-interface NewArmorSetGroup {
-  key: string;
-  name: string;
-  source?: string;
-  set?: Armor30SetRef;
-  pieces: ArmorDoc[];
-}
+import { ArmorItemIcon } from "./armor-item-icon";
 
 type SetBonus = NonNullable<Armor30SetRef["perks"]>[number];
 
@@ -31,71 +25,6 @@ function formatDate(value?: string): string | undefined {
     hour: "numeric",
     minute: "2-digit",
   });
-}
-
-function sortPieces(a: ArmorDoc, b: ArmorDoc): number {
-  const classDelta = CLASS_ORDER.indexOf(a.classType) - CLASS_ORDER.indexOf(b.classType);
-  if (classDelta !== 0) return classDelta;
-
-  const slotDelta = SLOT_ORDER.indexOf(a.slot) - SLOT_ORDER.indexOf(b.slot);
-  if (slotDelta !== 0) return slotDelta;
-
-  return a.name.localeCompare(b.name);
-}
-
-function groupNewArmor(index: NewArmorIndex): NewArmorSetGroup[] {
-  const setsByHash = new Map(index.armor30Sets.map((set) => [set.hash, set]));
-  const groups = new Map<string, NewArmorSetGroup>();
-
-  for (const piece of index.armor) {
-    const key = piece.setHash != null ? `set-${piece.setHash}` : `item-${piece.hash}`;
-    const set = piece.setHash != null ? setsByHash.get(piece.setHash) : undefined;
-    const existing = groups.get(key);
-
-    if (existing) {
-      existing.pieces.push(piece);
-      if (!existing.source && piece.source) existing.source = piece.source;
-      continue;
-    }
-
-    groups.set(key, {
-      key,
-      name: set?.name ?? piece.setName ?? piece.name,
-      source: piece.source,
-      set,
-      pieces: [piece],
-    });
-  }
-
-  return [...groups.values()]
-    .map((group) => ({ ...group, pieces: [...group.pieces].sort(sortPieces) }))
-    .sort((a, b) => a.name.localeCompare(b.name));
-}
-
-function ArmorIcon({ armor }: { armor: ArmorDoc }) {
-  const icon = bungieIcon(armor.icon);
-  const watermark = bungieIcon(armor.watermark);
-
-  return (
-    <div
-      className={cn(
-        "relative size-9 shrink-0 overflow-hidden rounded ring-1",
-        RARITY_RING[armor.rarity] ?? "ring-border",
-      )}
-    >
-      {icon && <Image src={icon} alt="" width={36} height={36} className="size-9" unoptimized />}
-      {watermark && (
-        <Image
-          src={watermark}
-          alt=""
-          width={36}
-          height={36}
-          className="absolute inset-0 size-9"
-          unoptimized
-        />
-      )}
-    </div>
-  );
 }
 
 function SetBonusFrame({ perk }: { perk: SetBonus }) {
@@ -114,7 +43,7 @@ function SetBonusFrame({ perk }: { perk: SetBonus }) {
 function ArmorPiece({ armor }: { armor: ArmorDoc }) {
   return (
     <li className="bg-card/70 flex items-center gap-2 rounded-md border border-white/10 p-2">
-      <ArmorIcon armor={armor} />
+      <ArmorItemIcon icon={armor.icon} watermark={armor.watermark} rarity={armor.rarity} />
       <div className="min-w-0">
         <div className="truncate text-xs font-medium">{armor.name}</div>
         <div className="text-muted-foreground text-[11px] leading-tight">
@@ -187,7 +116,7 @@ function EmptyState({
 }
 
 export function NewArmorPage({ index }: { index?: NewArmorIndex }) {
-  const groups = index ? groupNewArmor(index) : [];
+  const groups = index ? groupNewArmorBySet(index) : [];
   const generatedAt = formatDate(index?.generatedAt);
   const baselineAt = formatDate(index?.baselineGeneratedAt);
 

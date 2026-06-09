@@ -37,14 +37,6 @@ function readPreviousArmorIndex(): ArmorIndex | undefined {
   }
 }
 
-function readPreviousNewArmorIndex(): NewArmorIndex | undefined {
-  try {
-    return JSON.parse(readFileSync(newArmorFile, "utf8")) as NewArmorIndex;
-  } catch {
-    return undefined;
-  }
-}
-
 async function generateFromManifest(apiKey: string): Promise<void> {
   console.log("Downloading Destiny manifest (this can take a moment)…");
   const { version, defs } = await downloadManifest(apiKey);
@@ -74,15 +66,21 @@ async function generateFromManifest(apiKey: string): Promise<void> {
 
   console.log("Flattening armor…");
   const previousArmorIndex = readPreviousArmorIndex();
-  const previousNewArmorIndex = readPreviousNewArmorIndex();
   const armorIndex = buildArmorIndex(defs, version);
   const computedNewArmorIndex = buildNewArmorIndex(armorIndex, previousArmorIndex);
-  const newArmorIndex =
+  const manifestVersionChanged = previousArmorIndex?.version !== armorIndex.version;
+  const preserveExistingNewArmorSnapshot =
     computedNewArmorIndex.armor.length === 0 &&
-    previousNewArmorIndex?.version === armorIndex.version &&
-    previousNewArmorIndex.armor.length > 0
-      ? previousNewArmorIndex
-      : computedNewArmorIndex;
+    !manifestVersionChanged &&
+    existsSync(newArmorFile);
+  const newArmorContents = preserveExistingNewArmorSnapshot
+    ? readFileSync(newArmorFile, "utf8")
+    : JSON.stringify(computedNewArmorIndex);
+  const newArmorIndex = (
+    preserveExistingNewArmorSnapshot
+      ? JSON.parse(newArmorContents)
+      : computedNewArmorIndex
+  ) as NewArmorIndex;
   const armorManifestFile = writeGeneratedDataFile({
     dataDir,
     basename: "armor",
@@ -91,7 +89,7 @@ async function generateFromManifest(apiKey: string): Promise<void> {
   const newArmorManifestFile = writeGeneratedDataFile({
     dataDir,
     basename: "new-armor",
-    contents: JSON.stringify(newArmorIndex),
+    contents: newArmorContents,
   });
   writeGeneratedDataManifest(dataDir, {
     version: index.version,

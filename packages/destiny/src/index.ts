@@ -16,6 +16,7 @@ export type {
   ArmorDoc,
   ArmorIndex,
   NewArmorIndex,
+  NewArmorSetGroup,
   ArmorArchetypeRef,
   Armor30SetRef,
   StatMod,
@@ -130,7 +131,7 @@ export {
   type GeneratedDataManifest,
   type GeneratedDataManifestFile,
 } from "./generated-data-manifest";
-export { buildNewArmorIndex } from "./new-armor";
+export { buildNewArmorIndex, groupNewArmorBySet } from "./new-armor";
 export {
   filterArmor,
   sortArmor,

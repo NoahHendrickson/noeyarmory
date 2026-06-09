@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { buildNewArmorIndex } from "./new-armor";
+import { buildNewArmorIndex, groupNewArmorBySet } from "./new-armor";
 import type { Armor30SetRef, ArmorDoc, ArmorIndex } from "./types";
 
 const rootSet: Armor30SetRef = {
@@ -122,5 +122,67 @@ describe("buildNewArmorIndex", () => {
     expect(result.newArmorHashes).toEqual([2]);
     expect(result.newSetHashes).toEqual([rootSet.hash]);
     expect(result.armor30Sets).toEqual([rootSet]);
+  });
+});
+
+describe("groupNewArmorBySet", () => {
+  test("groups pieces by set hash and sorts by name", () => {
+    const setPiece = armor({
+      hash: 2,
+      name: "Root Gloves",
+      slot: "Gauntlets",
+      isArmor30: true,
+      setHash: rootSet.hash,
+      setName: rootSet.name,
+    });
+    const standalone = armor({ hash: 3, name: "Zeta Helm" });
+
+    const groups = groupNewArmorBySet({
+      version: "current",
+      generatedAt: "2026-06-09T17:00:00.000Z",
+      hasBaseline: true,
+      newArmorHashes: [2, 3],
+      newSetHashes: [rootSet.hash],
+      armor: [setPiece, standalone],
+      armor30Sets: [rootSet],
+    });
+
+    expect(groups).toHaveLength(2);
+    expect(groups[0]?.name).toBe("Root of Nightmares");
+    expect(groups[0]?.pieces).toEqual([setPiece]);
+    expect(groups[1]?.name).toBe("Zeta Helm");
+    expect(groups[1]?.pieces).toEqual([standalone]);
+  });
+
+  test("merges multiple new pieces from the same set", () => {
+    const hood = armor({
+      hash: 2,
+      name: "Root Hood",
+      slot: "Helmet",
+      isArmor30: true,
+      setHash: rootSet.hash,
+      setName: rootSet.name,
+    });
+    const gloves = armor({
+      hash: 3,
+      name: "Root Gloves",
+      slot: "Gauntlets",
+      isArmor30: true,
+      setHash: rootSet.hash,
+      setName: rootSet.name,
+    });
+
+    const groups = groupNewArmorBySet({
+      version: "current",
+      generatedAt: "2026-06-09T17:00:00.000Z",
+      hasBaseline: true,
+      newArmorHashes: [2, 3],
+      newSetHashes: [rootSet.hash],
+      armor: [gloves, hood],
+      armor30Sets: [rootSet],
+    });
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0]?.pieces.map((piece) => piece.hash)).toEqual([2, 3]);
   });
 });

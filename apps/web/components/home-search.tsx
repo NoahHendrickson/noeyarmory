@@ -1,7 +1,7 @@
 "use client";
 
 import { ListFilterPlus } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import {
   Badge,
   cn,
@@ -552,6 +552,7 @@ export function HomeSearch({
               "mx-auto flex w-full max-w-[calc(100vw-2rem)] flex-col sm:w-[min(calc(100vw-2rem),calc(640px+var(--chip-count,0)*96px))]",
               selectedHash != null && "pointer-events-none invisible",
             )}
+            style={{ "--chip-count": paletteChips.length } as CSSProperties}
           >
             <div className="mb-4 flex flex-wrap items-center justify-end gap-2 sm:justify-between">
               {mode === "weapon" && pinnedFilters.length > 0 ? (
