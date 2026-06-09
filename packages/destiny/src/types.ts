@@ -231,6 +231,15 @@ export interface ArmorIndex {
   armor30Sets: Armor30SetRef[];
 }
 
+/** Committed hash snapshot used when no prior generated armor index exists (e.g. CI builds). */
+export interface ArmorCatalogBaseline {
+  version: string;
+  generatedAt: string;
+  armorHashes: number[];
+}
+
+export type ArmorCatalogDiffSource = ArmorIndex | ArmorCatalogBaseline;
+
 /** A new-armor catalog entry grouped by Armor 3.0 set (or standalone piece). */
 export interface NewArmorSetGroup {
   key: string;

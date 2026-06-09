@@ -63,6 +63,21 @@ describe("buildNewArmorIndex", () => {
     });
   });
 
+  test("diffs against a committed hash-only baseline snapshot", () => {
+    const oldPiece = armor({ hash: 1, name: "Abyssal Helm" });
+    const newPiece = armor({ hash: 2, name: "Abyssal Gloves" });
+
+    const result = buildNewArmorIndex(index({ armor: [oldPiece, newPiece] }), {
+      version: "baseline",
+      generatedAt: "2026-06-08T17:00:00.000Z",
+      armorHashes: [1],
+    });
+
+    expect(result.hasBaseline).toBe(true);
+    expect(result.newArmorHashes).toEqual([2]);
+    expect(result.armor).toEqual([newPiece]);
+  });
+
   test("includes current armor hashes that are missing from the previous index", () => {
     const oldPiece = armor({ hash: 1, name: "Abyssal Helm" });
     const newPiece = armor({ hash: 2, name: "Abyssal Gloves" });

@@ -1,4 +1,15 @@
-import type { ArmorDoc, ArmorIndex, NewArmorIndex, NewArmorSetGroup } from "./types";
+import type {
+  ArmorCatalogDiffSource,
+  ArmorDoc,
+  ArmorIndex,
+  NewArmorIndex,
+  NewArmorSetGroup,
+} from "./types";
+
+function armorHashesFromDiffSource(previous: ArmorCatalogDiffSource): Set<number> {
+  if ("armorHashes" in previous) return new Set(previous.armorHashes);
+  return new Set(previous.armor.map((item) => item.hash));
+}
 
 const CLASS_ORDER = ["Titan", "Hunter", "Warlock", "Any"];
 const SLOT_ORDER = ["Helmet", "Gauntlets", "Chest", "Legs", "Class"];
@@ -42,7 +53,10 @@ export function groupNewArmorBySet(index: NewArmorIndex): NewArmorSetGroup[] {
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
-export function buildNewArmorIndex(current: ArmorIndex, previous?: ArmorIndex): NewArmorIndex {
+export function buildNewArmorIndex(
+  current: ArmorIndex,
+  previous?: ArmorCatalogDiffSource,
+): NewArmorIndex {
   const base = {
     version: current.version,
     generatedAt: current.generatedAt,
@@ -61,7 +75,7 @@ export function buildNewArmorIndex(current: ArmorIndex, previous?: ArmorIndex): 
     };
   }
 
-  const previousArmorHashes = new Set(previous.armor.map((item) => item.hash));
+  const previousArmorHashes = armorHashesFromDiffSource(previous);
   const armor = current.armor.filter((item) => !previousArmorHashes.has(item.hash));
   const newSetHashes = [
     ...new Set(

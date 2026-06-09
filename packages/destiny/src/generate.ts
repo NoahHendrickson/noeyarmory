@@ -8,10 +8,11 @@ import { buildAmmoTypeCatalog, buildWeaponIndex } from "./build-index";
 import { writeGeneratedDataFile, writeGeneratedDataManifest } from "./generated-data-files";
 import { stripPerksLowerReplacer } from "./intern-weapons";
 import { downloadDestinyIconDefinitions, downloadManifest } from "./manifest";
+import { readArmorCatalogDiffSource } from "./armor-catalog-baseline";
 import { buildNewArmorIndex } from "./new-armor";
 import { serializeWeaponFuseIndex } from "./search";
 import { isCatalogWeapon } from "./weapon-variants";
-import type { ArmorIndex, NewArmorIndex } from "./types";
+import type { NewArmorIndex } from "./types";
 import { writeSampleIndexes } from "./write-sample-indexes";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -28,14 +29,6 @@ function hasExistingGeneratedIndexes(): boolean {
   return (
     existsSync(weaponsFile) && existsSync(weaponsDetailFile) && existsSync(armorFile)
   );
-}
-
-function readPreviousArmorIndex(): ArmorIndex | undefined {
-  try {
-    return JSON.parse(readFileSync(armorFile, "utf8")) as ArmorIndex;
-  } catch {
-    return undefined;
-  }
 }
 
 async function generateFromManifest(apiKey: string): Promise<void> {
@@ -66,10 +59,15 @@ async function generateFromManifest(apiKey: string): Promise<void> {
   console.log(`✓ Wrote ${Object.keys(detailIndex.details).length} weapon details → ${weaponsDetailFile}`);
 
   console.log("Flattening armor…");
-  const previousArmorIndex = readPreviousArmorIndex();
+  const previousArmorCatalog = readArmorCatalogDiffSource(armorFile);
   const armorIndex = buildArmorIndex(defs, version);
-  const computedNewArmorIndex = buildNewArmorIndex(armorIndex, previousArmorIndex);
-  const manifestVersionChanged = previousArmorIndex?.version !== armorIndex.version;
+  const computedNewArmorIndex = buildNewArmorIndex(armorIndex, previousArmorCatalog);
+  const manifestVersionChanged = previousArmorCatalog?.version !== armorIndex.version;
+  if (previousArmorCatalog && !existsSync(armorFile)) {
+    console.log(
+      `Using committed armor baseline (${previousArmorCatalog.version}, ${"armorHashes" in previousArmorCatalog ? previousArmorCatalog.armorHashes.length : previousArmorCatalog.armor.length} hashes)`,
+    );
+  }
   const preserveExistingNewArmorSnapshot =
     computedNewArmorIndex.armor.length === 0 &&
     !manifestVersionChanged &&
