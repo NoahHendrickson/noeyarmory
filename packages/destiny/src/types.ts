@@ -213,6 +213,10 @@ export interface Armor30SetRef {
   hash: number;
   name: string;
   perkNames: string[];
+  perks?: {
+    name: string;
+    description?: string;
+  }[];
 }
 
 export interface ArmorIndex {
@@ -222,5 +226,27 @@ export interface ArmorIndex {
   /** Global stat archetype plug catalog (Armor 3.0). */
   archetypes: ArmorArchetypeRef[];
   /** Armor 3.0 sets that have set bonus perks. */
+  armor30Sets: Armor30SetRef[];
+}
+
+/** A new-armor catalog entry grouped by Armor 3.0 set (or standalone piece). */
+export interface NewArmorSetGroup {
+  key: string;
+  name: string;
+  source?: string;
+  set?: Armor30SetRef;
+  pieces: ArmorDoc[];
+}
+
+/** Armor newly introduced between two generated armor indexes. */
+export interface NewArmorIndex {
+  version: string;
+  generatedAt: string;
+  hasBaseline: boolean;
+  baselineVersion?: string;
+  baselineGeneratedAt?: string;
+  newArmorHashes: number[];
+  newSetHashes: number[];
+  armor: ArmorDoc[];
   armor30Sets: Armor30SetRef[];
 }

@@ -1,9 +1,8 @@
 import { memo } from "react";
-import Image from "next/image";
 import { Button, ResultRow } from "@repo/ui";
 
-import { bungieIcon } from "../lib/bungie";
 import type { OwnedArmorItem } from "../lib/armor-types";
+import { ArmorItemIcon } from "./armor-item-icon";
 import { ArmorStatsSubtitle } from "./armor-stats-subtitle";
 
 const CLASS_CHARACTERS = new Set(["Titan", "Hunter", "Warlock"]);
@@ -65,8 +64,7 @@ export const ArmorResultRow = memo(function ArmorResultRow({
   onMoveToCharacter?: () => void;
   actionState?: ArmorActionState;
 }) {
-  const icon = bungieIcon(armor.icon);
-  const watermark = bungieIcon(armor.watermark);
+  const watermark = armor.watermark;
 
   const subtitle =
     armor.isArmor30 && armor.stats && armor.stats.length > 0 ? (
@@ -89,21 +87,12 @@ export const ArmorResultRow = memo(function ArmorResultRow({
       render={onSelect ? undefined : <div />}
       onClick={onSelect}
       icon={
-        <>
-          {icon && (
-            <Image src={icon} alt="" width={40} height={40} className="size-full" unoptimized />
-          )}
-          {watermark && (
-            <Image
-              src={watermark}
-              alt=""
-              width={40}
-              height={40}
-              className="absolute inset-0 size-full"
-              unoptimized
-            />
-          )}
-        </>
+        <ArmorItemIcon
+          icon={armor.icon}
+          watermark={watermark}
+          size={40}
+          className="size-full ring-0"
+        />
       }
       title={armor.name}
       subtitle={subtitle}

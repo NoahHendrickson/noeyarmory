@@ -152,10 +152,17 @@ export function buildArmorIndex(defs: ManifestDefs, version: string): ArmorIndex
     const equipableSetHash = item.equippingBlock?.equipableItemSetHash;
     if (equipableSetHash != null) {
       const setDef = equipableSets[equipableSetHash];
-      const perkNames =
+      const setPerks =
         setDef?.setPerks
-          ?.map((p) => sandboxPerks[p.sandboxPerkHash]?.displayProperties?.name)
-          .filter((n): n is string => Boolean(n)) ?? [];
+          ?.map((p) => {
+            const display = sandboxPerks[p.sandboxPerkHash]?.displayProperties;
+            const perkName = display?.name;
+            if (!perkName) return undefined;
+            const description = display.description?.trim() || undefined;
+            return description ? { name: perkName, description } : { name: perkName };
+          })
+          .filter((p) => p != null) ?? [];
+      const perkNames = setPerks.map((p) => p.name);
       if (setDef?.displayProperties?.name && perkNames.length > 0) {
         setHash = equipableSetHash;
         setName = setDef.displayProperties.name;
@@ -164,6 +171,7 @@ export function buildArmorIndex(defs: ManifestDefs, version: string): ArmorIndex
             hash: equipableSetHash,
             name: setDef.displayProperties.name,
             perkNames,
+            perks: setPerks,
           });
         }
       }

@@ -9,6 +9,7 @@ import { WeaponsProvider } from "../lib/weapons-context";
 import { AppBackground } from "./app-background";
 import { ChangelogDialog } from "./changelog-dialog";
 import { MoonfangScreensaver } from "./moonfang-screensaver";
+import { NewArmorButton } from "./new-armor-button";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -29,6 +30,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <div aria-hidden="true" />
               )}
               <div className="pointer-events-auto flex items-center justify-end gap-2 sm:gap-3">
+                <NewArmorButton />
                 <ChangelogDialog />
                 <FeedbackDialog />
               </div>
