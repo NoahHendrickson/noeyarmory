@@ -4,6 +4,9 @@ import { useDeferredValue, useMemo } from "react";
 import type { ValueSuggestion } from "@repo/ui";
 import { bestGhostCompletion, suggestWeaponNames, type WeaponSummary } from "@repo/destiny";
 
+import { useSearchPopularity } from "../lib/use-search-popularity";
+import { useWeapons } from "../lib/weapons-context";
+
 export interface UsePaletteGhostCompletionParams {
   enabled: boolean;
   query: string;
@@ -24,6 +27,9 @@ export function usePaletteGhostCompletion({
   const deferredQuery = useDeferredValue(query);
   const deferredInlineSuggestions = useDeferredValue(inlineSuggestions);
   const ghostQuery = deferredQuery;
+  // Built-once name index from context (B1) — not rebuilt per hook.
+  const { nameIndex } = useWeapons();
+  const popularity = useSearchPopularity();
 
   const candidates = useMemo(() => {
     if (!enabled || !ghostQuery.trim()) return [];
@@ -31,12 +37,12 @@ export function usePaletteGhostCompletion({
       label: s.value,
     }));
     if (mode === "weapon") {
-      for (const weapon of suggestWeaponNames(weapons, ghostQuery, 5)) {
+      for (const weapon of suggestWeaponNames(weapons, ghostQuery, 5, nameIndex, popularity)) {
         items.push({ label: weapon.value, popularity: weapon.count });
       }
     }
     return items;
-  }, [enabled, ghostQuery, deferredInlineSuggestions, mode, weapons]);
+  }, [enabled, ghostQuery, deferredInlineSuggestions, mode, weapons, nameIndex, popularity]);
 
   const ghost = useMemo(
     () => (enabled ? bestGhostCompletion(ghostQuery, candidates, recentValues) : undefined),

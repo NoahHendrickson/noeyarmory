@@ -5,6 +5,8 @@ import { matchRank, suggestWeaponNames, type WeaponSummary } from "@repo/destiny
 import type { PaletteValueOption } from "@repo/ui";
 
 import type { PaletteResultsMode } from "../lib/palette/results-mode";
+import { useSearchPopularity } from "../lib/use-search-popularity";
+import { useWeapons } from "../lib/weapons-context";
 
 export interface UsePaletteSubmitParams {
   query: string;
@@ -25,13 +27,17 @@ export function usePaletteSubmit({
   setQuery,
   setResultsMode,
 }: UsePaletteSubmitParams) {
+  // Built-once name index from context (B1) — not rebuilt per hook.
+  const { nameIndex } = useWeapons();
+  const popularity = useSearchPopularity();
+
   return useCallback(() => {
     if (composingCustomFilter) return;
     const q = query.trim();
     if (!q) return;
 
     if (mode === "weapon") {
-      const names = suggestWeaponNames(weapons, q, 1);
+      const names = suggestWeaponNames(weapons, q, 1, nameIndex, popularity);
       const top = names[0];
       if (top) {
         const rank = matchRank(top.value, q);
@@ -48,5 +54,5 @@ export function usePaletteSubmit({
     }
 
     setResultsMode("text");
-  }, [composingCustomFilter, query, mode, weapons, addChip, setQuery, setResultsMode]);
+  }, [composingCustomFilter, query, mode, weapons, nameIndex, popularity, addChip, setQuery, setResultsMode]);
 }
