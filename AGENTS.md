@@ -6,7 +6,7 @@ Guidance for cloud agents working in this repository.
 
 ### Environment bootstrap
 
-Cloud agents load `.cursor/environment.json`, which runs `scripts/ensure-cloud-env.sh` before `pnpm install`. That script:
+Cloud agents load `.cursor/environment.json`, which runs `scripts/ensure-cloud-env.sh`, then `pnpm install`, then Playwright Chromium for `@repo/ui` Storybook browser tests. The bootstrap script:
 
 - Activates **Node 24** from `.nvmrc` (the VM default at `/exec-daemon/node` is Node 22)
 - Normalizes `origin` owner casing to `NoahHendrickson` when the remote already points at this repo (preserves HTTPS auth tokens and SSH URLs)
@@ -21,11 +21,10 @@ node -v   # should print v24.x
 
 ### Node.js version
 
-The repo requires **Node 24** (`engines.node >= 24`, `.nvmrc` is `24`). If the bootstrap script was skipped, prepend nvm's Node 24 to `PATH` before pnpm scripts:
+The repo requires **Node 24** (`engines.node >= 24`, `.nvmrc` is `24`). If the bootstrap script was skipped, use the same helper as above — do not rely on bare `nvm version` for `PATH`; on cloud VMs it can stay `system` while `/exec-daemon/node` (Node 22) remains active:
 
 ```bash
-export NVM_DIR="$HOME/.nvm" && . "$NVM_DIR/nvm.sh" && nvm use 24
-export PATH="$NVM_DIR/versions/node/$(nvm version)/bin:$PATH"
+source scripts/ensure-cloud-env.sh
 node -v   # should print v24.x
 ```
 
@@ -68,7 +67,7 @@ The command palette is keyboard-driven: press **F** to focus search, then type a
 ### Tests
 
 - `@repo/destiny` tests are pure Vitest (no browser).
-- `@repo/ui` includes Storybook browser tests via Playwright. After a fresh clone, install browsers once:
+- `@repo/ui` includes Storybook browser tests via Playwright. Cloud agents install Chromium during `.cursor/environment.json` bootstrap; locally after a fresh clone:
 
   ```bash
   cd packages/ui && pnpm exec playwright install chromium
