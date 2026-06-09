@@ -72,8 +72,6 @@ export interface WeaponSummary {
   seasonName?: string;
   /** Acquisition source from the collectible definition, e.g. "Root of Nightmares". */
   source?: string;
-  /** Collectible source grouping hash when Bungie provides one. */
-  sourceHash?: number;
   /** Manifest investment-table index — proxy for add order when season is unknown. */
   releaseIndex: number;
   /** Base Ammo Generation display value (0–100); omitted when the weapon has no such stat. */

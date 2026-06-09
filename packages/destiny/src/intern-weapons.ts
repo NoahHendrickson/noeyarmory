@@ -183,7 +183,6 @@ export function internWeaponCatalog(
       seasonNumber: weapon.seasonNumber,
       seasonName: weapon.seasonName,
       source: weapon.source,
-      sourceHash: weapon.sourceHash,
       releaseIndex: weapon.releaseIndex,
       ...(ammoGeneration != null ? { ammoGeneration } : {}),
       columns,

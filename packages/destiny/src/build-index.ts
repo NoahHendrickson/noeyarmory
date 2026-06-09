@@ -352,7 +352,6 @@ export function buildWeaponIndex(
       seasonNumber: season?.seasonNumber,
       seasonName: season?.displayProperties?.name || undefined,
       source,
-      sourceHash: collectible?.sourceHash,
       releaseIndex: item.index,
       stats: weaponStats,
       investmentStats: investmentStats.length > 0 ? investmentStats : undefined,

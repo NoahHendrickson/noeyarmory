@@ -107,34 +107,29 @@ function matchesFacet(value: string, selected?: string[]): boolean {
   return selected.some((s) => lower(s) === lower(value));
 }
 
-function matchesSource(value: string | undefined, selected?: string[]): boolean {
-  if (!selected || selected.length === 0) return true;
-  if (!value) return false;
-  const valueLower = lower(value);
-  return selected.some((s) => {
-    const wanted = lower(s.trim());
-    return wanted.length > 0 && (valueLower === wanted || valueLower.includes(wanted));
-  });
-}
-
 function seasonFacetValue(weapon: WeaponSummary): string | undefined {
   if (weapon.seasonName) return weapon.seasonName;
   return weapon.seasonNumber != null ? `Season ${weapon.seasonNumber}` : undefined;
 }
 
-function matchesSeason(weapon: WeaponSummary, selected?: string[]): boolean {
+function matchesOptionalFacet(
+  value: string | undefined,
+  selected?: string[],
+  aliases: readonly string[] = [],
+): boolean {
   if (!selected || selected.length === 0) return true;
-  const label = seasonFacetValue(weapon);
-  if (!label && weapon.seasonNumber == null) return false;
+  if (!value) return false;
+  const accepted = new Set([value, ...aliases].map(lower));
   return selected.some((s) => {
     const wanted = lower(s.trim());
-    if (!wanted) return false;
-    if (label && lower(label) === wanted) return true;
-    return (
-      weapon.seasonNumber != null &&
-      (wanted === String(weapon.seasonNumber) || wanted === `season ${weapon.seasonNumber}`)
-    );
+    return wanted.length > 0 && accepted.has(wanted);
   });
+}
+
+function seasonAliases(weapon: WeaponSummary): string[] {
+  return weapon.seasonNumber != null
+    ? [String(weapon.seasonNumber), `Season ${weapon.seasonNumber}`]
+    : [];
 }
 
 function matchesCraftable(craftable: boolean, selected?: string[]): boolean {
@@ -199,8 +194,8 @@ export function filterWeapons(
     if (!matchesFacet(w.rarity, filters.rarity)) return false;
     if (!matchesFacet(w.slot, filters.slot)) return false;
     if (filters.frame?.length && !matchesFacet(w.frame ?? "", filters.frame)) return false;
-    if (!matchesSource(w.source, filters.source)) return false;
-    if (!matchesSeason(w, filters.season)) return false;
+    if (!matchesOptionalFacet(w.source, filters.source)) return false;
+    if (!matchesOptionalFacet(seasonFacetValue(w), filters.season, seasonAliases(w))) return false;
     if (!matchesCraftable(w.craftable, filters.craftable)) return false;
     if (filters.adept != null && w.adept !== filters.adept) return false;
     if (trait1Wanted.size || trait2Wanted.size) {

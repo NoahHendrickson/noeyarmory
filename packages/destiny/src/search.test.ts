@@ -128,13 +128,11 @@ describe("filterWeapons", () => {
     ]);
   });
 
-  test("source facet supports exact and partial source names", () => {
+  test("source facet requires exact source names", () => {
     expect(
       names(filterWeapons(sampleSummaries, { source: ["Root of Nightmares"] }, samplePerks)),
     ).toEqual(["Stormcharge"]);
-    expect(names(filterWeapons(sampleSummaries, { source: ["Nightmares"] }, samplePerks))).toEqual([
-      "Stormcharge",
-    ]);
+    expect(filterWeapons(sampleSummaries, { source: ["Nightmares"] }, samplePerks)).toEqual([]);
   });
 
   test("season facet supports season labels and season numbers", () => {
