@@ -270,6 +270,25 @@ export function filterWeaponNames(
 /** Minimum query length before text search and name-match pinning apply. */
 export const MIN_WEAPON_TEXT_QUERY_LENGTH = 2;
 
+/** Same band as palette inline chip suggestions (`scanValueSuggestions` `maxRank: 2`). */
+const STRONG_WEAPON_NAME_MATCH_RANK = 2;
+
+/**
+ * True when the query matches a catalog weapon name at prefix quality or better.
+ * Used to prefer live name/fuzzy preview over hypothetical perk-filter previews.
+ */
+export function hasStrongWeaponNameMatch(
+  weapons: WeaponSummary[],
+  query: string,
+  index?: WeaponNameIndex,
+): boolean {
+  const q = query.trim();
+  if (q.length < MIN_WEAPON_TEXT_QUERY_LENGTH) return false;
+  return filterWeaponNames(weapons, q, index).some(
+    (match) => match.searchRank <= STRONG_WEAPON_NAME_MATCH_RANK,
+  );
+}
+
 /**
  * Canonical tie-break order for `filterWeaponNames` results across search surfaces.
  * With a {@link PopularityLookup}, popularity breaks ties before the catalog count.

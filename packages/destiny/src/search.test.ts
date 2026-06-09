@@ -16,6 +16,7 @@ import {
   filterWeaponNames,
   filterWeapons,
   fuzzySearchWeapons,
+  hasStrongWeaponNameMatch,
   rankWeaponResults,
   sortWeapons,
   suggestWeaponNames,
@@ -266,6 +267,25 @@ describe("filterWeaponNames", () => {
     const matches = filterWeaponNames(sampleSummaries, "fate");
     expect(matches.some((m) => m.value === "Fatebringer")).toBe(true);
     expect(matches.find((m) => m.value === "Fatebringer")?.searchRank).toBeLessThanOrEqual(1);
+  });
+});
+
+describe("hasStrongWeaponNameMatch", () => {
+  test("detects prefix and word-boundary weapon names", () => {
+    const summaries = [
+      ...sampleSummaries,
+      { ...sampleSummaries[0]!, hash: 9001, name: "The Beacon" },
+    ];
+    expect(hasStrongWeaponNameMatch(summaries, "fate")).toBe(true);
+    expect(hasStrongWeaponNameMatch(summaries, "beacon")).toBe(true);
+  });
+
+  test("returns false when the query is too short", () => {
+    expect(hasStrongWeaponNameMatch(sampleSummaries, "f")).toBe(false);
+  });
+
+  test("returns false for perk-only substring matches", () => {
+    expect(hasStrongWeaponNameMatch(sampleSummaries, "round")).toBe(false);
   });
 });
 
