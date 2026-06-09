@@ -17,7 +17,13 @@ export {
 export { Switch, SwitchRoot, SwitchThumb, type SwitchProps } from "./components/switch";
 export { PillSelect, type PillSelectProps, type PillSelectOption } from "./components/pill-select";
 export { Kbd } from "./components/kbd";
-export { FilterChip, filterChipVariants, type FilterChipProps, type FilterChipTone, type FilterChipElement } from "./components/filter-chip";
+export {
+  FilterChip,
+  filterChipVariants,
+  type FilterChipProps,
+  type FilterChipTone,
+  type FilterChipElement,
+} from "./components/filter-chip";
 export { ResultRow, type ResultRowProps } from "./components/result-row";
 export {
   CommandPalette,
@@ -35,6 +41,7 @@ export {
   valueSuggestionsToChipItems,
 } from "./components/command-palette/command-palette";
 export { frostedSurface, type FrostedSurfaceToken } from "./lib/frosted-surface";
+export { motion, motionDurationMs, motionTokens, type MotionToken } from "./lib/motion";
 export { FrostedShell, FrostedShellBar } from "./components/frosted-shell";
 export {
   availableCategories,
@@ -53,7 +60,10 @@ export {
   DialogPopup,
 } from "./components/dialog";
 export { FeedbackDialog, type FeedbackDialogProps } from "./components/feedback-dialog";
-export { FrostedToolbarButton, type FrostedToolbarButtonProps } from "./components/frosted-toolbar-button";
+export {
+  FrostedToolbarButton,
+  type FrostedToolbarButtonProps,
+} from "./components/frosted-toolbar-button";
 export {
   Popover,
   PopoverTrigger,

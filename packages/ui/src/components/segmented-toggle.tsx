@@ -1,6 +1,7 @@
 import { useRef } from "react";
 import type { ReactNode } from "react";
 
+import { motion } from "../lib/motion";
 import { cn } from "../lib/utils";
 
 export interface SegmentedToggleOption<T extends string> {
@@ -29,6 +30,8 @@ function SegmentedToggle<T extends string>({
 }: SegmentedToggleProps<T>) {
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
   const activeIndex = options.findIndex((o) => o.value === value);
+  const safeActiveIndex = activeIndex >= 0 ? activeIndex : 0;
+  const optionCount = Math.max(options.length, 1);
 
   function move(delta: number) {
     const next = (activeIndex + delta + options.length) % options.length;
@@ -40,8 +43,22 @@ function SegmentedToggle<T extends string>({
     <div
       role="radiogroup"
       aria-label={ariaLabel}
-      className={cn("bg-secondary inline-flex items-center gap-0.5 rounded-xl p-0.5", className)}
+      className={cn("relative inline-grid items-center rounded-xl bg-secondary p-0.5", className)}
+      style={{ gridTemplateColumns: `repeat(${optionCount}, minmax(0, 1fr))` }}
     >
+      {options.length > 0 && (
+        <span
+          aria-hidden
+          className={motion(
+            "snappySpring",
+            "pointer-events-none absolute top-0.5 bottom-0.5 left-0.5 rounded-[10px] border border-white/30 bg-white/[0.16] shadow-sm transition-transform",
+          )}
+          style={{
+            width: `calc((100% - 0.25rem) / ${optionCount})`,
+            transform: `translateX(${safeActiveIndex * 100}%)`,
+          }}
+        />
+      )}
       {options.map((option, i) => {
         const active = option.value === value;
         return (
@@ -65,10 +82,11 @@ function SegmentedToggle<T extends string>({
               }
             }}
             className={cn(
-              "h-7 cursor-pointer rounded-[10px] border px-3 text-xs font-medium transition-colors outline-none",
-              "focus-visible:ring-ring focus-visible:ring-2",
+              "relative z-10 h-7 cursor-pointer rounded-[10px] border border-transparent bg-transparent px-3 text-xs font-medium whitespace-nowrap transition-colors outline-none",
+              motion("fastSmooth"),
+              "focus-visible:ring-2 focus-visible:ring-ring",
               active
-                ? "border-white/30 bg-white/[0.16] text-foreground"
+                ? "text-foreground"
                 : "border-transparent text-foreground/60 hover:text-foreground",
             )}
           >

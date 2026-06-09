@@ -6,6 +6,7 @@ import {
   scanValueSuggestions,
   type ValueSuggestion,
 } from "../../lib/palette-suggestions";
+import { motionDurationMs } from "../../lib/motion";
 import type {
   DormantSnapshot,
   ListMode,
@@ -20,7 +21,7 @@ import type {
   PanelKind,
 } from "./types";
 
-export const PANEL_TRANSITION_MS = 200;
+export const PANEL_TRANSITION_MS = motionDurationMs.snappy;
 
 /** Draft query with no committed chips — defer preview rows until the open animation settles. */
 export function shouldDeferPreviews(query: string, chipsLength: number): boolean {
@@ -92,9 +93,7 @@ export function splitPreviewTail(items: PaletteItem[]): {
 
 /** Drop preview rows/sections — used for lightweight open/close animation snapshots. */
 export function stripPreviewItems(items: PaletteItem[]): PaletteItem[] {
-  const previewIndex = items.findIndex(
-    (item) => item.kind === "section" && item.id === "preview",
-  );
+  const previewIndex = items.findIndex((item) => item.kind === "section" && item.id === "preview");
   if (previewIndex < 0) return items;
   let start = previewIndex;
   const prev = items[start - 1];
