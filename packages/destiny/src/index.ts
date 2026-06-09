@@ -9,6 +9,7 @@ export type {
   WeaponDetailFields,
   WeaponIndex,
   WeaponDetailIndex,
+  SerializedWeaponFuseIndex,
   DamageTypeRef,
   WeaponTypeRef,
   AmmoTypeRef,
@@ -100,7 +101,14 @@ export {
   type WeaponNameIndex,
   type PopularityLookup,
 } from "./search";
-export { parseWeaponQuery, type ParsedWeaponQuery } from "./query-language";
+export {
+  parseWeaponQuery,
+  planWeaponTextSearch,
+  mergeWeaponFilters,
+  ARRAY_FACET_KEYS,
+  type ParsedWeaponQuery,
+  type WeaponTextSearchPlan,
+} from "./query-language";
 export { expandWeaponQueryAliases, WEAPON_NAME_ALIASES } from "./aliases";
 export { createLruCache, type LruCache } from "./lru-cache";
 export {

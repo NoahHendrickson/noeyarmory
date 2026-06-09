@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import { sampleWeapons } from "./fixtures/sample-weapons";
 import { internWeaponCatalog } from "./intern-weapons";
 import { createWeaponFuse, serializeWeaponFuseIndex } from "./search";
+import type { SerializedWeaponFuseIndex } from "./types";
 
 const { index } = internWeaponCatalog(sampleWeapons, "sample");
 const weapons = index.weapons;
@@ -20,8 +21,10 @@ describe("prebuilt weapon fuse index", () => {
     }
   });
 
-  test("serialized index round-trips through JSON", () => {
-    const serialized: unknown = JSON.parse(JSON.stringify(serializeWeaponFuseIndex(weapons)));
+  test("serialized index round-trips through JSON (the on-disk boundary)", () => {
+    const serialized = JSON.parse(
+      JSON.stringify(serializeWeaponFuseIndex(weapons)),
+    ) as SerializedWeaponFuseIndex;
     const fuse = createWeaponFuse(weapons, serialized);
     expect(fuse.search("fate").length).toBeGreaterThan(0);
   });

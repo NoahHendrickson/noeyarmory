@@ -2,8 +2,8 @@ import { describe, expect, test } from "vitest";
 
 import { sampleWeapons } from "./fixtures/sample-weapons";
 import { internWeaponCatalog } from "./intern-weapons";
-import { parseWeaponQuery } from "./query-language";
-import { filterWeapons } from "./search";
+import { mergeWeaponFilters, parseWeaponQuery, planWeaponTextSearch } from "./query-language";
+import { filterWeapons, type WeaponFilters } from "./search";
 
 describe("parseWeaponQuery", () => {
   test("plain text passes through with no filters", () => {
@@ -67,5 +67,58 @@ describe("parseWeaponQuery", () => {
     const { filters } = parseWeaponQuery("is:adept");
     const adeptOnly = filterWeapons(weapons, filters, index.perks);
     expect(adeptOnly.every((w) => w.adept)).toBe(true);
+  });
+});
+
+describe("planWeaponTextSearch", () => {
+  test("free text becomes the search text", () => {
+    expect(planWeaponTextSearch("fatebringer")).toEqual({
+      filters: {},
+      searchText: "fatebringer",
+    });
+  });
+
+  test("text + keyword splits into searchText and filters", () => {
+    const plan = planWeaponTextSearch("fate element:solar");
+    expect(plan.searchText).toBe("fate");
+    expect(plan.filters.element).toEqual(["solar"]);
+  });
+
+  test("keyword-only query yields empty searchText (filter the full catalog)", () => {
+    const plan = planWeaponTextSearch("is:adept element:arc");
+    expect(plan.searchText).toBe("");
+    expect(plan.filters.adept).toBe(true);
+    expect(plan.filters.element).toEqual(["arc"]);
+  });
+
+  test("sub-threshold text with no keywords falls back to the raw input", () => {
+    expect(planWeaponTextSearch("a").searchText).toBe("a");
+  });
+});
+
+describe("mergeWeaponFilters", () => {
+  test("returns base unchanged when extra is empty", () => {
+    const base: WeaponFilters = { element: ["solar"] };
+    expect(mergeWeaponFilters(base, {})).toBe(base);
+  });
+
+  test("OR-merges facet arrays case-insensitively without duplicates", () => {
+    const merged = mergeWeaponFilters({ element: ["Solar"] }, { element: ["solar", "arc"] });
+    expect(merged.element).toEqual(["Solar", "arc"]);
+  });
+
+  test("extra adept flag overrides; custom groups concatenate", () => {
+    const merged = mergeWeaponFilters(
+      { customPerkGroups: [["a"]] },
+      { adept: true, customPerkGroups: [["b"]] },
+    );
+    expect(merged.adept).toBe(true);
+    expect(merged.customPerkGroups).toEqual([["a"], ["b"]]);
+  });
+
+  test("does not mutate the base filter object", () => {
+    const base: WeaponFilters = { element: ["solar"] };
+    mergeWeaponFilters(base, { element: ["arc"] });
+    expect(base.element).toEqual(["solar"]);
   });
 });

@@ -1,5 +1,5 @@
 import { expandWeaponQueryAliases } from "./aliases";
-import type { WeaponFilters } from "./search";
+import { MIN_WEAPON_TEXT_QUERY_LENGTH, type WeaponFilters } from "./search";
 
 /** Result of parsing a raw search box string into structured filters + leftover free text. */
 export interface ParsedWeaponQuery {
@@ -8,8 +8,21 @@ export interface ParsedWeaponQuery {
   text: string;
 }
 
-/** WeaponFilters fields that are plain OR-within string arrays. */
-type ArrayFacetKey = "element" | "type" | "ammo" | "slot" | "rarity" | "frame" | "craftable" | "name";
+/** `WeaponFilters` fields that are OR-within string arrays — the single source of truth for merging. */
+export const ARRAY_FACET_KEYS = [
+  "element",
+  "type",
+  "ammo",
+  "rarity",
+  "frame",
+  "slot",
+  "trait1",
+  "trait2",
+  "originTrait",
+  "perks",
+  "craftable",
+  "name",
+] as const satisfies readonly (keyof WeaponFilters)[];
 
 /** `key:` tokens that map straight onto an OR-within facet array. */
 const FACET_KEYS: Readonly<Record<string, "element" | "type" | "ammo" | "slot" | "rarity" | "frame">> = {
@@ -87,7 +100,7 @@ export function parseWeaponQuery(input: string): ParsedWeaponQuery {
   const filters: WeaponFilters = {};
   const freeText: string[] = [];
 
-  const addFacet = (key: ArrayFacetKey, value: string) => {
+  const addFacet = (key: (typeof ARRAY_FACET_KEYS)[number], value: string) => {
     const list = (filters[key] ??= []);
     pushUnique(list, value);
   };
@@ -118,19 +131,19 @@ export function parseWeaponQuery(input: string): ParsedWeaponQuery {
     }
 
     if (key === "perk") {
-      pushUnique((filters.perks ??= []), rawValue);
+      addFacet("perks", rawValue);
       continue;
     }
     if (key === "trait1" || key === "trait") {
-      pushUnique((filters.trait1 ??= []), rawValue);
+      addFacet("trait1", rawValue);
       continue;
     }
     if (key === "trait2") {
-      pushUnique((filters.trait2 ??= []), rawValue);
+      addFacet("trait2", rawValue);
       continue;
     }
     if (key === "origin" || key === "origintrait") {
-      pushUnique((filters.originTrait ??= []), rawValue);
+      addFacet("originTrait", rawValue);
       continue;
     }
     if (key === "name") {
@@ -155,4 +168,70 @@ export function parseWeaponQuery(input: string): ParsedWeaponQuery {
   }
 
   return { filters, text: freeText.join(" ") };
+}
+
+/** How to execute a free-form query: keyword filters plus the text to fuzzy-search. */
+export interface WeaponTextSearchPlan {
+  filters: WeaponFilters;
+  /**
+   * The free text to run name/fuzzy search on. Empty string means "no usable
+   * text" — the caller should search the full catalog and let `filters` narrow it.
+   */
+  searchText: string;
+}
+
+/**
+ * Parse `input` once and decide the text to search:
+ * - enough free text → search that text (keywords stripped out into `filters`);
+ * - only keyword filters → empty `searchText` (filter the full catalog);
+ * - otherwise → fall back to the raw input as plain text.
+ *
+ * Centralizes the keyword-only / text / both branching so call sites don't reparse.
+ */
+export function planWeaponTextSearch(input: string): WeaponTextSearchPlan {
+  const { filters, text } = parseWeaponQuery(input);
+  const trimmed = text.trim();
+  if (trimmed.length >= MIN_WEAPON_TEXT_QUERY_LENGTH) {
+    return { filters, searchText: trimmed };
+  }
+  if (Object.keys(filters).length > 0) {
+    return { filters, searchText: "" };
+  }
+  return { filters, searchText: input.trim() };
+}
+
+function mergeFacetArray(a: string[] | undefined, b: string[] | undefined): string[] | undefined {
+  if (!a?.length) return b?.length ? [...b] : a;
+  if (!b?.length) return [...a];
+  const seen = new Set(a.map((v) => v.toLowerCase()));
+  const merged = [...a];
+  for (const value of b) {
+    if (!seen.has(value.toLowerCase())) {
+      seen.add(value.toLowerCase());
+      merged.push(value);
+    }
+  }
+  return merged;
+}
+
+/**
+ * Combine two filter sets (e.g. chip-derived `base` + keyword-parsed `extra`),
+ * OR-merging each facet array and letting `extra`'s flags extend `base`. `extra`
+ * wins for the single-valued `adept` flag when it sets one.
+ */
+export function mergeWeaponFilters(base: WeaponFilters, extra: WeaponFilters): WeaponFilters {
+  if (Object.keys(extra).length === 0) return base;
+  const out: WeaponFilters = { ...base };
+
+  for (const key of ARRAY_FACET_KEYS) {
+    const merged = mergeFacetArray(base[key], extra[key]);
+    if (merged) out[key] = merged;
+  }
+
+  if (extra.customPerkGroups?.length) {
+    out.customPerkGroups = [...(base.customPerkGroups ?? []), ...extra.customPerkGroups];
+  }
+  if (extra.adept != null) out.adept = extra.adept;
+
+  return out;
 }

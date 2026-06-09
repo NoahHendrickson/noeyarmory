@@ -2,7 +2,7 @@ import Fuse from "fuse.js";
 
 import { matchRank } from "@repo/search-rank";
 
-import type { InternedPerkColumn, PerkRef, WeaponSummary } from "./types";
+import type { InternedPerkColumn, PerkRef, SerializedWeaponFuseIndex, WeaponSummary } from "./types";
 import type { WeaponDpsLookup } from "./weapon-dps";
 import type { WeaponNameIndex } from "./weapon-name-index";
 
@@ -413,8 +413,6 @@ const WEAPON_FUSE_OPTIONS = {
   ignoreLocation: true,
 } as const;
 
-type ParsedFuseIndex = Parameters<typeof Fuse.parseIndex>[0];
-
 /**
  * Build a reusable Fuse index for fuzzy name/type/perk search.
  *
@@ -423,17 +421,16 @@ type ParsedFuseIndex = Parameters<typeof Fuse.parseIndex>[0];
  */
 export function createWeaponFuse(
   weapons: WeaponSummary[],
-  serializedIndex?: unknown,
+  serializedIndex?: SerializedWeaponFuseIndex,
 ): Fuse<WeaponSummary> {
   if (serializedIndex) {
-    const parsed = Fuse.parseIndex<WeaponSummary>(serializedIndex as ParsedFuseIndex);
-    return new Fuse(weapons, WEAPON_FUSE_OPTIONS, parsed);
+    return new Fuse(weapons, WEAPON_FUSE_OPTIONS, Fuse.parseIndex<WeaponSummary>(serializedIndex));
   }
   return new Fuse(weapons, WEAPON_FUSE_OPTIONS);
 }
 
 /** Serialize a prebuilt weapon Fuse index (shipped so clients don't rebuild it). */
-export function serializeWeaponFuseIndex(weapons: WeaponSummary[]): unknown {
+export function serializeWeaponFuseIndex(weapons: WeaponSummary[]): SerializedWeaponFuseIndex {
   return Fuse.createIndex(WEAPON_FUSE_KEYS, weapons).toJSON();
 }
 
