@@ -86,6 +86,7 @@ export {
   collectColumnPerks,
   filterWeaponNames,
   sortFilteredWeaponNames,
+  hasStrongWeaponNameMatch,
   MIN_WEAPON_TEXT_QUERY_LENGTH,
   weaponsMatchingTextQuery,
   rankWeaponResults,
