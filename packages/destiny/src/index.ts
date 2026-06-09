@@ -120,6 +120,16 @@ export {
   type WeaponIndexLookups,
 } from "./weapon-index-lookups";
 export {
+  DEFAULT_GENERATED_DATA_PATHS,
+  GENERATED_DATA_MANIFEST_FILENAME,
+  GENERATED_DATA_MANIFEST_PATH,
+  generatedDataCacheMode,
+  generatedDataPath,
+  type GeneratedDataKey,
+  type GeneratedDataManifest,
+  type GeneratedDataManifestFile,
+} from "./generated-data-manifest";
+export {
   filterArmor,
   sortArmor,
   createArmorFuse,

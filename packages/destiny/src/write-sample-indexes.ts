@@ -1,4 +1,3 @@
-import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 
 import { sampleArmor } from "./fixtures/sample-armor";
@@ -6,6 +5,7 @@ import { sampleAmmoTypes } from "./fixtures/sample-ammo-types";
 import { sampleDamageTypes } from "./fixtures/sample-damage-types";
 import { sampleWeaponTypes } from "./fixtures/sample-weapon-types";
 import { sampleWeapons } from "./fixtures/sample-weapons";
+import { writeGeneratedDataFile, writeGeneratedDataManifest } from "./generated-data-files";
 import { internWeaponCatalog, stripPerksLowerReplacer } from "./intern-weapons";
 import type { ArmorIndex, WeaponIndex } from "./types";
 import { sampleStatGroup } from "./weapon-stats";
@@ -48,12 +48,33 @@ export function writeSampleIndexes(
     statGroups: { [String(sampleStatGroup.hash)]: sampleStatGroup },
   };
   const armorIndex = buildSampleArmorIndex();
+  const dataDir = dirname(weaponsFile);
 
-  mkdirSync(dirname(weaponsFile), { recursive: true });
   // Match production shape (generate.ts) — strip the re-derivable `perksLower`.
-  writeFileSync(weaponsFile, JSON.stringify(weaponIndex, stripPerksLowerReplacer));
-  writeFileSync(weaponsDetailFile, JSON.stringify(detailWithStatGroups));
-  writeFileSync(armorFile, JSON.stringify(armorIndex));
+  const weaponsManifestFile = writeGeneratedDataFile({
+    dataDir,
+    basename: "weapons",
+    contents: JSON.stringify(weaponIndex, stripPerksLowerReplacer),
+  });
+  const detailsManifestFile = writeGeneratedDataFile({
+    dataDir,
+    basename: "weapons-detail",
+    contents: JSON.stringify(detailWithStatGroups),
+  });
+  const armorManifestFile = writeGeneratedDataFile({
+    dataDir,
+    basename: "armor",
+    contents: JSON.stringify(armorIndex),
+  });
+  writeGeneratedDataManifest(dataDir, {
+    version: weaponIndex.version,
+    generatedAt: weaponIndex.generatedAt,
+    files: {
+      weapons: weaponsManifestFile,
+      weaponDetails: detailsManifestFile,
+      armor: armorManifestFile,
+    },
+  });
 
   console.log(`✓ Wrote ${weaponIndex.weapons.length} sample weapons → ${weaponsFile}`);
   console.log(`✓ Wrote ${Object.keys(detailIndex.details).length} sample weapon details → ${weaponsDetailFile}`);
