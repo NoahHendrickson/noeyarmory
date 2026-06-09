@@ -20,8 +20,8 @@ export function PinnedWeaponsRail({
   if (weapons.length === 0) return null;
 
   return (
-    <aside className={cn("w-full lg:w-52", className)} aria-label="Pinned weapons">
-      <div className="flex gap-2 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0">
+    <section className={cn("w-full", className)} aria-label="Pinned weapons">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
         {weapons.map((weapon) => {
           const icon = bungieIcon(weapon.icon);
           const watermark = bungieIcon(weapon.watermark);
@@ -30,7 +30,7 @@ export function PinnedWeaponsRail({
             <div
               key={weapon.hash}
               className={cn(
-                "group relative flex min-w-44 shrink-0 items-center gap-2 rounded-xl p-2 lg:min-w-0",
+                "group relative flex min-w-0 items-center gap-2 rounded-xl p-2",
                 frostedSurface("pill"),
               )}
             >
@@ -84,6 +84,6 @@ export function PinnedWeaponsRail({
           );
         })}
       </div>
-    </aside>
+    </section>
   );
 }

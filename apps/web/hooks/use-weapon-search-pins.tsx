@@ -15,6 +15,8 @@ interface UseWeaponSearchPinsParams {
   weaponCategories: PaletteCategory[];
   weaponByHash: ReadonlyMap<number, WeaponSummary>;
   addChip: (categoryId: string, option: PaletteValueOption) => void;
+  setQuery: (query: string) => void;
+  setPaletteOpen: (open: boolean) => void;
 }
 
 export function useWeaponSearchPins({
@@ -23,6 +25,8 @@ export function useWeaponSearchPins({
   weaponCategories,
   weaponByHash,
   addChip,
+  setQuery,
+  setPaletteOpen,
 }: UseWeaponSearchPinsParams) {
   const {
     pinnedFilters,
@@ -52,9 +56,11 @@ export function useWeaponSearchPins({
   const applyPinnedFilter = useCallback(
     (filter: PinnedFilter) => {
       if (mode !== "weapon") return;
+      setQuery("");
       addChip(filter.categoryId, { id: filter.valueId, label: filter.value });
+      setPaletteOpen(true);
     },
-    [mode, addChip],
+    [mode, addChip, setQuery, setPaletteOpen],
   );
 
   const renderValueTrailing = useCallback(

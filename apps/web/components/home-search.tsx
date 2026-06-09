@@ -223,6 +223,8 @@ export function HomeSearch({
     weaponCategories,
     weaponByHash: byHash,
     addChip,
+    setQuery,
+    setPaletteOpen,
   });
 
   const resultCount = mode === "weapon" ? weaponResultCount : armorResultCount;
@@ -545,48 +547,36 @@ export function HomeSearch({
   return (
     <div className="flex min-h-screen flex-col">
       <main className="mx-auto flex w-full flex-1 flex-col px-4 pt-4 sm:pt-[12vh]">
-        <div
-          className={cn(
-            "mx-auto flex w-full max-w-[calc(100vw-2rem)] flex-col sm:w-fit",
-            selectedHash != null && "pointer-events-none invisible",
-          )}
-        >
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-            {mode === "weapon" && pinnedFilters.length > 0 ? (
-              <PinnedFilterPills
-                filters={pinnedFilters}
-                onApplyFilter={applyPinnedFilter}
-                onRemoveFilter={removePinnedFilter}
-              />
-            ) : (
-              <div className="flex-1" />
+          <div
+            className={cn(
+              "mx-auto flex w-full max-w-[calc(100vw-2rem)] flex-col sm:w-fit",
+              selectedHash != null && "pointer-events-none invisible",
             )}
-            <div
-              data-palette-ignore-close
-              className="flex shrink-0 cursor-pointer items-center sm:mr-6"
-              onClick={(e) => e.stopPropagation()}
-              onPointerDown={(e) => e.stopPropagation()}
-            >
-              <PillSelect
-                aria-label="Search mode"
-                options={MODES}
-                value={mode}
-                onValueChange={handleModeChange}
-              />
+          >
+            <div className="mb-4 flex items-center gap-2">
+              {mode === "weapon" && pinnedFilters.length > 0 ? (
+                <PinnedFilterPills
+                  filters={pinnedFilters}
+                  onApplyFilter={applyPinnedFilter}
+                  onRemoveFilter={removePinnedFilter}
+                />
+              ) : null}
+              <div
+                data-palette-ignore-close
+                className="ml-auto shrink-0"
+                onClick={(e) => e.stopPropagation()}
+                onPointerDown={(e) => e.stopPropagation()}
+              >
+                <PillSelect
+                  aria-label="Search mode"
+                  options={MODES}
+                  value={mode}
+                  onValueChange={handleModeChange}
+                />
+              </div>
             </div>
-          </div>
-          <div className="flex w-full flex-col items-stretch gap-4 lg:flex-row lg:items-start lg:justify-center">
-            {mode === "weapon" && (
-              <PinnedWeaponsRail
-                weapons={pinnedWeapons}
-                onSelectWeapon={(hash) => {
-                  trackWeaponView(hash, "search");
-                  setSelectedHash(hash);
-                }}
-                onUnpinWeapon={removeWeaponHash}
-              />
-            )}
-            <CommandPalette
+            <div className="flex w-full flex-col items-stretch gap-4">
+              <CommandPalette
               className="mx-0"
               instantPreviewExpand={firefoxPalettePerf}
               instantInputSizing={firefoxPalettePerf}
@@ -731,6 +721,16 @@ export function HomeSearch({
               disabled={mode === "armor" && !signedIn}
               renderBarOverlay={mode === "armor" ? armorOverlay : undefined}
             />
+            {mode === "weapon" && (
+              <PinnedWeaponsRail
+                weapons={pinnedWeapons}
+                onSelectWeapon={(hash) => {
+                  trackWeaponView(hash, "search");
+                  setSelectedHash(hash);
+                }}
+                onUnpinWeapon={removeWeaponHash}
+              />
+            )}
           </div>
         </div>
 
