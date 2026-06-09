@@ -1,393 +1,378 @@
-# Destiny.report competitive research
+# Destiny.report research — performance, search & index
 
-Research date: **2026-06-09**
+Research date: **2026-06-09** (revised per product direction)
 
-Primary source: live inspection of [destiny.report](https://destiny.report) (HTML shell, shipped JS bundles, worker code, and public data assets). Secondary context: our own codebase (`@repo/destiny`, `apps/web`).
+**Scope:** What [destiny.report](https://destiny.report) teaches us about **search performance**, **index shape**, and **build/runtime architecture** — without changing noeyarmory's command-palette + chip UX.
+
+Primary source: reverse-engineering production assets (HTML config, worker bundle, public JSON/WASM). Secondary: our codebase (`@repo/destiny`, `apps/web`).
 
 ---
 
 ## Executive summary
 
-**destiny.report** is a focused, production-quality **Destiny 2 weapon database** built as a client-side SPA. Its core bet is the same as noeyarmory's weapon mode — flatten the Bungie manifest into a static index and search it in the browser — but it optimizes heavily for **power-user search** (DIM-style query language), **desktop browse workflows** (list/tile/rail + split detail), and **search performance** (Web Worker + WASM trigram index).
+destiny.report solves the same core problem we do: flatten the Bungie manifest, search client-side. Where they invest heavily is **making search fast at scale** and **indexing more manifest fields up front** so filters are cheap predicates, not runtime manifest walks.
 
-It is **not** a vault/account tool today. OAuth/profile hooks exist in filter definitions (`light:` / `power:` are stubbed), but the live product is manifest-only weapon search, roll inspection, and build preview.
+| Area | destiny.report | noeyarmory today | Takeaway |
+|------|----------------|------------------|----------|
+| **Initial catalog** | ~3.5MB `weapons.json` preloaded in `<head>` | `weapons.json` fetched in `WeaponsProvider` | Start fetch earlier; consider content-hashed filenames |
+| **Text search** | WASM trigram index (~6.4MB) in a worker | fuse.js on main thread | Worker + optional trigram if palette previews lag |
+| **Structured filters** | Compiled predicates in worker | `filterWeapons()` full scan on main thread | Same logic, different thread; enrich index fields first |
+| **Detail/stats** | Separate `weapon-stats.json` (~3.6MB) | Lazy `weapons-detail.json` after 1.5s idle | Our split is leaner; pull **display stats onto summaries** for search |
+| **Filter surface** | DIM query string | Palette categories + chips | **Add categories**, not a new query UI |
+| **Index metadata** | source, foundry, breaker, event, holofoil, reissue, … | element, type, perks, frame, craftable, adept (regex) | Biggest functional gap — all mappable to new chips |
 
-**Best lessons for us:**
-
-1. Enrich the weapon index with **source, foundry, breaker, holofoil/featured/reissue** metadata — these unlock filters users already know from DIM.
-2. Add a **shareable query language** (or URL-encoded equivalent) without throwing away our command-palette UX.
-3. Ship a **rail + detail** layout and **pin/saved-build** persistence for comparison-heavy sessions.
-4. Move search/filter off the main thread once the catalog + detail payloads grow.
-
-**Keep our differentiators:** armor vault search + equip/transfer, DPS/ammo-gen sorting, custom named perk filters, and the keyboard-first command palette for casual discovery.
-
----
-
-## What destiny.report is
-
-| Aspect | Observation |
-|--------|-------------|
-| **Positioning** | "Search and filter every Destiny 2 weapon by name, perk, frame, archetype, damage type, ammo, and source." |
-| **Scope (live)** | Weapon catalog search, perk reverse lookup, interactive roll/build preview, docs pages (`/en/docs/*`). |
-| **Scope (historical)** | `archive.destiny.report` was a manifest diff/archive tool; it is **retired** and no longer updated. |
-| **Name collision** | An older browser extension "Destiny Report" (SarKurd, ~2019) showed **raid stats on Bungie.net fireteams** — unrelated to the current weapon DB. |
-| **Attribution** | Footer: community-built, Bungie API data, not affiliated with Bungie. Ko-fi + Discord links in docs chrome. |
+**Constraint:** Keep command palette, pills, ghost completion, custom filters, and modal detail. Improvements ship as faster search, richer chip categories, and better build artifacts — not a new browse paradigm.
 
 ---
 
-## Technical architecture
+## Their tech stack (what we can learn)
+
+### Runtime architecture
 
 ```mermaid
-flowchart TB
-  subgraph boot [Initial page load]
-    HTML[HTML shell + inline CSS]
-    Preload[Preload weapons.json fetch]
+flowchart LR
+  subgraph boot [Page boot]
+    HTML[Inline critical CSS]
+    Preload["fetch(weapons.json) in head"]
     Config[destiny-report-config JSON]
-    HTML --> Preload
-    HTML --> Config
   end
 
-  subgraph app [Client SPA]
-  Main[Vite bundle ~479KB]
-  Worker[weapon-search.worker.js ~26KB]
-  WASM[trigram_search.wasm ~18KB]
-  Index[trigram-index.bin ~6.4MB]
-  Main -->|Comlink| Worker
-  Worker --> WASM
-  Worker --> Index
+  subgraph main [Main thread]
+    SPA[Vite bundle ~479KB]
+    CM[CodeMirror filter bar]
+    UI[Virtualized results + detail]
   end
 
-  subgraph data [Static assets]
-  Weapons[weapons.json ~3.5MB]
-  Stats[weapon-stats.json ~3.6MB]
+  subgraph worker [Web Worker]
+    Parse[Query parser + AST]
+    Pred[Filter predicates]
+    Tri[WASM trigram encode]
+    WASM[trigram_search.wasm ~18KB]
+    BIN[trigram-index.bin ~6.4MB]
   end
 
-  Preload --> Weapons
-  Worker --> Weapons
-  Main --> Stats
+  Preload --> worker
+  SPA -->|Comlink RPC| worker
+  worker --> WASM
+  worker --> BIN
+  Parse --> Pred
+  Tri --> Pred
 ```
 
-### Stack signals (from shipped artifacts)
+| Component | Their choice | Relevance for us |
+|-----------|--------------|------------------|
+| **SPA shell** | Vite + client-only routing | We use Next.js — adopt **patterns**, not the framework swap |
+| **Worker + Comlink** | All `query()` / filter eval off main thread | Drop-in behind existing `filterWeapons` + fuse APIs |
+| **WASM trigram** | Build-time `scripts/build-wasm-trigram-index.ts` → `.bin` + `.wasm` | Optional phase-2 if fuse-in-worker isn't enough |
+| **Content-hashed assets** | `weapons.<hash>.json`, config points at current hashes | Long-cache CDN without stale-data bugs |
+| **Config injection** | `<script id="destiny-report-config">` with manifest version + asset URLs | Mirror with Next layout/script or `manifest.json` sidecar |
+| **Module preload** | Fonts + weapons JSON before JS executes | Next: `<link rel="preload">` or early `fetch` in root layout |
+| **PWA** | Empty service worker (install only) | Low priority; unrelated to search perf |
 
-| Layer | Implementation |
-|-------|----------------|
-| **App shell** | Vite SPA (`index-*.js`), Solid-style reactivity patterns, Base UI–like primitives |
-| **Search** | Dedicated **Web Worker**; query parse + filter evaluation in worker |
-| **Fuzzy text** | **WASM trigram encoder** + binary index (`scripts/build-wasm-trigram-index.ts` referenced in worker) |
-| **Filter UI** | **CodeMirror 6** editor with custom "filter pill" decorations |
-| **Data** | Content-hashed JSON under `/assets/public/data/` |
-| **PWA** | `manifest.webmanifest` + minimal `sw.js` (installability only — **no caching**) |
-| **i18n** | Locale prefix routes (`/en/`, canonical `/en/`) |
-| **SEO** | Progressive enhancement: hidden `<main id="seo-fallback">` with real `<form>` + `<h1>` before JS boots |
-| **Perf** | Inline critical CSS; font preloads (Inter, JetBrains Mono, Destiny Symbols); weapons.json fetch started in `<head>` |
+### Data pipeline
 
-### Runtime config (embedded in HTML)
+| Artifact | Size (observed) | Role |
+|----------|-----------------|------|
+| `weapons.json` | ~3.5MB | Catalog + interned perks + flags |
+| `weapon-stats.json` | ~3.6MB | Display stats keyed by weapon hash |
+| `trigram-index.bin` | ~6.4MB | Precomputed text index for fuzzy narrowing |
+| `trigram_search.wasm` | ~18KB | Query encoding |
 
-```json
+**Total client search payload:** ~13MB before Bungie icons. We currently ship a smaller summary index and lazy-load detail — that's a **real advantage** on first visit. Any trigram/WASM addition should be weighed against that.
+
+### Search pipeline (implementation detail)
+
+1. **Parse** filter string → AST (`and` / `or` / `not` / `filter`).
+2. **Compile** AST → predicate function over weapon records.
+3. For freeform text legs: **WASM trigram** returns candidate hash list → predicate refines.
+4. Return hash list to UI via Comlink.
+
+Our equivalent today (main thread, `use-weapon-search-results.ts`):
+
+1. Optional fuse text narrow (`weaponsMatchingTextQuery`).
+2. `filterWeapons(base, weaponFilters, perks)` — O(n) scan per call.
+3. `rankWeaponResults` sort.
+
+**Hot path cost for us:** palette **preview** mode can call `filterWeapons` many times per keystroke (hypothetical chips × inline suggestions). Firefox already uses lower preview limits — a signal we're near the comfort ceiling.
+
+---
+
+## Index enrichment opportunities
+
+destiny.report precomputes manifest fields we skip. Each row below is a **candidate `WeaponSummary` field** plus how it surfaces in **existing** palette UX (new category or chip value — no new interaction model).
+
+### High value — new palette categories
+
+| Field | destiny.report | Bungie / build-index source | Palette category idea |
+|-------|----------------|----------------------------|------------------------|
+| **`sources: string[]`** | `source:trials`, `source:raid`, … (~40 tags) | `collectibles` / item source hashes on `DestinyInventoryItemDefinition` | **Source** — "Trials", "Vault of Glass", "Iron Banner", … |
+| **`sourceLabel: string`** | Human drop text in detail | Same + `displayProperties.description` / source records | Detail subtitle only (not a filter chip) |
+| **`foundry: string \| null`** | `foundry:hakke`, `foundry:suros` | Item definition foundry identifier | **Foundry** |
+| **`breaker: string \| null`** | `breaker:barrier` / overload / unstoppable | Intrinsic / socket champion mod | **Champion** |
+| **`event: string \| null`** | `event:dawning`, `event:fotl` | Seasonal event tagging in index build | **Event** (optional; smaller set) |
+
+These answer "where do I farm this?" — a common question our element/type/perk chips don't cover.
+
+### Medium value — boolean / enum chips (extend existing categories)
+
+| Field | Count (DR snapshot) | Notes | Palette mapping |
+|-------|----------------------|-------|-----------------|
+| **`isAdept`** | 168 | Manifest flag, not name regex | Replace `(Adept|Timelost|Harrowed)` regex in `build-index.ts`; optional **Adept** yes/no under Rarity or standalone |
+| **`isHolofoil`** | 90 | Shiny reprise weapons | **Holofoil** yes/no |
+| **`isFeatured`** | 321 | Edge of Fate bonus gear | **Featured** yes/no |
+| **`isEnhanceable`** | 552 | Weapons with enhanced perk tiers | **Enhanceable** yes/no |
+| **`reissueVersion: number`** | 88 | Same hash, new perk pool | **Reissued** yes/no; detail links to sibling versions |
+| **`variantOf: number \| null`** | 126 variants | Alternate names (Adept, Timelost, …) | Index-only grouping; detail/version picker, not search chip |
+
+### Search-power fields — enable new filter *types* (still as chips)
+
+| Field | destiny.report filter | Our gap | Implementation |
+|-------|----------------------|---------|----------------|
+| **Display stats on summary** | `stat:rpm:>=640`, `stat:range:>60` | Stats only in lazy detail | Copy scaled display values into `WeaponSummary` at build time (we already compute these for detail) |
+| **`perk1` / `perk2` column** | Column-specific perkname | We have Trait 1 / Trait 2 categories | Already aligned — verify `columnKind()` accuracy for edge archetypes |
+| **Negation** | `-is:exotic` | No NOT on chips | Optional later: "exclude" chip variant (same pill UX, inverted predicate) — not a query bar |
+
+### Lower priority for us
+
+| Field | Why deprioritize |
+|-------|------------------|
+| `pinned:` / `edited:` filters | Session UI feature, not index |
+| `light:` / `power:` | Requires profile OAuth — vault milestone |
+| `screenshotCut` | Detail presentation only |
+| Full DIM query parser | Different UX; we use chips |
+
+---
+
+## destiny.report index schema (reference)
+
+Top-level `weapons.json`:
+
+```ts
 {
-  "manifestVersion": "243523.26.04.28.2000-3-bnet.64859",
-  "weaponsUrl": "/assets/public/data/weapons.<hash>.json",
-  "weaponStatsUrl": "/assets/public/data/weapon-stats.<hash>.json",
-  "searchWasmUrl": "/assets/public/spikes/trigram_search.<hash>.wasm",
-  "searchIndexUrl": "/assets/public/spikes/trigram-index.<hash>.bin"
+  manifestVersion: string;
+  generatedAt: string;       // ISO — we already have generatedAt
+  weapons: Record<hash, Weapon>;
+  perks: Record<hash, PerkDef>;
+  overlays: OverlayAssets;     // shared MW/crafted/tier sprites
+  statNames: Record<hash, string>;
 }
 ```
 
-Generated timestamp observed in weapons bundle: **2026-06-09** (same day as this research).
+Per-weapon record (search-relevant fields):
 
----
-
-## Data model comparison
-
-### destiny.report `weapons.json` (top-level)
-
-| Field | Purpose |
-|-------|---------|
-| `manifestVersion` | Bungie manifest version string |
-| `generatedAt` | ISO build timestamp |
-| `weapons` | Map of hash → weapon record |
-| `perks` | Map of plug hash → perk definition (name, description, icon, …) |
-| `overlays` | Shared icon overlays (masterwork, crafted, enhanced, tier tints) |
-| `statNames` | Stat hash → display name |
-
-**Scale (2026-06-09 snapshot):** ~1,837 weapon entries, ~1,112 perk defs, ~126 `variantOf` variants, ~88 reissue versions.
-
-### Weapon record highlights (destiny.report)
-
-| Field | Example / notes |
-|-------|-----------------|
-| `perks[]` | `{ socketIndex, socketKind, plugs: [hash, …] }` — plugs are **indices into `perks` map** |
-| `stats` | Map of stat hash → display value |
-| `source` | Array of source tags, e.g. `["trials"]` |
-| `sourceString` | Human-readable drop text |
-| `archetype` | `{ hash, name, icon }` intrinsic frame |
-| `foundry` | Normalized foundry id (hakke, suros, …) |
-| `breakerType` | Champion breaker enum |
-| `event` | Seasonal event id (dawning, fotl, …) |
-| Flags | `isAdept`, `isCraftable`, `isHolofoil`, `isFeatured`, `isEnhanceable`, `isTiered` |
-| Versioning | `variantOf`, `reissueVersion`, `screenshotCut` for hero framing |
-
-### noeyarmory `@repo/destiny` (today)
-
-| Aspect | Our approach |
-|--------|--------------|
-| **Catalog shape** | `WeaponSummary[]` (interned perks) + lazy `weapons-detail.json` |
-| **Perk columns** | Heuristic `columnKind()` labels (Barrel, Magazine, Trait, …) |
-| **Search fields** | Facets: element, type, slot, ammo, rarity, frame, trait1/2, originTrait, craftable, exact name |
-| **Multi-perk** | AND across `perks[]`; custom saved groups in localStorage |
-| **Missing vs DR** | `source`, `foundry`, `breaker`, `event`, `holofoil`, `featured`, `reissue`/`variant` grouping, stat-range filters |
-| **Adept** | Name regex `(Adept|Timelost|Harrowed)` — DR uses manifest flag `isAdept` |
-
----
-
-## Search & filter system (destiny.report)
-
-### Query language (DIM-adjacent)
-
-Parsed in the worker into an AST with `and`, `or`, `not`, `filter`, and `noop` nodes.
-
-**Syntax features:**
-
-- Implicit AND between terms (`is:arc perkname:outlaw`)
-- Explicit `OR`, `AND`, `NOT`, parentheses
-- Quoted strings (`perkname:"kill clip"`)
-- Block comments `/* … */`
-- Negation prefix `-` on filters
-
-**Filter inventory (extracted from worker):**
-
-| Category | Keywords |
-|----------|----------|
-| **Simple `is:`** | `weapon`, weapon types (`handcannon`, `pulserifle`, …), slots (`kineticslot`, `energy`, `power`), ammo (`primary`, `special`), elements, rarities, `adept`, `craftable`, `enhanceable`, `holofoil`/`shiny`, `featured`/`newgear`, `reissued` |
-| **Query `is:`** | `breaker:`, `foundry:`, `event:`, `source:` (~40 activity sources) |
-| **Freeform** | `name:`, `exactname:`, `perk:`, `perkname:`, `exactperk:`, `perk1:`, `perk2:`, `frame:`/`archetype:`, `description:`, `keyword:`/`any:` |
-| **Stat** | `stat:<stat>:<op><n>` — rpm, range, stability, handling, reload, mag, AA, recoil, … |
-| **Range** | `season:`, `year:` (season name aliases like `witch`, `seraph`) |
-| **Meta** | `pinned:`, `edited:`/`perked:` (local saved builds) |
-| **Stubbed** | `light:` / `power:` (requires profile data) |
-
-**Example queries implied by filters:**
-
-```
-is:handcannon source:trials perkname:rangefinder perkname:opening shot
-is:arc is:autorifle stat:rpm:>=720 -is:exotic
-(perkname:outlaw AND perkname:rampage) OR is:exotic
-pinned: edited:
+```ts
+{
+  hash, name, season, tierType, damageType, ammoType, bucketHash,
+  typeName, archetype: { hash, name, icon },
+  foundry, breakerType, event,
+  source: string[],           // e.g. ["trials"]
+  sourceString: string,
+  stats: Record<statHash, number>,  // display values — on summary for them
+  perks: { socketIndex, socketKind, plugs: number[] }[],
+  isAdept, isCraftable, isHolofoil, isFeatured, isEnhanceable,
+  variantOf?, reissueVersion?,
+}
 ```
 
-### Search pipeline
+### Compared to our `WeaponSummary`
 
-1. **Structured filters** → compile AST → predicate per weapon.
-2. **Freeform `keyword:` / text leg** → WASM trigram index narrows candidate set, then predicate refines.
-3. Results returned to main thread via Comlink.
+We already do well:
 
-### Filter UI
+- **Interned perks** + `weaponsByPerkName` reverse index (hash lists, not full objects)
+- **`perksLower` stripped on disk**, rebuilt at load (`stripPerksLowerReplacer`)
+- **Split detail** (`weapons-detail.json`) — smaller first paint
+- **`buildWeaponIndexLookups`** — `byHash`, `perkMap`, `weaponsByPerkName` precomputed
 
-- CodeMirror editor in the header/filter bar (monospace, pill tokens, autocomplete dropdown).
-- Results page adds **example pills** (one-click sample queries) and **refine pills** (click to negate a token).
-- Filter state is the **query string** — naturally URL-shareable (they use `/en/weapons/` + `q` param in SEO fallback).
-
----
-
-## Browse & detail UX (destiny.report)
-
-### Results layouts
-
-| Mode | Behavior |
-|------|----------|
-| **List** | Dense rows: icon, element, season, type, archetype, RPM (compact mode) |
-| **Tile** | Card grid with virtualized rows |
-| **Rail** | Left sidebar list; optional **pinned** section; resizable width; active row highlights |
-
-### Persistence (localStorage)
-
-| Key | Purpose |
-|-----|---------|
-| `dr.pinned-weapons` | Array of weapon hashes pinned in rail |
-| `destiny-report.weapon-selections.v1` | Per-weapon selected perk sockets / build state |
-
-Filters `pinned:` and `edited:`/`perked:` read these stores.
-
-### Weapon detail
-
-- **Hero layout**: weapon screenshot with cutout mask (`screenshotCut`), stats column, perk columns, mod row.
-- **Interactive build**: click perks to preview stat deltas; layered stat bars (base / socket / perk / MW / negative / behavior).
-- **Stat breakdown popover** on hover.
-- **Masterwork column** + tier row; **mod row** (square perk tiles).
-- **Versions sidebar** when reissues/variants exist.
-- **Clarity** community perk text in tooltips (same ecosystem we already use).
-- **Pin** control on detail + rail rows.
-- `weapon-rail-filter-mismatch` corner flag when a pinned/selected weapon no longer matches the active query.
-
-### Mobile
-
-Below ~1024px, rail collapses — detail becomes full-width; filter inline chips hidden on small screens.
+We're missing acquisition/metadata flags and **summary-level stats** for predicate filters.
 
 ---
 
-## Side-by-side: destiny.report vs noeyarmory
+## Performance recommendations
 
-| Dimension | destiny.report | noeyarmory (today) |
-|-----------|----------------|---------------------|
-| **Primary search UX** | DIM-style query bar (CodeMirror) | Command palette + category chips |
-| **Perk AND logic** | `perkname:a perkname:b` (any column) + `perk1:`/`perk2:` column-specific | AND across `perks[]`; trait1/trait2/origin columns |
-| **Negation** | `-is:exotic`, refine pill negate | No first-class NOT |
-| **Stat filters** | `stat:rpm:>600` | Interactive build preview only (no search) |
-| **Source / activity** | `source:trials`, `source:raid`, … | Not indexed |
-| **Foundry / breaker** | `foundry:hakke`, `breaker:barrier` | Not indexed |
-| **Season** | `season:28`, `season:lawless` aliases | Facet + Newest/Oldest sort |
-| **Shareability** | Query string is the filter state | `/weapon/[hash]` share; chip state not in URL |
-| **Results UI** | List / tile / rail + split detail | Virtualized list (50→200); detail in **modal** |
-| **Pin / compare** | Pin rail + `pinned:` filter | None |
-| **Saved builds** | Per-weapon localStorage + `edited:` filter | Custom named perk filters (different model) |
-| **Search perf** | Worker + WASM trigram (~6.4MB index) | Main-thread fuse.js over summaries |
-| **Data payload** | ~3.5MB weapons + ~3.6MB stats + ~6.4MB index | Split summary + lazy detail |
-| **DPS** | Not observed in filter set | DPS sort + benchmark tooltips |
-| **Armor** | None | Owned armor search + equip/transfer |
-| **Vault weapons** | Stub filters only | Planned (`docs/vault-search-plan.md`); OAuth exists |
-| **PWA** | Installable (empty SW) | None |
-| **Auth** | None live | Bungie OAuth for armor |
+Ordered by impact vs. invasiveness. All preserve palette UX.
+
+### 1. Enrich index first (cheap filters)
+
+**Why:** `filterWeapons` cost is O(n × predicate complexity). Adding `w.source.includes('trials')` is as cheap as `w.element === 'Arc'`. Richer predicates don't hurt if fields are plain scalars on the summary.
+
+**Work:** Extend `build-index.ts` → `WeaponSummary` → `collectFacets` → `weapon-categories.ts` (new categories).
+
+**Verify:** `@repo/destiny` tests; regenerate index; palette shows new categories with counts.
+
+### 2. Move search engine to a Web Worker
+
+**Why:** destiny.report never runs filter evaluation on the main thread. Our preview loop (`use-weapon-search-results.ts`) multiplies work while typing.
+
+**Work:**
+
+- New `packages/destiny/src/search-worker.ts` (or `apps/web/workers/weapon-search.worker.ts`)
+- Initialize with serialized `WeaponIndex` or transferable lookup tables
+- Expose: `filterWeapons`, `weaponsMatchingTextQuery`, `filterWeaponNames`, `rankWeaponResults`
+- Main thread: Comlink or typed `postMessage`; `useDeferredValue` stays for React concurrency
+- **Palette API unchanged** — hook swaps implementation
+
+**Verify:** Chrome Performance panel, 6× CPU throttle, type in palette with 3+ chips + preview; compare long tasks before/after.
+
+### 3. Start catalog fetch earlier
+
+**Why:** DR begins `fetch(weapons.json)` in inline `<head>` script before the JS bundle downloads.
+
+**Work (Next.js):**
+
+- Root layout: `<link rel="preload" href="/data/weapons.json" as="fetch" crossorigin />`
+- Or mirror DR: inline script that assigns `globalThis.__weaponIndexPreload = fetch(...)`
+- `WeaponsProvider` awaits preload promise before starting its own fetch
+
+**Verify:** Network waterfall — weapons.json parallel with JS, not sequential after hydration.
+
+### 4. Content-hashed index filenames
+
+**Why:** DR uses `weapons.8c33445bd4d59b2f.json` + config pointing at current hash → immutable CDN cache.
+
+**Work:**
+
+- `generate.ts` writes `weapons.<contentHash>.json` + `weapons-manifest.json` `{ url, version, generatedAt }`
+- App reads manifest first (tiny, short cache) then fetches hashed catalog (long cache)
+- Next can keep stable `/data/weapons.json` as redirect/sync alias for dev ergonomics
+
+**Verify:** Deployed cache headers; manifest bump invalidates only catalog, not app JS.
+
+### 5. Precompute facet catalogs at build time
+
+**Why:** `collectFacets(weapons)` and `collectColumnPerks(weapons, perks)` run on every weapons load in `home-search.tsx`.
+
+**Work:**
+
+- Emit `facets` and `columnPerkOptions` in `weapons.json` at generate time
+- Client reads precomputed maps; `collectFacets` becomes identity or merge for dynamic data (vault)
+
+**Verify:** Profile React commit after index load — fewer ms in `useMemo` chains.
+
+### 6. Optimize preview path (no worker required)
+
+Quick wins in `use-weapon-search-results.ts` before/alongside worker:
+
+- **Single shared filter pass** for multiple hypothetical chips where possible (union bitmap instead of N full scans)
+- **Early exit** when chip set unchanged (stable hash of `chips` + `customFilters`)
+- **Cap preview filter sets** uniformly (not only Firefox)
+- **Reuse `weaponsByPerkName`** when preview is perk-only — intersect hash sets instead of scanning all weapons
+
+### 7. WASM trigram index (optional, measure first)
+
+**Why:** DR uses trigram narrowing before predicates — sub-ms text leg on ~1.8k weapons.
+
+**When to adopt:** Only if fuse-in-worker still stutters on text search + multi-preview. Cost is ~6MB extra download and build pipeline complexity (`build-wasm-trigram-index.ts` equivalent).
+
+**Work:**
+
+- Build step: trigram index over `name`, `type`, `perks`, `sourceLabel`, flavor (if on summary)
+- Worker: encode query via WASM → bitmap/hash list → existing `filterWeapons`
+
+**When to skip:** fuse.js in worker may be sufficient for ~2k weapons; profile first.
+
+### 8. Display stats on `WeaponSummary`
+
+**Why:** Enables stat threshold chips (e.g. category **RPM** with values `≥600`, `≥720`) without loading detail JSON.
+
+**Work:**
+
+- During `build-index.ts`, apply stat-group scaling once, store `{ rpm?, range?, stability?, … }` on summary
+- Extend `WeaponFilters` + `filterWeapons` with stat predicates
+- New palette categories or numeric chip picker (same pill UX)
 
 ---
 
-## What they do better (steal-worthy)
+## Search capability matrix (palette-centric)
 
-### 1. Expressive, portable search language
+What destiny.report filters do that we could match **via chips** (not query strings):
 
-Power users already think in DIM queries. A string like `is:solar is:scoutrifle source:ironbanner perkname:explosive payload` is faster to type, paste into Discord, and bookmark than reconstructing six palette chips.
-
-**Recommendation:** Add an optional **query mode** (toggle or `:` prefix in palette) that parses a DIM subset and syncs to URL `?q=`. Keep chips as the default — compile chip state → query string for sharing.
-
-### 2. Richer manifest flattening
-
-Their index encodes acquisition and build metadata we skip:
-
-- `source` / `sourceString` — "where do I farm this?"
-- `foundry`, `breaker`, `event`
-- `isHolofoil`, `isFeatured`, `isEnhanceable`
-- `variantOf` / `reissueVersion` — version picker UX
-
-**Recommendation:** Extend `build-index.ts` with source tags (reuse Bungie item source hashes), breaker from socket/intrinsic, foundry from item defs. Surfaces: new palette categories + detail chips.
-
-### 3. Desktop browse workflow
-
-Rail + pinned + split detail is excellent for "compare five Hand Cannons with Rangefinder."
-
-**Recommendation:** Add a **Browse** layout on `/` or `/weapons`: optional rail (reuse `WeaponResultRow`), pin set in localStorage, detail panel instead of modal on wide viewports. Modal remains on mobile.
-
-### 4. Search performance architecture
-
-They pay ~6.4MB upfront for instant fuzzy search at scale; evaluation never blocks the UI thread.
-
-**Recommendation:** When catalog + detail growth makes typing laggy (we already cap Firefox previews), port `filterWeapons` + fuse to a **worker**. WASM trigram is optional — measure fuse-in-worker first.
-
-### 5. Stat-aware search
-
-`stat:rpm:>=640` answers a real question ("which aggressive frames hit 640+ RPM?") that build preview alone cannot.
-
-**Recommendation:** Index display stats on `WeaponSummary` (we already compute them in detail). Add `stat:*` filters to query mode or advanced palette facet.
-
-### 6. Product polish details
-
-- SEO fallback form + structured data
-- PWA install (trivial empty SW)
-- `generatedAt` / manifest version in UI for "is my data stale?"
-- Filter mismatch indicator on pinned items
-- Three density/view modes
+| Capability | DR mechanism | Our path |
+|------------|--------------|----------|
+| Activity source | `source:trials` | **Source** category |
+| Foundry | `foundry:hakke` | **Foundry** category |
+| Champion | `breaker:barrier` | **Champion** category |
+| Holofoil / Featured / Reissued | `is:holofoil`, etc. | Yes/No chips |
+| Stat thresholds | `stat:rpm:>=640` | Summary stats + numeric chips |
+| Perk column specificity | `perk1:`, `perk2:` | Existing Trait 1 / Trait 2 |
+| Multi-perk AND | implicit AND | Existing `perks[]` chip logic |
+| Exclude exotic, etc. | `-is:exotic` | Future: exclude toggle on chip (same pill) |
+| Season range | `season:>=20` | Extend **Season** from sort-only to range chips, or keep Newest/Oldest sort |
 
 ---
 
-## What we already do better (protect)
+## What we should not copy
 
-| Strength | Notes |
-|----------|-------|
-| **Armor vault** | Live OAuth, owned search, equip/transfer — DR has no equivalent |
-| **Command palette** | Lower floor for new users; ghost completion, recent searches, custom filter composer |
-| **DPS + ammo gen** | Community spreadsheet integration + sort — DR has stat search but not DPS ranking |
-| **Split detail loading** | Smaller initial fetch; DR loads full weapons + stats + trigram index up front (~13MB+) |
-| **Next.js SSR** | `/weapon/[hash]` and `/perk/[hash]` are linkable with server seeds |
-| **Analytics** | Popular weapons, perk-commit events (optional Redis) |
+| DR pattern | Reason to skip |
+|------------|----------------|
+| CodeMirror / DIM query bar | Conflicts with palette-first UX |
+| Rail + pin + split detail | Layout change, not search perf |
+| Monolithic 3.5MB + 3.6MB upfront | Our lazy detail is better for TTFB |
+| 6.4MB trigram without profiling | May be overkill at our catalog size |
+| Empty service worker | Cosmetic; no search benefit |
 
 ---
 
-## Recommended plan (for noeyarmory)
+## Recommended implementation plan
 
-Prioritized by user impact vs. effort. No calendar estimates — ordered by dependency and leverage.
+Phases respect **palette UX frozen**. Each phase is independently shippable.
 
-### Phase A — Index enrichment (foundation)
+### Phase 1 — Index enrichment (search correctness + new chips)
 
-**Goal:** Unlock filters and detail chips DR users expect.
+**Files:** `packages/destiny/src/build-index.ts`, `types.ts`, `search.ts`, `apps/web/lib/palette/weapon-categories.ts`
 
-- [ ] Add to `WeaponSummary` / `build-index.ts`: `sources[]`, `sourceLabel`, `foundry`, `breaker`, `isHolofoil`, `isFeatured`, `isEnhanceable`, `reissueVersion`, `variantOf`
-- [ ] Replace adept regex with manifest-driven flag where available
-- [ ] Expose source/foundry/breaker as palette categories
-- [ ] Weapon detail: source string + version switcher when variants exist
+- [ ] Add `sources`, `sourceLabel`, `foundry`, `breaker`, `event` to `WeaponSummary`
+- [ ] Add `isHolofoil`, `isFeatured`, `isEnhanceable`, `reissueVersion`, `variantOf`
+- [ ] Replace adept regex with manifest `isAdept` when available
+- [ ] Extend `collectFacets` + palette categories: Source, Foundry, Champion, Holofoil, Featured, Reissued
+- [ ] Unit tests for new predicates in `filterWeapons`
 
-**Verify:** `pnpm --filter @repo/destiny test`; regenerate index; spot-check Trials + raid weapons.
+### Phase 2 — Summary stats for stat chips
 
-### Phase B — Shareable search (query language lite)
+**Files:** `build-index.ts`, `search.ts`, `weapon-categories.ts`
 
-**Goal:** Discord-friendly URLs without removing the palette.
+- [ ] Store key display stats on `WeaponSummary` (rpm, range, stability, handling, reload, mag)
+- [ ] Add `WeaponFilters.statRanges` or per-stat chip category
+- [ ] Predicate in `filterWeapons` (no detail fetch required)
 
-- [ ] Define a **minimal query grammar** aligned with DR/DIM subset (start with `is:`, `perkname:`, `source:`, `stat:`, implicit AND, `-` negation)
-- [ ] Implement parser + compiler → existing `WeaponFilters` struct (or parallel predicate)
-- [ ] Sync `?q=` on home; "Copy search link" action
-- [ ] Palette ↔ query round-trip for chip selections (best-effort)
+### Phase 3 — Search performance (worker + early fetch)
 
-**Verify:** Unit tests in `@repo/destiny`; golden queries from DR examples.
+**Files:** new worker module, `use-weapon-search-results.ts`, `weapons-context.tsx`, root layout
 
-### Phase C — Browse layout & session state
+- [ ] Web Worker wrapping existing `@repo/destiny/search` functions
+- [ ] Head preload / early fetch for `weapons.json`
+- [ ] Preview-path optimizations (perk hash intersection, filter-set cap)
+- [ ] Benchmark: 6× CPU, 3 chips, rapid typing — target zero >50ms long tasks
 
-**Goal:** Comparison workflow for theorycrafters.
+### Phase 4 — Build pipeline hardening
 
-- [ ] Rail view + pin list (`localStorage`)
-- [ ] Wide viewport: inline detail panel; narrow: keep modal
-- [ ] Persist selected perk build per weapon (reuse DR's model or extend custom filters)
-- [ ] `pinned:` / `edited:` as palette filters or query keywords
+**Files:** `generate.ts`, deploy config
 
-**Verify:** Storybook / manual desktop + mobile pass.
+- [ ] Content-hashed weapon index + tiny manifest sidecar
+- [ ] Precomputed `facets` / column perk options in index JSON
+- [ ] Surface `generatedAt` + manifest `version` in sample-data banner (staleness signal)
 
-### Phase D — Search performance
+### Phase 5 — Trigram WASM (only if Phase 3 insufficient)
 
-**Goal:** Keep typing instant as index grows.
+**Files:** new `packages/destiny/scripts/build-trigram-index.ts`, worker WASM loader
 
-- [ ] Move `filterWeapons` + fuse search into Web Worker (Comlink or native `postMessage`)
-- [ ] Optional: trigram WASM index if worker + fuse insufficient
-- [ ] Show manifest `generatedAt` in sample-data banner / settings
-
-**Verify:** Profile palette input on throttled CPU; compare main-thread vs worker.
-
-### Phase E — Vault weapons (existing roadmap)
-
-**Goal:** Leap beyond DR — search **owned rolls**.
-
-- [ ] Execute `docs/vault-search-plan.md` (OAuth already wired for armor)
-- [ ] Reuse DR's instanced socket resolution ideas; map to `WeaponDoc`
-- [ ] Combine vault + manifest filters (`is:owned`, `perkname:` on rolled perks)
-
-**Verify:** Signed-in dev Bungie app; owned weapon count matches in-game.
-
-### Phase F — Polish & distribution
-
-- [ ] PWA manifest + empty service worker (install to home screen)
-- [ ] SEO fallback content on `/` (noscript search form)
-- [ ] In-app filter help page mirroring DR's `/en/docs/filters`
+- [ ] Profile-guided: only ship if fuse-in-worker misses targets
+- [ ] Lazy-load trigram binary after catalog (don't block first search)
 
 ---
 
 ## Open questions
 
-1. **Open source?** No public repo found for the current destiny.report SPA (unlike the author's separate [DestinyActivityReport](https://github.com/Kigstn/DestinyActivityReport) project). Research relied on reverse-engineering shipped assets.
-2. **Profile / vault roadmap?** `light:`/`power:` filters are defined but return false — suggests future signed-in features. Worth monitoring.
-3. **Index size budget:** DR ships ~13MB+ client assets before icons. Our split-summary strategy is leaner; any WASM index should be justified by profiling.
-4. **Query vs chips:** Do we want full DIM compatibility or a curated subset? Full parity is a large spec; subset covering 90% of weapon queries is probably enough.
+1. **Source taxonomy:** Map Bungie `source` hashes to DR's dotted tags (`trials`, `vaultofglass`) — need a single canonical enum in `build-index.ts`.
+2. **Stat chip UX:** Range chips (≥600 RPM) vs bucket chips (600–700, 700+) — same palette picker pattern as facets.
+3. **Worker + SSR:** Worker is client-only; ensure no regression on `/weapon/[hash]` SSR seeds.
+4. **Vault weapons:** Owned-roll search stays on `docs/vault-search-plan.md`; enriched manifest index helps vault filters too (`source:` + `perkname:` on instanced rolls).
 
 ---
 
 ## References
 
 - Live app: https://destiny.report
-- Weapons data (content-hashed): `https://destiny.report/assets/public/data/weapons.8c33445bd4d59b2f.json`
-- Retired archive: https://archive.destiny.report (503 at time of research)
+- DR weapons bundle: `https://destiny.report/assets/public/data/weapons.8c33445bd4d59b2f.json`
+- Our search hot path: `apps/web/hooks/use-weapon-search-results.ts`
+- Our index pipeline: `packages/destiny/src/build-index.ts`, `generate.ts`
 - Our vault plan: `docs/vault-search-plan.md`
-- DIM search wiki (conceptual neighbor): https://github.com/DestinyItemManager/DIM/wiki/Item-Search-Useful-Queries
