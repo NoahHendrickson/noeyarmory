@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 
+import type { ManifestDefs } from "./manifest";
 import {
   canonicalRaidSource,
   isRaidSource,
@@ -25,7 +26,7 @@ const presentationNodes = {
     parentNodeHashes: [3790247699],
     hash: 239187336,
   },
-} as const;
+} as unknown as ManifestDefs["DestinyPresentationNodeDefinition"];
 
 const seasons = {
   1743682818: {
@@ -43,7 +44,7 @@ const seasons = {
     seasonNumber: 26,
     displayProperties: { name: "Episode: Heresy" },
   },
-} as const;
+} as unknown as ManifestDefs["DestinySeasonDefinition"];
 
 describe("normalizeWeaponSource", () => {
   test("extracts quoted raid names from Bungie source strings", () => {
