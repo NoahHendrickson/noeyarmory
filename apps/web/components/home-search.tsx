@@ -1,11 +1,12 @@
 "use client";
 
-import { ListFilterPlus } from "lucide-react";
+import { ListFilterPlus, Pin, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Badge,
   cn,
   CommandPalette,
+  frostedSurface,
   Input,
   PANEL_TRANSITION_MS,
   PillSelect,
@@ -52,11 +53,17 @@ import { useWeaponIconMaps } from "../lib/use-weapon-icon-maps";
 import { useWeaponDetail, useWeapons } from "../lib/weapons-context";
 import { getFilterChipAppearance } from "../lib/filter-chip-appearance";
 import { ArmorResultRow } from "./armor-result-row";
+import { PinnedWeaponsRail } from "./pinned-weapons-rail";
 import { PopularWeapons } from "./popular-weapons";
 import { WeaponDetailModal } from "./weapon-detail-modal";
 import { WeaponResultRow } from "./weapon-result-row";
 import { trackWeaponView } from "../lib/track-weapon-view";
 import { useIsFirefox } from "../lib/use-is-firefox";
+import {
+  pinnedFilterKey,
+  usePinnedSearchItems,
+  type PinnedFilter,
+} from "../lib/use-pinned-search-items";
 import { WeaponModeIcon } from "./icons/weapon-mode-icon";
 
 type Mode = "weapon" | "armor";
@@ -99,6 +106,14 @@ export function HomeSearch({
   const { filters: customFilters, createFilter } = useCustomWeaponFilters();
   const { recordSearch, getRecentForMode, findById, removeRecent, clearRecentForMode } =
     useRecentSearches();
+  const {
+    pinnedFilters,
+    pinnedWeaponHashes,
+    toggleFilter,
+    removeFilter,
+    toggleWeaponHash,
+    removeWeaponHash,
+  } = usePinnedSearchItems();
   const firefoxPalettePerf = useIsFirefox();
   const [mode, setMode] = useState<Mode>(initialMode);
   const armorEnabled = signedIn && mode === "armor";
@@ -223,10 +238,7 @@ export function HomeSearch({
     [armorPreviewItems],
   );
 
-  const armorResultIds = useMemo(
-    () => armorShown.map((armor) => armor.instanceId),
-    [armorShown],
-  );
+  const armorResultIds = useMemo(() => armorShown.map((armor) => armor.instanceId), [armorShown]);
 
   const weaponById = useMemo(
     () => new Map(weaponShown.map((weapon) => [String(weapon.hash), weapon] as const)),
@@ -234,9 +246,21 @@ export function HomeSearch({
   );
 
   const weaponPreviewById = useMemo(
-    () =>
-      new Map(weaponPreviewWeapons.map((weapon) => [String(weapon.hash), weapon] as const)),
+    () => new Map(weaponPreviewWeapons.map((weapon) => [String(weapon.hash), weapon] as const)),
     [weaponPreviewWeapons],
+  );
+  const pinnedFilterKeys = useMemo(
+    () => new Set(pinnedFilters.map((filter) => pinnedFilterKey(filter))),
+    [pinnedFilters],
+  );
+  const pinnedWeaponHashSet = useMemo(() => new Set(pinnedWeaponHashes), [pinnedWeaponHashes]);
+  const pinnedWeapons = useMemo(
+    () =>
+      pinnedWeaponHashes.flatMap((hash) => {
+        const weapon = byHash.get(hash);
+        return weapon ? [weapon] : [];
+      }),
+    [pinnedWeaponHashes, byHash],
   );
   const lastWeaponPreviewByIdRef = useRef<ReadonlyMap<string, WeaponSummary>>(new Map());
 
@@ -261,10 +285,19 @@ export function HomeSearch({
           weapon={weapon}
           elementIconPath={elementIconMap.get(weapon.element)}
           dps={dpsByName.get(weapon.name)}
+          pinned={pinnedWeaponHashSet.has(weapon.hash)}
+          onTogglePin={() => toggleWeaponHash(weapon.hash)}
         />
       );
     },
-    [weaponById, weaponPreviewById, elementIconMap, dpsByName],
+    [
+      weaponById,
+      weaponPreviewById,
+      elementIconMap,
+      dpsByName,
+      pinnedWeaponHashSet,
+      toggleWeaponHash,
+    ],
   );
 
   const renderArmorResult = useCallback(
@@ -303,6 +336,35 @@ export function HomeSearch({
       addChip(categoryId, option);
     },
     [composingCustomFilter, addComposerPerk, addChip],
+  );
+
+  const isValuePinned = useCallback(
+    (categoryId: string, option: PaletteValueOption) =>
+      pinnedFilterKeys.has(`${categoryId}:${option.id}`),
+    [pinnedFilterKeys],
+  );
+
+  const handleToggleValuePin = useCallback(
+    (categoryId: string, option: PaletteValueOption) => {
+      if (mode !== "weapon" || composingCustomFilter) return;
+      const category = weaponCategories.find((candidate) => candidate.id === categoryId);
+      if (!category) return;
+      toggleFilter({
+        categoryId,
+        categoryLabel: category.label,
+        value: option.label,
+        valueId: option.id,
+      });
+    },
+    [mode, composingCustomFilter, weaponCategories, toggleFilter],
+  );
+
+  const handleApplyPinnedFilter = useCallback(
+    (filter: PinnedFilter) => {
+      if (mode !== "weapon") return;
+      addChip(filter.categoryId, { id: filter.valueId, label: filter.value });
+    },
+    [mode, addChip],
   );
 
   const handleRemoveChip = useCallback(
@@ -428,13 +490,19 @@ export function HomeSearch({
         id: "create-custom-filter",
         label: "Create custom filter",
         hint: "Group perks into a reusable filter",
-        icon: <ListFilterPlus className="text-muted-foreground size-3.5 shrink-0" aria-hidden />,
+        icon: <ListFilterPlus className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />,
         hideKeyboardHint: true,
         keepPanelOpen: true,
         onSelect: () => setCustomFilterComposer({ name: "", perkNames: [] }),
       },
     ];
-  }, [mode, composingCustomFilter, canCreateCustomFilter, handleCreateCustomFilter, customFilterComposer]);
+  }, [
+    mode,
+    composingCustomFilter,
+    canCreateCustomFilter,
+    handleCreateCustomFilter,
+    customFilterComposer,
+  ]);
 
   useEffect(() => {
     setShowAllResults(false);
@@ -446,19 +514,22 @@ export function HomeSearch({
     }
   }, [query, chips, mode]);
 
-  const handleModeChange = useCallback((next: Mode) => {
-    setMode(next);
-    setChips([]);
-    setQuery("");
-    clearArmorAction();
-  }, [clearArmorAction]);
+  const handleModeChange = useCallback(
+    (next: Mode) => {
+      setMode(next);
+      setChips([]);
+      setQuery("");
+      clearArmorAction();
+    },
+    [clearArmorAction],
+  );
 
   const armorOverlay = !signedIn ? (
     <a href={ARMOR_LOGIN_URL} className="inline-flex">
       <Badge variant="warning">Reconnect your bungie account ↗</Badge>
     </a>
   ) : armorLoadError ? (
-    <span className="text-destructive text-sm">{armorLoadError}</span>
+    <span className="text-sm text-destructive">{armorLoadError}</span>
   ) : undefined;
 
   const hasFilters = paletteChips.length > 0;
@@ -473,11 +544,10 @@ export function HomeSearch({
     const recents = query.trim()
       ? filterRecentSearches(getRecentForMode(mode), query)
       : getRecentForMode(mode);
-    return excludeCurrentRecentSearch(recents, mode, query, chips)
-      .map((search) => ({
-        id: search.id,
-        label: formatRecentSearchLabel(search.chips, search.query),
-      }));
+    return excludeCurrentRecentSearch(recents, mode, query, chips).map((search) => ({
+      id: search.id,
+      label: formatRecentSearchLabel(search.chips, search.query),
+    }));
   }, [composingCustomFilter, getRecentForMode, mode, query, chips]);
 
   const placeholder = composingCustomFilter
@@ -500,20 +570,14 @@ export function HomeSearch({
     [armorPreviewIds],
   );
 
-  const weaponResults = useMemo(
-    () => weaponResultIds.map((id) => ({ id })),
-    [weaponResultIds],
-  );
+  const weaponResults = useMemo(() => weaponResultIds.map((id) => ({ id })), [weaponResultIds]);
 
   const weaponPreviewResults = useMemo(
     () => weaponPreviewIds.map((id) => ({ id })),
     [weaponPreviewIds],
   );
 
-  const armorResults = useMemo(
-    () => armorResultIds.map((id) => ({ id })),
-    [armorResultIds],
-  );
+  const armorResults = useMemo(() => armorResultIds.map((id) => ({ id })), [armorResultIds]);
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -524,10 +588,24 @@ export function HomeSearch({
             selectedHash != null && "pointer-events-none invisible",
           )}
         >
-          <div className="mb-4 flex justify-end">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+            {mode === "weapon" && pinnedFilters.length > 0 ? (
+              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+                {pinnedFilters.map((filter) => (
+                  <PinnedFilterPill
+                    key={pinnedFilterKey(filter)}
+                    filter={filter}
+                    onApply={() => handleApplyPinnedFilter(filter)}
+                    onRemove={() => removeFilter(filter)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="flex-1" />
+            )}
             <div
               data-palette-ignore-close
-              className="mr-6 flex shrink-0 cursor-pointer items-center"
+              className="flex shrink-0 cursor-pointer items-center sm:mr-6"
               onClick={(e) => e.stopPropagation()}
               onPointerDown={(e) => e.stopPropagation()}
             >
@@ -539,150 +617,168 @@ export function HomeSearch({
               />
             </div>
           </div>
-          <CommandPalette
-            className="mx-0"
-            instantPreviewExpand={firefoxPalettePerf}
-            instantInputSizing={firefoxPalettePerf}
-            placeholder={placeholder}
-            categories={categories}
-            categoryActions={categoryActions}
-            suspendResults={selectedHash != null}
-            chips={paletteChips}
-            open={paletteOpen}
-            onOpenChange={(open) => {
-              if (!open) {
-                clearTimeout(recordSearchTimerRef.current);
-                recordSearchTimerRef.current = setTimeout(
-                  recordCurrentSearch,
-                  PANEL_TRANSITION_MS,
-                );
-                setCustomFilterComposer(null);
-              }
-              setPaletteOpen(open);
-            }}
-            recentItems={recentPaletteItems}
-            onSelectRecent={handleSelectRecent}
-            onRemoveRecent={removeRecent}
-            onClearRecent={handleClearRecent}
-            onAddChip={handleAddChip}
-            onRemoveChip={handleRemoveChip}
-            onClearChips={handleClearChips}
-            getChipAppearance={(chip) => {
-              if (chip.categoryId === CUSTOM_FILTER_DRAFT_CATEGORY_ID) {
-                return { tone: "trait", hideLabel: true };
-              }
-              return getFilterChipAppearance(chip.categoryId, chip.value, {
-                elementIcons: elementIconMap,
-                weaponTypeIcons: typeIconMap,
-                ammoIcons: ammoIconMap,
-              });
-            }}
-            hideCategoryList={composingCustomFilter}
-            plainPanelHeader={composingCustomFilter}
-            panelHeader={
-              composingCustomFilter ? (
-                <div
-                  className="space-y-3 py-3"
-                  data-palette-ignore-close
-                  onClick={(e) => e.stopPropagation()}
-                  onPointerDown={(e) => e.stopPropagation()}
-                >
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-white">New custom filter</p>
-                    <p className="text-muted-foreground text-xs">
-                      Combine different perks to create a custom filter.
-                    </p>
-                  </div>
-                  <Input
-                    id="custom-filter-name"
-                    value={customFilterComposer!.name}
-                    onChange={(event) =>
-                      setCustomFilterComposer((prev) =>
-                        prev ? { ...prev, name: event.target.value } : prev,
-                      )
-                    }
-                    placeholder="Name your custom filter, e.g. reload perks"
-                    className="h-8 rounded-[8px] text-xs"
-                    aria-label="Filter name"
-                  />
-                </div>
-              ) : undefined
-            }
-            query={query}
-            onQueryChange={setQuery}
-            onSubmit={handleSubmit}
-            onPanelStateChange={handlePanelStateChange}
-            onPreviewsReadyChange={setPreviewsReady}
-            showResults={showResults}
-            resultsWhileFiltering={resultsWhileFiltering}
-            ghostCompletion={paletteOpen ? ghostCompletion : undefined}
-            ghostSuffix={paletteOpen ? ghostSuffixText : undefined}
-            recentValues={recentValues}
-            chipSuggestions={chipSuggestions}
-            previewResults={
-              previewsReady && !showResults
-                ? mode === "weapon"
-                  ? weaponPreviewResults
-                  : armorPreviewResults
-                : undefined
-            }
-            previewSectionLabel="Results"
-            results={mode === "weapon" ? weaponResults : armorResults}
-            renderResult={mode === "weapon" ? renderWeaponResult : renderArmorResult}
-            onSelectResult={(id) => {
-              recordCurrentSearch();
-              if (mode === "weapon") {
-                const weapon = byHash.get(Number(id));
-                if (weapon) {
-                  trackWeaponView(weapon.hash, "search");
-                  setSelectedHash(weapon.hash);
+          <div className="flex w-full flex-col items-stretch gap-4 lg:flex-row lg:items-start lg:justify-center">
+            {mode === "weapon" && (
+              <PinnedWeaponsRail
+                weapons={pinnedWeapons}
+                onSelectWeapon={(hash) => {
+                  trackWeaponView(hash, "search");
+                  setSelectedHash(hash);
+                }}
+                onUnpinWeapon={removeWeaponHash}
+              />
+            )}
+            <CommandPalette
+              className="mx-0"
+              instantPreviewExpand={firefoxPalettePerf}
+              instantInputSizing={firefoxPalettePerf}
+              placeholder={placeholder}
+              categories={categories}
+              categoryActions={categoryActions}
+              suspendResults={selectedHash != null}
+              chips={paletteChips}
+              open={paletteOpen}
+              onOpenChange={(open) => {
+                if (!open) {
+                  clearTimeout(recordSearchTimerRef.current);
+                  recordSearchTimerRef.current = setTimeout(
+                    recordCurrentSearch,
+                    PANEL_TRANSITION_MS,
+                  );
+                  setCustomFilterComposer(null);
                 }
+                setPaletteOpen(open);
+              }}
+              recentItems={recentPaletteItems}
+              onSelectRecent={handleSelectRecent}
+              onRemoveRecent={removeRecent}
+              onClearRecent={handleClearRecent}
+              onAddChip={handleAddChip}
+              onRemoveChip={handleRemoveChip}
+              onClearChips={handleClearChips}
+              getChipAppearance={(chip) => {
+                if (chip.categoryId === CUSTOM_FILTER_DRAFT_CATEGORY_ID) {
+                  return { tone: "trait", hideLabel: true };
+                }
+                return getFilterChipAppearance(chip.categoryId, chip.value, {
+                  elementIcons: elementIconMap,
+                  weaponTypeIcons: typeIconMap,
+                  ammoIcons: ammoIconMap,
+                });
+              }}
+              hideCategoryList={composingCustomFilter}
+              plainPanelHeader={composingCustomFilter}
+              panelHeader={
+                composingCustomFilter ? (
+                  <div
+                    className="space-y-3 py-3"
+                    data-palette-ignore-close
+                    onClick={(e) => e.stopPropagation()}
+                    onPointerDown={(e) => e.stopPropagation()}
+                  >
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-white">New custom filter</p>
+                      <p className="text-xs text-muted-foreground">
+                        Combine different perks to create a custom filter.
+                      </p>
+                    </div>
+                    <Input
+                      id="custom-filter-name"
+                      value={customFilterComposer!.name}
+                      onChange={(event) =>
+                        setCustomFilterComposer((prev) =>
+                          prev ? { ...prev, name: event.target.value } : prev,
+                        )
+                      }
+                      placeholder="Name your custom filter, e.g. reload perks"
+                      className="h-8 rounded-[8px] text-xs"
+                      aria-label="Filter name"
+                    />
+                  </div>
+                ) : undefined
               }
-            }}
-            resultsEmpty={mode === "weapon" ? "No weapons match." : "Go farm!"}
-            resultsHeader={
-              showResults && mode === "armor" ? (
-                <div className="text-muted-foreground text-xs tracking-body">
-                  {resultCount} {resultCount === 1 ? "result" : "results"}
-                </div>
-              ) : showResults && mode === "weapon" ? (
-                <div
-                  data-palette-ignore-close
-                  className="flex items-center justify-between gap-3"
-                  onClick={(e) => e.stopPropagation()}
-                  onPointerDown={(e) => e.stopPropagation()}
-                >
-                  <span className="text-muted-foreground text-xs tracking-body">
+              query={query}
+              onQueryChange={setQuery}
+              onSubmit={handleSubmit}
+              onPanelStateChange={handlePanelStateChange}
+              onPreviewsReadyChange={setPreviewsReady}
+              isValuePinned={
+                mode === "weapon" && !composingCustomFilter ? isValuePinned : undefined
+              }
+              onToggleValuePin={
+                mode === "weapon" && !composingCustomFilter ? handleToggleValuePin : undefined
+              }
+              showResults={showResults}
+              resultsWhileFiltering={resultsWhileFiltering}
+              ghostCompletion={paletteOpen ? ghostCompletion : undefined}
+              ghostSuffix={paletteOpen ? ghostSuffixText : undefined}
+              recentValues={recentValues}
+              chipSuggestions={chipSuggestions}
+              previewResults={
+                previewsReady && !showResults
+                  ? mode === "weapon"
+                    ? weaponPreviewResults
+                    : armorPreviewResults
+                  : undefined
+              }
+              previewSectionLabel="Results"
+              results={mode === "weapon" ? weaponResults : armorResults}
+              renderResult={mode === "weapon" ? renderWeaponResult : renderArmorResult}
+              onSelectResult={(id) => {
+                recordCurrentSearch();
+                if (mode === "weapon") {
+                  const weapon = byHash.get(Number(id));
+                  if (weapon) {
+                    trackWeaponView(weapon.hash, "search");
+                    setSelectedHash(weapon.hash);
+                  }
+                }
+              }}
+              resultsEmpty={mode === "weapon" ? "No weapons match." : "Go farm!"}
+              resultsHeader={
+                showResults && mode === "armor" ? (
+                  <div className="text-xs tracking-body text-muted-foreground">
                     {resultCount} {resultCount === 1 ? "result" : "results"}
-                  </span>
-                  <PillSelect
-                    variant="ghost"
-                    aria-label="Sort weapons"
-                    options={WEAPON_SORT_OPTIONS}
-                    value={sort}
-                    onValueChange={setSort}
-                  />
-                </div>
-              ) : undefined
-            }
-            resultsFooter={
-              resultCount > shownCount ? (
-                <button
-                  type="button"
-                  data-palette-ignore-close
-                  className="hover:text-foreground w-full cursor-pointer transition-colors"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowAllResults(true);
-                  }}
-                >
-                  Showing {shownCount} of {resultCount}
-                </button>
-              ) : undefined
-            }
-            disabled={mode === "armor" && !signedIn}
-            renderBarOverlay={mode === "armor" ? armorOverlay : undefined}
-          />
+                  </div>
+                ) : showResults && mode === "weapon" ? (
+                  <div
+                    data-palette-ignore-close
+                    className="flex items-center justify-between gap-3"
+                    onClick={(e) => e.stopPropagation()}
+                    onPointerDown={(e) => e.stopPropagation()}
+                  >
+                    <span className="text-xs tracking-body text-muted-foreground">
+                      {resultCount} {resultCount === 1 ? "result" : "results"}
+                    </span>
+                    <PillSelect
+                      variant="ghost"
+                      aria-label="Sort weapons"
+                      options={WEAPON_SORT_OPTIONS}
+                      value={sort}
+                      onValueChange={setSort}
+                    />
+                  </div>
+                ) : undefined
+              }
+              resultsFooter={
+                resultCount > shownCount ? (
+                  <button
+                    type="button"
+                    data-palette-ignore-close
+                    className="w-full cursor-pointer transition-colors hover:text-foreground"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowAllResults(true);
+                    }}
+                  >
+                    Showing {shownCount} of {resultCount}
+                  </button>
+                ) : undefined
+              }
+              disabled={mode === "armor" && !signedIn}
+              renderBarOverlay={mode === "armor" ? armorOverlay : undefined}
+            />
+          </div>
         </div>
 
         {mode === "weapon" && !hasFilters && !isFiltering && selectedHash == null && (
@@ -695,17 +791,17 @@ export function HomeSearch({
         )}
 
         {mode === "weapon" && !hasFilters && !isFiltering && isSample && (
-          <p className="text-muted-foreground mt-3 text-center text-xs">
+          <p className="mt-3 text-center text-xs text-muted-foreground">
             Sample data — run <code>pnpm setup:bungie</code> for the full index.
           </p>
         )}
 
         {mode === "armor" && signedIn && armorLoading && (
-          <p className="text-muted-foreground mt-3 text-center text-xs">Loading your armor…</p>
+          <p className="mt-3 text-center text-xs text-muted-foreground">Loading your armor…</p>
         )}
 
         {mode === "armor" && signedIn && !armorLoading && !armorLoadError && owned.length === 0 && (
-          <p className="text-muted-foreground mt-3 text-center text-xs">
+          <p className="mt-3 text-center text-xs text-muted-foreground">
             No armor found — run <code>pnpm setup:bungie</code> to generate the armor index.
           </p>
         )}
@@ -720,6 +816,46 @@ export function HomeSearch({
         onClose={() => setSelectedHash(null)}
       />
     </div>
+  );
+}
+
+function PinnedFilterPill({
+  filter,
+  onApply,
+  onRemove,
+}: {
+  filter: PinnedFilter;
+  onApply: () => void;
+  onRemove: () => void;
+}) {
+  return (
+    <span
+      data-palette-ignore-close
+      className={cn(
+        "inline-flex h-8 max-w-full items-center overflow-hidden rounded-pill",
+        frostedSurface("pill"),
+      )}
+    >
+      <button
+        type="button"
+        className="inline-flex min-w-0 cursor-pointer items-center gap-1.5 py-1.5 pr-2 pl-3 text-xs font-normal text-foreground"
+        onClick={onApply}
+      >
+        <Pin className="size-3.5 shrink-0 fill-current text-muted-foreground" aria-hidden />
+        <span className="truncate">
+          <span className="text-muted-foreground">{filter.categoryLabel}: </span>
+          {filter.value}
+        </span>
+      </button>
+      <button
+        type="button"
+        aria-label={`Unpin ${filter.categoryLabel}: ${filter.value}`}
+        className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
+        onClick={onRemove}
+      >
+        <X className="size-3.5" />
+      </button>
+    </span>
   );
 }
 

@@ -1,6 +1,7 @@
 import { memo } from "react";
 import { ResultRow } from "@repo/ui";
 import type { WeaponDpsEntry, WeaponSummary } from "@repo/destiny";
+import { Pin } from "lucide-react";
 
 import { CraftableBadge } from "./craftable-badge";
 import { ElementIcon } from "./element-icon";
@@ -35,15 +36,49 @@ export const WeaponResultRow = memo(function WeaponResultRow({
   elementIconPath,
   dps,
   onSelect,
+  pinned = false,
+  onTogglePin,
 }: {
   weapon: WeaponResultData;
   /** Bungie manifest icon path for the weapon's damage type. */
   elementIconPath?: string;
   dps?: WeaponDpsEntry;
   onSelect?: () => void;
+  pinned?: boolean;
+  onTogglePin?: () => void;
 }) {
   const icon = bungieIcon(weapon.icon);
   const watermark = bungieIcon(weapon.watermark);
+  const dpsLabel =
+    dps != null ? (
+      <span className="hidden sm:inline-flex">
+        <WeaponDpsLabel entry={dps} />
+      </span>
+    ) : null;
+  const pinButton =
+    onTogglePin != null ? (
+      <button
+        type="button"
+        aria-label={`${pinned ? "Unpin" : "Pin"} ${weapon.name}`}
+        aria-pressed={pinned}
+        onMouseDown={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+        }}
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          onTogglePin();
+        }}
+        className={
+          pinned
+            ? "flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-full text-primary transition-colors hover:bg-white/10"
+            : "flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
+        }
+      >
+        <Pin className={pinned ? "size-3.5 fill-current" : "size-3.5"} />
+      </button>
+    ) : null;
 
   return (
     <ResultRow
@@ -91,9 +126,10 @@ export const WeaponResultRow = memo(function WeaponResultRow({
         </span>
       }
       trailing={
-        dps != null ? (
-          <span className="hidden sm:inline-flex">
-            <WeaponDpsLabel entry={dps} />
+        pinButton != null || dpsLabel != null ? (
+          <span className="inline-flex items-center gap-2">
+            {pinButton}
+            {dpsLabel}
           </span>
         ) : undefined
       }

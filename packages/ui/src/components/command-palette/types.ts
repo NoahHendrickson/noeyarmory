@@ -160,6 +160,10 @@ export interface CommandPaletteProps {
   onPanelStateChange?: (state: PalettePanelState) => void;
   /** Fired when preview rows may mount (after open-animation deferral, if any). */
   onPreviewsReadyChange?: (ready: boolean) => void;
+  /** Optional pinned-state lookup for drilled value rows. */
+  isValuePinned?: (categoryId: string, option: PaletteValueOption) => boolean;
+  /** Optional pin toggle for drilled value rows. */
+  onToggleValuePin?: (categoryId: string, option: PaletteValueOption) => void;
   /** Skip preview expand animation — Firefox perf; Chrome leaves this unset. */
   instantPreviewExpand?: boolean;
   /** Use `size` instead of `field-sizing:content` on the main input — Firefox perf. */

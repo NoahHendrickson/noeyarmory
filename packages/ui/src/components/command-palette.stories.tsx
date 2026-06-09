@@ -36,7 +36,13 @@ const CATEGORIES: PaletteCategory[] = [
     examples: "Firefly, Explosive Payload",
     getValues: match("trait1"),
   },
-  { id: "trait2", label: "Trait 2", single: true, examples: "Surrounded", getValues: match("trait2") },
+  {
+    id: "trait2",
+    label: "Trait 2",
+    single: true,
+    examples: "Surrounded",
+    getValues: match("trait2"),
+  },
   { id: "element", label: "Element", examples: "Arc, Solar", getValues: match("element") },
   { id: "slot", label: "Slot", examples: "Energy, Kinetic", getValues: () => [] },
 ];
@@ -89,6 +95,74 @@ function Demo() {
 }
 
 export const Default: Story = { render: () => <Demo /> };
+
+function PinValueDemo() {
+  const [query, setQuery] = useState("");
+  const [chips, setChips] = useState<PaletteChip[]>([]);
+  const [pinnedKeys, setPinnedKeys] = useState<ReadonlySet<string>>(new Set());
+
+  return (
+    <CommandPalette
+      placeholder="Press F to search"
+      categories={CATEGORIES}
+      chips={chips}
+      query={query}
+      onQueryChange={setQuery}
+      onAddChip={(categoryId, option) => {
+        const category = CATEGORIES.find((c) => c.id === categoryId)!;
+        setChips((prev) => [
+          ...prev.filter((c) => !(c.categoryId === categoryId && c.valueId === option.id)),
+          {
+            id: `${categoryId}:${option.id}`,
+            categoryId,
+            categoryLabel: category.label,
+            value: option.label,
+            valueId: option.id,
+          },
+        ]);
+      }}
+      onRemoveChip={(id) => setChips((prev) => prev.filter((c) => c.id !== id))}
+      isValuePinned={(categoryId, option) => pinnedKeys.has(`${categoryId}:${option.id}`)}
+      onToggleValuePin={(categoryId, option) => {
+        const key = `${categoryId}:${option.id}`;
+        setPinnedKeys((prev) => {
+          const next = new Set(prev);
+          if (next.has(key)) {
+            next.delete(key);
+          } else {
+            next.add(key);
+          }
+          return next;
+        });
+      }}
+    />
+  );
+}
+
+export const PinsValueWithoutAddingChip: Story = {
+  render: () => <PinValueDemo />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole("combobox"));
+    await waitFor(() =>
+      expect(canvas.getByRole("option", { name: /Trait 1/ })).toBeInTheDocument(),
+    );
+    await userEvent.click(canvas.getByRole("option", { name: /Trait 1/ }));
+    await waitFor(() =>
+      expect(canvas.getByRole("option", { name: /Firefly/ })).toBeInTheDocument(),
+    );
+
+    await userEvent.click(canvas.getByRole("button", { name: "Pin Trait 1: Firefly" }));
+
+    await waitFor(() =>
+      expect(canvas.getByRole("button", { name: "Unpin Trait 1: Firefly" })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      ),
+    );
+    expect(canvas.queryByRole("button", { name: /remove trait 1/i })).toBeNull();
+  },
+};
 
 function ElementPlaceholder({ label }: { label: string }) {
   return (
@@ -187,9 +261,7 @@ export const DisabledWithOverlay: Story = {
       onAddChip={() => {}}
       onRemoveChip={() => {}}
       disabled
-      renderBarOverlay={
-        <Badge variant="warning">Reconnect your bungie account ↗</Badge>
-      }
+      renderBarOverlay={<Badge variant="warning">Reconnect your bungie account ↗</Badge>}
     />
   ),
 };
@@ -199,9 +271,13 @@ export const DrillsAndAddsChipByMouse: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("combobox"));
-    await waitFor(() => expect(canvas.getByRole("option", { name: /Trait 1/ })).toBeInTheDocument());
+    await waitFor(() =>
+      expect(canvas.getByRole("option", { name: /Trait 1/ })).toBeInTheDocument(),
+    );
     await userEvent.click(canvas.getByRole("option", { name: /Trait 1/ }));
-    await waitFor(() => expect(canvas.getByRole("option", { name: /Firefly/ })).toBeInTheDocument());
+    await waitFor(() =>
+      expect(canvas.getByRole("option", { name: /Firefly/ })).toBeInTheDocument(),
+    );
     await userEvent.click(canvas.getByRole("option", { name: /Firefly/ }));
     await waitFor(() =>
       expect(canvas.getByRole("button", { name: /remove trait 1/i })).toBeInTheDocument(),
@@ -215,9 +291,13 @@ export const KeyboardDrillAndAdd: Story = {
     const canvas = within(canvasElement);
     const input = canvas.getByRole("combobox");
     await userEvent.click(input);
-    await waitFor(() => expect(canvas.getByRole("option", { name: /Trait 1/ })).toBeInTheDocument());
+    await waitFor(() =>
+      expect(canvas.getByRole("option", { name: /Trait 1/ })).toBeInTheDocument(),
+    );
     await userEvent.keyboard("{Enter}");
-    await waitFor(() => expect(canvas.getByRole("option", { name: /Firefly/ })).toBeInTheDocument());
+    await waitFor(() =>
+      expect(canvas.getByRole("option", { name: /Firefly/ })).toBeInTheDocument(),
+    );
     await userEvent.keyboard("{Enter}");
     await waitFor(() =>
       expect(canvas.getByRole("button", { name: /remove trait 1/i })).toBeInTheDocument(),
@@ -232,7 +312,9 @@ export const BackspaceRemovesLastChip: Story = {
     const input = canvas.getByRole("combobox");
     await userEvent.click(input);
     await userEvent.keyboard("{Enter}");
-    await waitFor(() => expect(canvas.getByRole("option", { name: /Firefly/ })).toBeInTheDocument());
+    await waitFor(() =>
+      expect(canvas.getByRole("option", { name: /Firefly/ })).toBeInTheDocument(),
+    );
     await userEvent.keyboard("{Enter}");
     await waitFor(() =>
       expect(canvas.getByRole("button", { name: /remove trait 1/i })).toBeInTheDocument(),
@@ -329,7 +411,9 @@ export const ClearsQueryOnCategorySelect: Story = {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("combobox"));
     await userEvent.type(canvas.getByRole("combobox"), "ele");
-    await waitFor(() => expect(canvas.getByRole("option", { name: /Element/ })).toBeInTheDocument());
+    await waitFor(() =>
+      expect(canvas.getByRole("option", { name: /Element/ })).toBeInTheDocument(),
+    );
     await userEvent.keyboard("{Enter}");
     await waitFor(() => expect(canvas.getByRole("combobox")).toHaveValue(""));
   },
@@ -340,7 +424,9 @@ export const ArrowDownMovesSelection: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("combobox"));
-    await waitFor(() => expect(canvas.getByRole("option", { name: /Trait 1/ })).toBeInTheDocument());
+    await waitFor(() =>
+      expect(canvas.getByRole("option", { name: /Trait 1/ })).toBeInTheDocument(),
+    );
     await userEvent.keyboard("{ArrowDown}");
     const trait2Option = canvas.getByRole("option", { name: /Trait 2/ });
     await expect(trait2Option).toHaveAttribute("aria-selected", "true");
@@ -353,9 +439,7 @@ export const DraftChipWhileDrilling: Story = {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("combobox"));
     await userEvent.keyboard("{Enter}");
-    await waitFor(() =>
-      expect(canvas.getByLabelText(/filtering by trait 1/i)).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(canvas.getByLabelText(/filtering by trait 1/i)).toBeInTheDocument());
     const chipInput = canvasElement.querySelector('[data-slot="filter-chip-input"]');
     expect(chipInput).toBeTruthy();
     expect(canvas.getByRole("combobox")).toBe(chipInput);
@@ -369,9 +453,7 @@ export const DraftChipWhisperFollowsHighlight: Story = {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("combobox"));
     await userEvent.keyboard("{Enter}");
-    await waitFor(() =>
-      expect(canvas.getByLabelText(/filtering by trait 1/i)).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(canvas.getByLabelText(/filtering by trait 1/i)).toBeInTheDocument());
     const chipInput = canvas.getByRole("combobox");
     await expect(chipInput).toHaveAttribute("placeholder", "Firefly");
     await userEvent.keyboard("{ArrowDown}");
@@ -417,9 +499,7 @@ export const TypesInsideDraftChip: Story = {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("combobox"));
     await userEvent.keyboard("{ArrowDown}{Enter}");
-    await waitFor(() =>
-      expect(canvas.getByLabelText(/filtering by trait 2/i)).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(canvas.getByLabelText(/filtering by trait 2/i)).toBeInTheDocument());
     const chipInput = canvas.getByRole("combobox");
     await userEvent.type(chipInput, "ramp");
     await waitFor(() => expect(chipInput).toHaveValue("ramp"));
@@ -455,9 +535,7 @@ function ResultsDemo() {
         },
         {
           id: "2",
-          content: (
-            <ResultRow render={<div />} title="Palindrome" subtitle="Void · Hand Cannon" />
-          ),
+          content: <ResultRow render={<div />} title="Palindrome" subtitle="Void · Hand Cannon" />,
         },
       ]}
       onSelectResult={fn()}
@@ -487,9 +565,7 @@ export const ShowsResultsAfterChip: Story = {
     await waitFor(() =>
       expect(canvas.getByRole("option", { name: /Fatebringer/ })).toBeInTheDocument(),
     );
-    await waitFor(() =>
-      expect(canvas.queryByRole("option", { name: /Trait 1/ })).toBeNull(),
-    );
+    await waitFor(() => expect(canvas.queryByRole("option", { name: /Trait 1/ })).toBeNull());
   },
 };
 
@@ -662,7 +738,9 @@ export const RecentSearchesSeparatedFromSuggestions: Story = {
     await userEvent.type(input, "surr");
     await waitFor(() => {
       expect(canvas.getByText("Recent searches")).toBeInTheDocument();
-      expect(canvas.getAllByRole("option", { name: /Surrounded/i }).length).toBeGreaterThanOrEqual(2);
+      expect(canvas.getAllByRole("option", { name: /Surrounded/i }).length).toBeGreaterThanOrEqual(
+        2,
+      );
     });
     expect(canvasElement.querySelectorAll('[role="separator"]').length).toBeGreaterThanOrEqual(1);
     expect(canvas.getByText("Results")).toBeInTheDocument();
@@ -683,9 +761,7 @@ export const ShowsPreviewWhileDrilling: Story = {
       previewResults={[
         {
           id: "preview-1",
-          content: (
-            <ResultRow render={<div />} title="Palindrome" subtitle="Void · Hand Cannon" />
-          ),
+          content: <ResultRow render={<div />} title="Palindrome" subtitle="Void · Hand Cannon" />,
         },
       ]}
       onSelectResult={fn()}
@@ -695,9 +771,7 @@ export const ShowsPreviewWhileDrilling: Story = {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("combobox"));
     await userEvent.keyboard("{ArrowDown}{Enter}");
-    await waitFor(() =>
-      expect(canvas.getByLabelText(/filtering by trait 2/i)).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(canvas.getByLabelText(/filtering by trait 2/i)).toBeInTheDocument());
     const chipInput = canvas.getByRole("combobox");
     await userEvent.type(chipInput, "surr");
     await waitFor(() =>
@@ -728,10 +802,14 @@ export const ProgressiveEscape: Story = {
 
     await userEvent.keyboard("{ArrowDown}");
     await waitFor(() => expect(input).toHaveAttribute("aria-expanded", "true"));
-    await waitFor(() => expect(canvas.getByRole("option", { name: /Trait 1/ })).toBeInTheDocument());
+    await waitFor(() =>
+      expect(canvas.getByRole("option", { name: /Trait 1/ })).toBeInTheDocument(),
+    );
 
     await userEvent.keyboard("{Enter}");
-    await waitFor(() => expect(canvas.getByRole("option", { name: /Firefly/ })).toBeInTheDocument());
+    await waitFor(() =>
+      expect(canvas.getByRole("option", { name: /Firefly/ })).toBeInTheDocument(),
+    );
 
     input = canvas.getByRole("combobox");
     await userEvent.type(input, "fire");
@@ -742,7 +820,9 @@ export const ProgressiveEscape: Story = {
     expect(canvas.getByLabelText(/filtering by trait 1/i)).toBeInTheDocument();
 
     await userEvent.keyboard("{Escape}");
-    await waitFor(() => expect(canvas.getByRole("option", { name: /Trait 1/ })).toBeInTheDocument());
+    await waitFor(() =>
+      expect(canvas.getByRole("option", { name: /Trait 1/ })).toBeInTheDocument(),
+    );
     expect(canvas.queryByLabelText(/filtering by trait 1/i)).toBeNull();
   },
 };
