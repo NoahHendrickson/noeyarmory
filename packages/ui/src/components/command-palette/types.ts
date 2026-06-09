@@ -164,6 +164,8 @@ export interface CommandPaletteProps {
   instantPreviewExpand?: boolean;
   /** Use `size` instead of `field-sizing:content` on the main input — Firefox perf. */
   instantInputSizing?: boolean;
+  /** Optional column rendered to the left of the palette shell (e.g. pinned items). */
+  sideRail?: ReactNode;
   className?: string;
 }
 

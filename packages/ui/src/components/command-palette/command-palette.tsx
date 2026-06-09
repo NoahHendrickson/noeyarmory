@@ -113,6 +113,7 @@ export function CommandPalette({
   onPreviewsReadyChange,
   instantPreviewExpand = false,
   instantInputSizing = false,
+  sideRail,
   className,
   renderResult,
 }: CommandPaletteProps) {
@@ -619,11 +620,13 @@ export function CommandPalette({
       data-palette-root
       data-palette-typing={inputValue.trim().length > 0 ? "" : undefined}
       className={cn(
-        "mx-auto w-full min-w-0 max-w-[calc(100vw-2rem)] sm:w-[600px]",
+        "mx-auto flex w-full min-w-0 max-w-[calc(100vw-2rem)] items-start gap-2 sm:w-[600px]",
+        sideRail != null && "sm:w-[calc(600px+3rem)]",
         className,
       )}
     >
-      <FrostedShell className="rounded-[20px]">
+      {sideRail}
+      <FrostedShell className="min-w-0 flex-1 rounded-[20px]">
         <div className="flex flex-col">
           <PaletteInputBar
             open={open}

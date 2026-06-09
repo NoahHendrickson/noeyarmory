@@ -1,3 +1,4 @@
+import { Pin, PinOff } from "lucide-react";
 import { memo } from "react";
 import Image from "next/image";
 import { Button, ResultRow } from "@repo/ui";
@@ -58,12 +59,16 @@ export const ArmorResultRow = memo(function ArmorResultRow({
   onEquip,
   onMoveToCharacter,
   actionState,
+  pinned,
+  onTogglePin,
 }: {
   armor: OwnedArmorItem;
   onSelect?: () => void;
   onEquip?: () => void;
   onMoveToCharacter?: () => void;
   actionState?: ArmorActionState;
+  pinned?: boolean;
+  onTogglePin?: () => void;
 }) {
   const icon = bungieIcon(armor.icon);
   const watermark = bungieIcon(armor.watermark);
@@ -114,6 +119,19 @@ export const ArmorResultRow = memo(function ArmorResultRow({
           onPointerDown={isolatePalettePointer}
         >
           <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-1.5">
+            {onTogglePin != null ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="text-muted-foreground hover:text-foreground size-8"
+                aria-label={pinned ? `Unpin ${armor.name}` : `Pin ${armor.name}`}
+                aria-pressed={pinned}
+                onClick={() => onTogglePin()}
+              >
+                {pinned ? <PinOff className="size-4" /> : <Pin className="size-4" />}
+              </Button>
+            ) : null}
             <Button
               type="button"
               variant="outline"

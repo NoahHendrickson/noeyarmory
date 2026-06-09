@@ -9,27 +9,102 @@ const filterChipBase =
 
 const filterChipVariants = cva(filterChipBase, {
     variants: {
+      variant: {
+        filled: "rounded-full",
+        outline:
+          "rounded-full border border-white/25 bg-transparent pr-2.5 pl-2.5 text-white/80 hover:border-white/40 hover:bg-white/[0.04]",
+      },
       tone: {
-        default: "text-card rounded-full bg-white/70 pr-0 pl-2.5",
-        trait: "rounded-full bg-filter-chip-trait pr-0 pl-2.5 text-filter-chip-trait-foreground",
-        "ammo-primary":
-          "rounded-full bg-filter-chip-ammo-primary pr-0 pl-2.5 text-filter-chip-ammo-primary-foreground",
-        "ammo-special":
-          "rounded-full bg-filter-chip-ammo-special pr-0 pl-2.5 text-filter-chip-ammo-special-foreground",
-        "ammo-heavy":
-          "rounded-full bg-filter-chip-ammo-heavy pr-0 pl-2.5 text-filter-chip-ammo-heavy-foreground",
-        element: "rounded-full pr-0 pl-2.5 text-filter-chip-element-foreground",
+        default: "",
+        trait: "",
+        "ammo-primary": "",
+        "ammo-special": "",
+        "ammo-heavy": "",
+        element: "",
       },
       element: {
-        Solar: "bg-filter-chip-element-solar",
-        Arc: "bg-filter-chip-element-arc",
-        Void: "bg-filter-chip-element-void",
-        Stasis: "bg-filter-chip-element-stasis",
-        Strand: "bg-filter-chip-element-strand",
-        Kinetic: "bg-filter-chip-element-kinetic",
+        Solar: "",
+        Arc: "",
+        Void: "",
+        Stasis: "",
+        Strand: "",
+        Kinetic: "",
       },
     },
-    defaultVariants: { tone: "default" },
+    compoundVariants: [
+      {
+        variant: "filled",
+        tone: "default",
+        class: "text-card bg-white/70 pr-0 pl-2.5",
+      },
+      {
+        variant: "filled",
+        tone: "trait",
+        class: "bg-filter-chip-trait pr-0 pl-2.5 text-filter-chip-trait-foreground",
+      },
+      {
+        variant: "filled",
+        tone: "ammo-primary",
+        class: "bg-filter-chip-ammo-primary pr-0 pl-2.5 text-filter-chip-ammo-primary-foreground",
+      },
+      {
+        variant: "filled",
+        tone: "ammo-special",
+        class: "bg-filter-chip-ammo-special pr-0 pl-2.5 text-filter-chip-ammo-special-foreground",
+      },
+      {
+        variant: "filled",
+        tone: "ammo-heavy",
+        class: "bg-filter-chip-ammo-heavy pr-0 pl-2.5 text-filter-chip-ammo-heavy-foreground",
+      },
+      {
+        variant: "filled",
+        tone: "element",
+        class: "pr-0 pl-2.5 text-filter-chip-element-foreground",
+      },
+      {
+        variant: "filled",
+        tone: "element",
+        element: "Solar",
+        class: "bg-filter-chip-element-solar",
+      },
+      {
+        variant: "filled",
+        tone: "element",
+        element: "Arc",
+        class: "bg-filter-chip-element-arc",
+      },
+      {
+        variant: "filled",
+        tone: "element",
+        element: "Void",
+        class: "bg-filter-chip-element-void",
+      },
+      {
+        variant: "filled",
+        tone: "element",
+        element: "Stasis",
+        class: "bg-filter-chip-element-stasis",
+      },
+      {
+        variant: "filled",
+        tone: "element",
+        element: "Strand",
+        class: "bg-filter-chip-element-strand",
+      },
+      {
+        variant: "filled",
+        tone: "element",
+        element: "Kinetic",
+        class: "bg-filter-chip-element-kinetic",
+      },
+      {
+        variant: "outline",
+        tone: "trait",
+        class: "border-filter-chip-trait/50 text-filter-chip-trait-foreground",
+      },
+    ],
+    defaultVariants: { variant: "filled", tone: "default" },
   },
 );
 
@@ -58,6 +133,8 @@ export interface FilterChipProps extends Omit<ComponentProps<"span">, "title"> {
   label: string;
   /** Chosen value, e.g. "Bait and Switch". Omit for an in-progress draft chip. */
   value?: string;
+  /** Filled (default) or outline — outline is used for pinned filter shortcuts. */
+  variant?: "filled" | "outline";
   /** Visual tone for committed chips. Draft chips always use the muted style. */
   tone?: FilterChipTone;
   /** Damage type for element-tone chips — selects the element background color. */
@@ -91,6 +168,7 @@ export interface FilterChipProps extends Omit<ComponentProps<"span">, "title"> {
 function FilterChip({
   label,
   value,
+  variant = "filled",
   tone = "default",
   element,
   valueIcon,
@@ -120,7 +198,11 @@ function FilterChip({
       className={cn(
         isDraft
           ? cn(filterChipBase, "rounded-full bg-white/[0.08] pl-2.5 pr-2 text-white/70")
-          : filterChipVariants({ tone, element: tone === "element" ? element : undefined }),
+          : filterChipVariants({
+              variant,
+              tone,
+              element: tone === "element" ? element : undefined,
+            }),
         hasInlineInput && (onRemove ? "pr-0" : "pr-2.5"),
         showIconOnly && "gap-0 pl-1.5 pr-0",
         className,
@@ -164,11 +246,16 @@ function FilterChip({
         <button
           type="button"
           aria-label={isDraft ? `Cancel ${label} filter` : `Remove ${label}: ${value}`}
-          onClick={onRemove}
+          onClick={(event) => {
+            event.stopPropagation();
+            onRemove();
+          }}
           className={
             isDraft
               ? "flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-full text-white/60 transition-colors hover:bg-white/10 hover:text-white"
-              : removeButtonVariants({ tone })
+              : variant === "outline"
+                ? "ml-0.5 flex size-5 shrink-0 cursor-pointer items-center justify-center rounded-full text-white/50 transition-colors hover:bg-white/10 hover:text-white"
+                : removeButtonVariants({ tone })
           }
         >
           <X className="size-3" />

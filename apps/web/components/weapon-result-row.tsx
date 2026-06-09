@@ -1,5 +1,6 @@
+import { Pin, PinOff } from "lucide-react";
 import { memo } from "react";
-import { ResultRow } from "@repo/ui";
+import { Button, ResultRow } from "@repo/ui";
 import type { WeaponDpsEntry, WeaponSummary } from "@repo/destiny";
 
 import { CraftableBadge } from "./craftable-badge";
@@ -30,17 +31,25 @@ export type WeaponResultData = Pick<
 >;
 
 /** A single weapon row in the command-palette results list. */
+function isolatePalettePointer(event: React.PointerEvent) {
+  event.stopPropagation();
+}
+
 export const WeaponResultRow = memo(function WeaponResultRow({
   weapon,
   elementIconPath,
   dps,
   onSelect,
+  pinned,
+  onTogglePin,
 }: {
   weapon: WeaponResultData;
   /** Bungie manifest icon path for the weapon's damage type. */
   elementIconPath?: string;
   dps?: WeaponDpsEntry;
   onSelect?: () => void;
+  pinned?: boolean;
+  onTogglePin?: () => void;
 }) {
   const icon = bungieIcon(weapon.icon);
   const watermark = bungieIcon(weapon.watermark);
@@ -91,11 +100,30 @@ export const WeaponResultRow = memo(function WeaponResultRow({
         </span>
       }
       trailing={
-        dps != null ? (
-          <span className="hidden sm:inline-flex">
-            <WeaponDpsLabel entry={dps} />
-          </span>
-        ) : undefined
+        <div
+          data-palette-ignore-close
+          className="flex shrink-0 items-center gap-2"
+          onPointerDown={isolatePalettePointer}
+        >
+          {onTogglePin != null ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="text-muted-foreground hover:text-foreground size-8"
+              aria-label={pinned ? `Unpin ${weapon.name}` : `Pin ${weapon.name}`}
+              aria-pressed={pinned}
+              onClick={() => onTogglePin()}
+            >
+              {pinned ? <PinOff className="size-4" /> : <Pin className="size-4" />}
+            </Button>
+          ) : null}
+          {dps != null ? (
+            <span className="hidden sm:inline-flex">
+              <WeaponDpsLabel entry={dps} />
+            </span>
+          ) : null}
+        </div>
       }
     />
   );
