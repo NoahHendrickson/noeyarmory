@@ -6,7 +6,6 @@ import { memo, useCallback } from "react";
 import type { ReactNode } from "react";
 import {
   cn,
-  frostedSurface,
   Tooltip,
   TooltipPortal,
   TooltipPopup,
@@ -258,7 +257,7 @@ const PerkTile = memo(function PerkTile({
         >
           <TooltipPopup
             className={cn(
-              frostedSurface("panel", "relative overflow-hidden p-0"),
+              "relative overflow-hidden p-0",
               perkTooltipMaxWidth(clarityLines),
               "pointer-events-none",
             )}

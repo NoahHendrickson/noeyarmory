@@ -596,7 +596,7 @@ export function CommandPalette({
         className,
       )}
     >
-      <FrostedShell className={open ? "rounded-[12px]" : "rounded-[1.75rem]"}>
+      <FrostedShell className="rounded-[20px]">
         <div className="flex flex-col">
           <PaletteInputBar
             open={open}

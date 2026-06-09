@@ -43,6 +43,7 @@
     "react-dom": "^19.0.0"
   },
   "dependencies": {
+    "@phosphor-icons/react": "^2.1.10",
     "@base-ui/react": "^1.5.0",
     "@repo/search-rank": "workspace:*",
     "class-variance-authority": "^0.7.1",
