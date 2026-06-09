@@ -62,10 +62,7 @@ export async function fetchGeneratedDataFile<T>(key: GeneratedDataKey): Promise<
   }
 }
 
-function preloadWeaponIndex(config: {
-  manifestUrl: string;
-  stableWeaponsUrl: string;
-}): void {
+function preloadWeaponIndex(config: { manifestUrl: string }): void {
   const store = globalThis.__noeyarmoryPreloads || (globalThis.__noeyarmoryPreloads = {});
   const fetchJson = (url: string, cache = "default") =>
     fetch(url, { credentials: "same-origin", cache: cache as RequestCache }).then((res) => {
@@ -78,10 +75,10 @@ function preloadWeaponIndex(config: {
   }
   if (!store.weapons) {
     store.weapons = store.generatedDataManifest.then((manifest) => {
-      const url = manifest?.files?.weapons?.path || config.stableWeaponsUrl;
-      const cache = url === config.stableWeaponsUrl ? "default" : "force-cache";
-      return fetchJson(url, cache).catch((error) => {
-        if (url !== config.stableWeaponsUrl) return fetchJson(config.stableWeaponsUrl);
+      const path = generatedDataPath(manifest, "weapons");
+      const fallbackPath = DEFAULT_GENERATED_DATA_PATHS.weapons;
+      return fetchJson(path, generatedDataCacheMode(manifest, "weapons")).catch((error) => {
+        if (path !== fallbackPath) return fetchJson(fallbackPath);
         throw error;
       });
     });
@@ -91,8 +88,12 @@ function preloadWeaponIndex(config: {
 export function weaponIndexPreloadScript(): string {
   const config = {
     manifestUrl: GENERATED_DATA_MANIFEST_PATH,
-    stableWeaponsUrl: DEFAULT_GENERATED_DATA_PATHS.weapons,
   };
 
-  return `(${preloadWeaponIndex.toString()})(${JSON.stringify(config)});`;
+  return `(() => {
+const DEFAULT_GENERATED_DATA_PATHS = ${JSON.stringify(DEFAULT_GENERATED_DATA_PATHS)};
+${generatedDataPath.toString()}
+${generatedDataCacheMode.toString()}
+(${preloadWeaponIndex.toString()})(${JSON.stringify(config)});
+})();`;
 }
