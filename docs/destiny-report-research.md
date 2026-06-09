@@ -365,7 +365,7 @@ Phases respect **palette UX frozen**. Each phase is independently shippable.
 1. **Source taxonomy:** Map Bungie `source` hashes to DR's dotted tags (`trials`, `vaultofglass`) — need a single canonical enum in `build-index.ts`.
 2. **Stat chip UX:** Range chips (≥600 RPM) vs bucket chips (600–700, 700+) — same palette picker pattern as facets.
 3. **Worker + SSR:** Worker is client-only; ensure no regression on `/weapon/[hash]` SSR seeds.
-4. **Vault weapons:** Owned-roll search stays on `docs/vault-search-plan.md`; enriched manifest index helps vault filters too (`source:` + `perkname:` on instanced rolls).
+4. **Owned armor search:** Separate plan in `docs/armor-vault-search-improvements.md` (mods, slot, location, stat chips). Not related to destiny.report. Owned weapon rolls are out of scope.
 
 ---
 
