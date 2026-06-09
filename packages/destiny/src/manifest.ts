@@ -21,6 +21,59 @@ export const MANIFEST_SLICES = [
 
 export type ManifestDefs = DestinyManifestSlice<typeof MANIFEST_SLICES>;
 
+/** HTTP statuses worth retrying during manifest generation (transient Bungie/CDN failures). */
+export function isRetryableBungieHttpStatus(status: number): boolean {
+  return status === 429 || status === 502 || status === 503 || status === 504;
+}
+
+const DEFAULT_BUNGIE_FETCH_ATTEMPTS = 4;
+const DEFAULT_BUNGIE_FETCH_BASE_DELAY_MS = 1000;
+
+function bungieFetchDelayMs(attempt: number): number {
+  return DEFAULT_BUNGIE_FETCH_BASE_DELAY_MS * 2 ** (attempt - 1);
+}
+
+async function sleep(ms: number): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export async function fetchBungieWithRetry(
+  url: string | URL,
+  init: RequestInit,
+  label: string,
+  maxAttempts = DEFAULT_BUNGIE_FETCH_ATTEMPTS,
+): Promise<Response> {
+  let lastError: Error | undefined;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const res = await fetch(url, init);
+      if (res.ok) return res;
+
+      lastError = new Error(`Bungie API ${label} → ${res.status} ${res.statusText}`);
+      if (!isRetryableBungieHttpStatus(res.status) || attempt === maxAttempts) {
+        throw lastError;
+      }
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      const statusMatch = /→ (\d{3}) /.exec(lastError.message);
+      const retryableHttp =
+        statusMatch != null && isRetryableBungieHttpStatus(Number(statusMatch[1]));
+      const retryableNetwork = statusMatch == null;
+
+      if (attempt === maxAttempts || (!retryableHttp && !retryableNetwork)) {
+        throw lastError;
+      }
+    }
+
+    const delayMs = bungieFetchDelayMs(attempt);
+    console.warn(`${lastError.message}; retrying in ${delayMs}ms (${attempt}/${maxAttempts})…`);
+    await sleep(delayMs);
+  }
+
+  throw lastError ?? new Error(`Bungie API ${label} failed`);
+}
+
 /**
  * A minimal Bungie HTTP client. bungie-api-ts builds absolute URLs, so we just
  * attach the API key header and parse JSON.
@@ -33,16 +86,15 @@ export function createHttpClient(apiKey: string): HttpClient {
         url.searchParams.set(key, value);
       }
     }
-    const res = await fetch(url, {
-      method: config.method,
-      headers: { "X-API-Key": apiKey },
-      body: config.body != null ? JSON.stringify(config.body) : undefined,
-    });
-    if (!res.ok) {
-      throw new Error(
-        `Bungie API ${config.method} ${config.url} → ${res.status} ${res.statusText}`,
-      );
-    }
+    const res = await fetchBungieWithRetry(
+      url,
+      {
+        method: config.method,
+        headers: { "X-API-Key": apiKey },
+        body: config.body != null ? JSON.stringify(config.body) : undefined,
+      },
+      `${config.method} ${config.url}`,
+    );
     const data: unknown = await res.json();
     return data as never;
   };
@@ -81,11 +133,10 @@ export async function downloadDestinyIconDefinitions(
   if (!path) {
     throw new Error("DestinyIconDefinition missing from manifest paths");
   }
-  const res = await fetch(`https://www.bungie.net${path}`, {
-    headers: { "X-API-Key": apiKey },
-  });
-  if (!res.ok) {
-    throw new Error(`DestinyIconDefinition fetch → ${res.status} ${res.statusText}`);
-  }
+  const res = await fetchBungieWithRetry(
+    `https://www.bungie.net${path}`,
+    { headers: { "X-API-Key": apiKey } },
+    "GET DestinyIconDefinition",
+  );
   return (await res.json()) as Record<string, DestinyIconDefinitionEntry>;
 }

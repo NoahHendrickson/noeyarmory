@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { config as loadEnv } from "dotenv";
@@ -19,16 +20,13 @@ const weaponsFile = resolve(dataDir, "weapons.json");
 const weaponsDetailFile = resolve(dataDir, "weapons-detail.json");
 const armorFile = resolve(dataDir, "armor.json");
 
-async function main(): Promise<void> {
-  const apiKey = process.env.BUNGIE_API_KEY;
-  if (!apiKey) {
-    console.warn(
-      "Missing BUNGIE_API_KEY — writing bundled sample indexes. " +
-        "Set BUNGIE_API_KEY (Vercel: scope to Build) for the full weapon + armor catalog.",
-    );
-    writeSampleIndexes(weaponsFile, weaponsDetailFile, armorFile);
-    return;
-  }
+function hasExistingGeneratedIndexes(): boolean {
+  return (
+    existsSync(weaponsFile) && existsSync(weaponsDetailFile) && existsSync(armorFile)
+  );
+}
+
+async function generateFromManifest(apiKey: string): Promise<void> {
   console.log("Downloading Destiny manifest (this can take a moment)…");
   const { version, defs } = await downloadManifest(apiKey);
   console.log(`Manifest ${version}. Loading ammo-type icons…`);
@@ -72,6 +70,39 @@ async function main(): Promise<void> {
     },
   });
   console.log(`✓ Wrote ${armorIndex.armor.length} armor → ${armorFile}`);
+}
+
+function fallbackAfterManifestFailure(err: unknown): void {
+  const message = err instanceof Error ? err.message : String(err);
+  if (hasExistingGeneratedIndexes()) {
+    console.warn(
+      `Bungie manifest download failed (${message}) — keeping existing generated indexes.`,
+    );
+    return;
+  }
+
+  console.warn(
+    `Bungie manifest download failed (${message}) — writing bundled sample indexes.`,
+  );
+  writeSampleIndexes(weaponsFile, weaponsDetailFile, armorFile);
+}
+
+async function main(): Promise<void> {
+  const apiKey = process.env.BUNGIE_API_KEY;
+  if (!apiKey) {
+    console.warn(
+      "Missing BUNGIE_API_KEY — writing bundled sample indexes. " +
+        "Set BUNGIE_API_KEY (Vercel: scope to Build) for the full weapon + armor catalog.",
+    );
+    writeSampleIndexes(weaponsFile, weaponsDetailFile, armorFile);
+    return;
+  }
+
+  try {
+    await generateFromManifest(apiKey);
+  } catch (err) {
+    fallbackAfterManifestFailure(err);
+  }
 }
 
 main().catch((err: unknown) => {

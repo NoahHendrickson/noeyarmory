@@ -30,7 +30,7 @@ export function buildSampleArmorIndex(): ArmorIndex {
   };
 }
 
-/** Write bundled sample indexes when the live manifest cannot be fetched (e.g. missing API key). */
+/** Write bundled sample indexes when the live manifest cannot be fetched (e.g. missing API key or Bungie outage). */
 export function writeSampleIndexes(
   weaponsFile: string,
   weaponsDetailFile: string,
