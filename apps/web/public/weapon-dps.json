@@ -1,73 +1,116 @@
 {
-  "source": "https://docs.google.com/spreadsheets/d/1_5wtBjRYHHxuF4oJKDb_iOGZs-wTkzB6RYbnyNLbuz4/edit?gid=1356041045",
+  "source": "https://docs.google.com/spreadsheets/d/1_5wtBjRYHHxuF4oJKDb_iOGZs-wTkzB6RYbnyNLbuz4/edit?gid=1455724279",
   "sheet": "Sustained",
-  "syncedAt": "2026-06-08T21:51:13.894Z",
+  "syncedAt": "2026-06-09T01:18:27.893Z",
   "byName": {
     "A Good Shout": {
-      "dps": 19464,
-      "totalDamage": 181990,
+      "dps": 14558,
+      "totalDamage": 136120,
       "buildPerks": [
         "Envious Arsenal",
         "Heavy Bolts",
         "High Ground"
       ],
-      "buildDescription": "High-impact bow · Heavy Bolts, Accelerated Assault, Envious Arsenal + High Ground, Guidance Ring x3, Moebius Quiver"
+      "buildDescription": "High-impact bow · Heavy Bolts, Accelerated Assault, Envious Arsenal + High Ground, Guidance Ring x3, Moebius Quiver, assumes reduction to 75%"
     },
     "Leviathan's Breath": {
-      "dps": 9116,
-      "totalDamage": 157965,
+      "dps": 11395,
+      "totalDamage": 197456,
       "buildPerks": [],
-      "buildDescription": "Archer's Tempo, Moebius Quiver"
+      "buildDescription": "Archer's Tempo, Moebius Quiver, Argent Quiver"
+    },
+    "Hezen Vengeance": {
+      "dps": 9850,
+      "totalDamage": 91879,
+      "buildPerks": [
+        "Elemental Honing",
+        "Cluster Bomb"
+      ],
+      "buildDescription": "Adaptive rocket launcher · Timelost Magazine, Cluster Bomb + Elemental Honing x5, Pack Hunter, Argent Ordnance, assumes normal clusters, simulates Sentinel Shield reload"
     },
     "Crux Termination IV": {
-      "dps": 7476,
-      "totalDamage": 64773,
+      "dps": 8066,
+      "totalDamage": 69885,
       "buildPerks": [
         "Surrounded",
         "Slideshot"
       ],
-      "buildDescription": "Aggressive rocket launcher · Slideshot + e. Surrounded, Pack Hunter"
+      "buildDescription": "Aggressive rocket launcher · Slideshot + e. Surrounded, Pack Hunter, Argent Ordnance"
     },
-    "Hezen Vengeance": {
-      "dps": 5855,
-      "totalDamage": 61266,
+    "Truth": {
+      "dps": 6554,
+      "totalDamage": 102586,
+      "buildPerks": [],
+      "buildDescription": "assumes 30% perk, assume 0.6x fire recovery delay, Argent Ordnance, simulates Sentinel Shield reload"
+    },
+    "Refurbished A499": {
+      "dps": 5755,
+      "totalDamage": 228132,
+      "buildPerks": [
+        "Aggregate Charge"
+      ],
+      "buildDescription": "Disruption sniper · Aggregate Charge x3, Accelerated Assault, Networked Targeting x5, Kinetic Synthesis, Sniper's Meditation, approximate"
+    },
+    "The When and Where": {
+      "dps": 5577,
+      "totalDamage": 73979,
       "buildPerks": [
         "Elemental Honing",
-        "Envious Arsenal"
+        "Clown Cartridge"
       ],
-      "buildDescription": "Adaptive rocket launcher · Timelost Magazine, Envious Arsenal + Elemental Honing x5, Pack Hunter"
+      "buildDescription": "Adaptive rocket launcher · Clown Cartridge + Elemental Honing x5, Pack Hunter, Argent Ordnance"
     },
     "Unvoiced": {
-      "dps": 5108,
-      "totalDamage": 72332,
+      "dps": 5363,
+      "totalDamage": 75948,
       "buildPerks": [
         "Elemental Honing",
         "Redirection"
       ],
       "buildDescription": "Pinpoint slug shotgun · Assault Mag, e. Redirection x30 + Elemental Honing x5, reload cancelling"
     },
-    "Refurbished A499": {
-      "dps": 4804,
-      "totalDamage": 124765,
+    "Tomorrow's Answer": {
+      "dps": 5339,
+      "totalDamage": 77417,
       "buildPerks": [
-        "Aggregate Charge"
+        "Envious Arsenal",
+        "Bait and Switch"
       ],
-      "buildDescription": "Aggressive sniper · Aggregate Charge x3, Networked Targeting x5"
+      "buildDescription": "High-impact rocket launcher · Envious Arsenal + Bait and Switch, Pack Hunter, Argent Ordnance"
+    },
+    "Ergo Sum": {
+      "dps": 5195,
+      "totalDamage": 118595,
+      "buildPerks": [
+        "Lightweight Frame"
+      ],
+      "buildDescription": "lightweight frame, Unplanned Reprieve, Enduring Blade, 1H2L combo, Lucent Blades x3, Pack Hunter, Transcendent, fireteam scaling, Argent Blade"
+    },
+    "Still Hunt": {
+      "dps": 4879,
+      "totalDamage": 103208,
+      "buildPerks": [],
+      "buildDescription": "pre-popped into 6 shot cycle, Celestial Nighthawk, Sniper's Meditation"
+    },
+    "Conspiracy Honed": {
+      "dps": 4853,
+      "totalDamage": 74499,
+      "buildPerks": [
+        "Bait and Switch"
+      ],
+      "buildDescription": "Dynamic sniper - 140RPM special · Ionized Heatsink, Dynamic Heat Limiter, Vorpal + Bait and Switch, Networked Targeting x5, Sniper's Meditation"
+    },
+    "Wolfsbane": {
+      "dps": 4680,
+      "totalDamage": 224345,
+      "buildPerks": [],
+      "buildDescription": "swapping after HLLHLLHLLHLLH, Honed Edge + Jagged Edge, Burning Ambition, 10 lights to regenerate, Argent Blade"
     },
     "Praxic Blade": {
       "dps": 4648,
       "totalDamage": 294945,
       "buildPerks": [],
       "buildDescription": "throw spam with double hits, Lucent Blades x3, Offensive Form, Forceful Blade III, Gyro Core (solar), simulated"
-    },
-    "The When and Where": {
-      "dps": 4619,
-      "totalDamage": 61266,
-      "buildPerks": [
-        "Elemental Honing",
-        "Clown Cartridge"
-      ],
-      "buildDescription": "Adaptive rocket launcher · Clown Cartridge + Elemental Honing x5, Pack Hunter"
     },
     "Outbreak Perfected": {
       "dps": 4587,
@@ -81,14 +124,14 @@
       "buildPerks": [],
       "buildDescription": "includes rehone time, hone before rally"
     },
-    "Tomorrow's Answer": {
-      "dps": 4422,
-      "totalDamage": 64114,
+    "Something Something": {
+      "dps": 4304,
+      "totalDamage": null,
       "buildPerks": [
-        "Envious Arsenal",
-        "Bait and Switch"
+        "Elemental Honing",
+        "Triple Tap"
       ],
-      "buildDescription": "High-impact rocket launcher · Envious Arsenal + Bait and Switch, Pack Hunter"
+      "buildDescription": "Aggressive sniper · Extended Mag, Accelerated Assault, Triple Tap + Elemental Honing x5, Networked Targeting x5, Kinetic Synthesis, Sniper's Meditation"
     },
     "Legend of Acrius": {
       "dps": 4293,
@@ -104,34 +147,61 @@
       ],
       "buildDescription": "Impetus, two kills"
     },
-    "Still Hunt": {
-      "dps": 4243,
-      "totalDamage": 89746,
-      "buildPerks": [],
-      "buildDescription": "pre-popped into 6 shot cycle, Celestial Nighthawk"
-    },
-    "Conspiracy Honed": {
-      "dps": 4220,
-      "totalDamage": 64782,
-      "buildPerks": [
-        "Bait and Switch"
-      ],
-      "buildDescription": "Dynamic sniper - 140RPM special · Ionized Heatsink, Dynamic Heat Limiter, Vorpal + Bait and Switch, Networked Targeting x5"
-    },
-    "Wolfsbane": {
-      "dps": 4070,
-      "totalDamage": 195083,
-      "buildPerks": [],
-      "buildDescription": "swapping after HLLHLLHLLHLLH, Honed Edge + Jagged Edge, Burning Ambition, 10 lights to regenerate"
-    },
     "Koraxis's Distress": {
-      "dps": 4051,
-      "totalDamage": 60097,
+      "dps": 4254,
+      "totalDamage": 63102,
       "buildPerks": [
         "Envious Assassin",
         "Surrounded"
       ],
       "buildDescription": "Rapid-fire grenade launcher · no Backup Mag, Spike Grenades, Envious Assassin + e. Surrounded"
+    },
+    "Praedyth's Revenge": {
+      "dps": 4204,
+      "totalDamage": null,
+      "buildPerks": [
+        "Fourth Time's the Charm",
+        "Elemental Honing"
+      ],
+      "buildDescription": "Rapid-fire sniper · Tactical Mag, Timelost Magazine, e. Fourth Time's the Charm + Elemental Honing x5, Networked Targeting x5, Kinetic Synthesis, Sniper's Meditation"
+    },
+    "Succession": {
+      "dps": 4132,
+      "totalDamage": 73520,
+      "buildPerks": [
+        "Reconstruction",
+        "Redirection"
+      ],
+      "buildDescription": "Aggressive sniper · Extended Mag, Reconstruction + e. Redirection x30, Networked Targeting x5"
+    },
+    "Hierarchy of Needs": {
+      "dps": 4047,
+      "totalDamage": null,
+      "buildPerks": [],
+      "buildDescription": "Guidance Ring x3, includes ignition every other shot, assumed base scaling"
+    },
+    "Submersion": {
+      "dps": 3987,
+      "totalDamage": null,
+      "buildPerks": [
+        "Aggregate Charge",
+        "Heavy Bolts"
+      ],
+      "buildDescription": "High-impact bow · Heavy Bolts, e. Aggregate Charge x3, Guidance Ring x3"
+    },
+    "The Chaperone": {
+      "dps": 3984,
+      "totalDamage": null,
+      "buildPerks": [
+        "The Roadborn"
+      ],
+      "buildDescription": "The Roadborn, Triple Tap, Kinetic Synthesis"
+    },
+    "New Land Beyond": {
+      "dps": 3852,
+      "totalDamage": null,
+      "buildPerks": [],
+      "buildDescription": "starts at The Master x20, sprint cancelling, Rally Barricade, Kinetic Synthesis, Sniper's Meditation"
     },
     "Relentless": {
       "dps": 3838,
@@ -154,15 +224,6 @@
       "buildPerks": [],
       "buildDescription": "body"
     },
-    "Submersion": {
-      "dps": 3731,
-      "totalDamage": null,
-      "buildPerks": [
-        "Aggregate Charge",
-        "Heavy Bolts"
-      ],
-      "buildDescription": "High-impact bow · Heavy Bolts, e. Aggregate Charge x3, Guidance Ring x3"
-    },
     "Lord of Wolves": {
       "dps": 3686,
       "totalDamage": 75300,
@@ -171,20 +232,20 @@
       ],
       "buildDescription": "Release the Wolves, hip-fire, precision, includes ignition"
     },
+    "Bitter/Sweet": {
+      "dps": 3649,
+      "totalDamage": 56652,
+      "buildPerks": [
+        "Envious Arsenal",
+        "Bait and Switch"
+      ],
+      "buildDescription": "Adaptive grenade launcher · Spike Grenades, Envious Arsenal + Bait and Switch"
+    },
     "Deathbringer": {
       "dps": 3626,
       "totalDamage": 83393,
       "buildPerks": [],
       "buildDescription": "realistic projectile height"
-    },
-    "Succession": {
-      "dps": 3593,
-      "totalDamage": 63931,
-      "buildPerks": [
-        "Reconstruction",
-        "Redirection"
-      ],
-      "buildDescription": "Aggressive sniper · Extended Mag, Reconstruction + e. Redirection x30, Networked Targeting x5"
     },
     "Duality": {
       "dps": 3591,
@@ -194,23 +255,23 @@
       ],
       "buildDescription": "3 pellet shots into On Black Wings x3 slugs"
     },
-    "Mint Retrograde": {
-      "dps": 3527,
-      "totalDamage": 48150,
-      "buildPerks": [
-        "Elemental Honing",
-        "Rewind Rounds"
-      ],
-      "buildDescription": "Micro-missile pulse rifle · Rewind Rounds + Elemental Honing x5"
-    },
-    "Bitter/Sweet": {
-      "dps": 3475,
-      "totalDamage": 53954,
+    "Outrageous Fortune": {
+      "dps": 3564,
+      "totalDamage": 56318,
       "buildPerks": [
         "Envious Arsenal",
         "Bait and Switch"
       ],
-      "buildDescription": "Adaptive grenade launcher · Spike Grenades, Envious Arsenal + Bait and Switch"
+      "buildDescription": "Rapid-fire grenade launcher · Bandolier, Spike Grenades, Envious Arsenal + Bait and Switch"
+    },
+    "Briar's Contempt": {
+      "dps": 3548,
+      "totalDamage": 100957,
+      "buildPerks": [
+        "Rewind Rounds",
+        "Surrounded"
+      ],
+      "buildDescription": "Adaptive burst linear fusion rifle · no Backup Mag, Accelerated Coils, Charge MW, e. Rewind Rounds + e. Surrounded"
     },
     "Until Its Return": {
       "dps": 3441,
@@ -227,20 +288,13 @@
       "buildPerks": [],
       "buildDescription": "Sleeper Simulant"
     },
-    "New Land Beyond": {
-      "dps": 3436,
-      "totalDamage": 151814,
-      "buildPerks": [],
-      "buildDescription": "starts at The Master x20, sprint cancelling, Rally Barricade"
-    },
-    "Outrageous Fortune": {
-      "dps": 3395,
-      "totalDamage": 53636,
+    "Starscape Null": {
+      "dps": 3422,
+      "totalDamage": 41791,
       "buildPerks": [
-        "Envious Arsenal",
-        "Bait and Switch"
+        "Elemental Honing"
       ],
-      "buildDescription": "Rapid-fire grenade launcher · Bandolier, Spike Grenades, Envious Arsenal + Bait and Switch"
+      "buildDescription": "Lightweight shotgun · body, Assault Mag, Elemental Honing x5, reload cancelling"
     },
     "Heartshadow": {
       "dps": 3366,
@@ -250,15 +304,6 @@
       ],
       "buildDescription": "heavy attacks, Shot in the Dark, Lucent Blades x3"
     },
-    "Praedyth's Revenge": {
-      "dps": 3366,
-      "totalDamage": 93399,
-      "buildPerks": [
-        "Fourth Time's the Charm",
-        "Elemental Honing"
-      ],
-      "buildDescription": "Rapid-fire sniper · Tactical Mag, Timelost Magazine, e. Fourth Time's the Charm + Elemental Honing x5, Networked Targeting x5"
-    },
     "Whisper of the Worm": {
       "dps": 3329,
       "totalDamage": 98661,
@@ -267,11 +312,14 @@
       ],
       "buildDescription": "Whispered Breathing"
     },
-    "Hierarchy of Needs": {
-      "dps": 3290,
-      "totalDamage": null,
-      "buildPerks": [],
-      "buildDescription": "Guidance Ring x3"
+    "Dimensional Hypotrochoid": {
+      "dps": 3318,
+      "totalDamage": 47777,
+      "buildPerks": [
+        "Envious Assassin",
+        "Vorpal Weapon"
+      ],
+      "buildDescription": "Compressed wave grenade launcher · Envious Assassin + Vorpal Weapon"
     },
     "The Other Half": {
       "dps": 3255,
@@ -300,30 +348,6 @@
       ],
       "buildDescription": "Lightweight sword · light attacks, Jagged Edge, Vorpal Weapon + Whirlwind Blade, Pack Hunter"
     },
-    "Briar's Contempt": {
-      "dps": 3225,
-      "totalDamage": 91779,
-      "buildPerks": [
-        "Rewind Rounds",
-        "Surrounded"
-      ],
-      "buildDescription": "Adaptive burst linear fusion rifle · no Backup Mag, Accelerated Coils, Charge MW, e. Rewind Rounds + e. Surrounded"
-    },
-    "Slayer's Fang": {
-      "dps": 3167,
-      "totalDamage": 47169,
-      "buildPerks": [],
-      "buildDescription": "Assault Mag, includes submunitions"
-    },
-    "Dimensional Hypotrochoid": {
-      "dps": 3160,
-      "totalDamage": 45502,
-      "buildPerks": [
-        "Envious Assassin",
-        "Vorpal Weapon"
-      ],
-      "buildDescription": "Compressed wave grenade launcher · Envious Assassin + Vorpal Weapon"
-    },
     "The Queenbreaker": {
       "dps": 3137,
       "totalDamage": 82380,
@@ -336,20 +360,59 @@
       "buildPerks": [],
       "buildDescription": "projectile mode, point blank"
     },
-    "Something Something": {
-      "dps": 3090,
-      "totalDamage": 78149,
+    "Slayer's Fang": {
+      "dps": 3110,
+      "totalDamage": 73375,
+      "buildPerks": [],
+      "buildDescription": "Assault Mag, includes submunitions"
+    },
+    "Cataclysmic": {
+      "dps": 3106,
+      "totalDamage": 171519,
       "buildPerks": [
-        "Elemental Honing",
-        "Triple Tap"
+        "Fourth Time's the Charm",
+        "Bait and Switch"
       ],
-      "buildDescription": "Aggressive sniper · Extended Mag, Accelerated Assault, Triple Tap + Elemental Honing x5, Networked Targeting x5"
+      "buildDescription": "Precision linear fusion rifle · Accelerated Coils, Charge MW, e. Fourth Time's the Charm + e. Bait and Switch"
+    },
+    "Prophet of Doom": {
+      "dps": 3082,
+      "totalDamage": 51145,
+      "buildPerks": [
+        "Reconstruction",
+        "Trench Barrel"
+      ],
+      "buildDescription": "Precision shotgun · body, no Backup Mag, Assault Mag, Reconstruction + Trench Barrel, reload cancelling"
+    },
+    "The Lament": {
+      "dps": 3065,
+      "totalDamage": 124138,
+      "buildPerks": [],
+      "buildDescription": "2L1H1R combo, Lucent Blades x3, approximate"
     },
     "Euphony": {
       "dps": 3030,
       "totalDamage": 95395,
       "buildPerks": [],
       "buildDescription": "starts at 0 stacks, Thread of Evolution, includes Threadlings"
+    },
+    "Scintillation": {
+      "dps": 2994,
+      "totalDamage": 89282,
+      "buildPerks": [
+        "Bait and Switch",
+        "Rewind Rounds"
+      ],
+      "buildDescription": "Adaptive burst linear fusion rifle · no Backup Mag, Charge MW, Accelerated Coils, Charge MW, e. Rewind Rounds + e. Bait and Switch"
+    },
+    "Found Verdict": {
+      "dps": 2970,
+      "totalDamage": 59643,
+      "buildPerks": [
+        "Rewind Rounds",
+        "Trench Barrel"
+      ],
+      "buildDescription": "Aggressive shotgun · body, Assault Mag, Timelost Magazine, e. Rewind Rounds + Trench Barrel"
     },
     "One Thousand Voices": {
       "dps": 2969,
@@ -364,20 +427,6 @@
         "Target Acquired"
       ],
       "buildDescription": "Networked Targeting x5, Target Acquired"
-    },
-    "Thunderlord": {
-      "dps": 2910,
-      "totalDamage": 95337,
-      "buildPerks": [],
-      "buildDescription": "Thunderlord"
-    },
-    "The Chaperone": {
-      "dps": 2898,
-      "totalDamage": 31625,
-      "buildPerks": [
-        "The Roadborn"
-      ],
-      "buildDescription": "2 shots to activate The Roadborn, reload cancelling"
     },
     "Two-Tailed Fox": {
       "dps": 2879,
@@ -400,11 +449,29 @@
       "buildPerks": [],
       "buildDescription": "assumes suspend tick every 3 shots"
     },
-    "The Lament": {
-      "dps": 2778,
-      "totalDamage": 112548,
+    "Thunderlord": {
+      "dps": 2794,
+      "totalDamage": 95337,
       "buildPerks": [],
-      "buildDescription": "2L1H1R combo, Lucent Blades x3"
+      "buildDescription": "assumes only one reload post-nerf"
+    },
+    "Fugue-55": {
+      "dps": 2794,
+      "totalDamage": 94761,
+      "buildPerks": [
+        "Fourth Time's the Charm",
+        "Firing Line"
+      ],
+      "buildDescription": "Adaptive sniper · Appended Mag, Fourth Time's the Charm + Firing Line, Networked Targeting x5"
+    },
+    "Trachinus": {
+      "dps": 2785,
+      "totalDamage": 48739,
+      "buildPerks": [
+        "Precision Instrument",
+        "Rapid Hit"
+      ],
+      "buildDescription": "Rapid-fire slug shotgun · Rapid Hit + e. Precision Instrument, reload cancelling"
     },
     "Critical Anomaly": {
       "dps": 2771,
@@ -415,14 +482,14 @@
       ],
       "buildDescription": "Aggressive sniper · Extended Mag, Reconstruction + Chaos Reshaped x2, Networked Targeting x5"
     },
-    "Scintillation": {
-      "dps": 2721,
-      "totalDamage": 81165,
+    "Pure Recollection": {
+      "dps": 2720,
+      "totalDamage": 50934,
       "buildPerks": [
-        "Bait and Switch",
-        "Rewind Rounds"
+        "High-Impact Reserves",
+        "Bait and Switch"
       ],
-      "buildDescription": "Adaptive burst linear fusion rifle · no Backup Mag, Charge MW, Accelerated Coils, Charge MW, e. Rewind Rounds + e. Bait and Switch"
+      "buildDescription": "Heavy burst shotgun · Appended Mag, e. High-Impact Reserves + Bait and Switch, reload cancelling"
     },
     "Lance Ephemeral": {
       "dps": 2715,
@@ -471,6 +538,20 @@
       ],
       "buildDescription": "The Fundamentals"
     },
+    "Touch of Malice": {
+      "dps": 2643,
+      "totalDamage": null,
+      "buildPerks": [],
+      "buildDescription": "final round, blighted, Precision Instrument"
+    },
+    "Deadlock": {
+      "dps": 2615,
+      "totalDamage": 39211,
+      "buildPerks": [
+        "Bait and Switch"
+      ],
+      "buildDescription": "Precision shotgun · body, no Backup Mag, Assault Mag, e. Bait and Switch, reload cancelling"
+    },
     "Grand Overture": {
       "dps": 2598,
       "totalDamage": 127537,
@@ -485,49 +566,11 @@
       ],
       "buildDescription": "Paracausal Imbuement"
     },
-    "Found Verdict": {
-      "dps": 2583,
-      "totalDamage": 51863,
-      "buildPerks": [
-        "Rewind Rounds",
-        "Trench Barrel"
-      ],
-      "buildDescription": "Aggressive shotgun · body, Assault Mag, Timelost Magazine, e. Rewind Rounds + Trench Barrel"
-    },
-    "Cataclysmic": {
-      "dps": 2572,
-      "totalDamage": 102376,
-      "buildPerks": [
-        "Fourth Time's the Charm",
-        "Bait and Switch"
-      ],
-      "buildDescription": "Precision linear fusion rifle · Accelerated Coils, Charge MW, e. Fourth Time's the Charm + e. Bait and Switch"
-    },
-    "Prophet of Doom": {
-      "dps": 2568,
-      "totalDamage": 42621,
-      "buildPerks": [
-        "Reconstruction",
-        "Trench Barrel"
-      ],
-      "buildDescription": "Precision shotgun · body, no Backup Mag, Assault Mag, Reconstruction + Trench Barrel, reload cancelling"
-    },
-    "Without Remorse": {
-      "dps": 2535,
-      "totalDamage": 30956,
-      "buildPerks": [
-        "Vorpal Weapon"
-      ],
-      "buildDescription": "Lightweight shotgun · body, Assault Mag, Vorpal Weapon, reload cancelling"
-    },
-    "Trachinus": {
-      "dps": 2531,
-      "totalDamage": 44308,
-      "buildPerks": [
-        "Precision Instrument",
-        "Rapid Hit"
-      ],
-      "buildDescription": "Rapid-fire slug shotgun · Rapid Hit + e. Precision Instrument, reload cancelling"
+    "Xenophage": {
+      "dps": 2523,
+      "totalDamage": 59631,
+      "buildPerks": [],
+      "buildDescription": "Xenophage"
     },
     "Finality's Auger": {
       "dps": 2522,
@@ -543,14 +586,13 @@
       ],
       "buildDescription": "Rapid-fire shotgun · body, Cast No Shadows, Trench Barrel, melee reloads"
     },
-    "Pure Recollection": {
-      "dps": 2472,
-      "totalDamage": 46303,
+    "Psi Aeterna IV": {
+      "dps": 2503,
+      "totalDamage": 34172,
       "buildPerks": [
-        "High-Impact Reserves",
-        "Bait and Switch"
+        "Elemental Honing"
       ],
-      "buildDescription": "Heavy burst shotgun · Appended Mag, e. High-Impact Reserves + Bait and Switch, reload cancelling"
+      "buildDescription": "Micro-missile pulse rifle · Appended Mag, Rewind Rounds + Elemental Honing x5, Accelerated Assault"
     },
     "Riskrunner": {
       "dps": 2472,
@@ -564,12 +606,6 @@
       "buildPerks": [],
       "buildDescription": "body, average across both shots"
     },
-    "Truth": {
-      "dps": 2461,
-      "totalDamage": 49756,
-      "buildPerks": [],
-      "buildDescription": "Truth"
-    },
     "Ex Diris": {
       "dps": 2443,
       "totalDamage": 53996,
@@ -582,14 +618,14 @@
       "buildPerks": [],
       "buildDescription": "projectile"
     },
-    "Fugue-55": {
-      "dps": 2429,
-      "totalDamage": 82401,
+    "Arcane Embrace": {
+      "dps": 2417,
+      "totalDamage": 87474,
       "buildPerks": [
         "Fourth Time's the Charm",
-        "Firing Line"
+        "Aggregate Charge"
       ],
-      "buildDescription": "Adaptive sniper · Appended Mag, Fourth Time's the Charm + Firing Line, Networked Targeting x5"
+      "buildDescription": "Heavy burst shotgun · Appended Mag, Fourth Time's the Charm + e. Aggregate Charge x3"
     },
     "Parasite": {
       "dps": 2406,
@@ -603,26 +639,47 @@
       "buildPerks": [],
       "buildDescription": "Gjallarhorn"
     },
-    "Xenophage": {
-      "dps": 2380,
-      "totalDamage": 44341,
-      "buildPerks": [],
-      "buildDescription": "Xenophage"
-    },
-    "Falling Guillotine": {
-      "dps": 2330,
-      "totalDamage": 52929,
+    "The Eremite": {
+      "dps": 2358,
+      "totalDamage": 73938,
       "buildPerks": [
-        "Whirlwind Blade",
-        "Frenzy"
+        "Envious Assassin",
+        "Controlled Burst"
       ],
-      "buildDescription": "Vortex sword · 1H2L combo, Jagged Edge, Frenzy + Whirlwind Blade, Lucent Blades x3, Pack Hunter"
+      "buildDescription": "High-impact fusion rifle · Accelerated Coils, Charge MW, Envious Assassin + Controlled Burst"
     },
     "Bastion": {
       "dps": 2288,
       "totalDamage": 90572,
       "buildPerks": [],
       "buildDescription": "Saint's Fury, includes melee time"
+    },
+    "Riptide": {
+      "dps": 2265,
+      "totalDamage": 47643,
+      "buildPerks": [
+        "Auto-Loading Holster",
+        "Controlled Burst"
+      ],
+      "buildDescription": "Rapid-fire fusion rifle · Bandolier, Accelerated Coils, Charge MW, Auto-Loading Holster + Controlled Burst, Accelerated Assault"
+    },
+    "Techeun Force": {
+      "dps": 2262,
+      "totalDamage": 51187,
+      "buildPerks": [
+        "Controlled Burst",
+        "Rewind Rounds"
+      ],
+      "buildDescription": "Adaptive fusion rifle · Accelerated Coils, Charge MW, e. Rewind Rounds + Controlled Burst"
+    },
+    "Axial Lacuna": {
+      "dps": 2227,
+      "totalDamage": 60996,
+      "buildPerks": [
+        "Controlled Burst",
+        "Reconstruction"
+      ],
+      "buildDescription": "Precision fusion rifle · no Backup Mag, Accelerated Coils, Charge MW, Reconstruction + Controlled Burst"
     },
     "Barrow-Dyad": {
       "dps": 2220,
@@ -632,45 +689,11 @@
       ],
       "buildDescription": "Target Lock, Taken Ambition, Peacekeepers"
     },
-    "Retrofuturist": {
-      "dps": 2200,
-      "totalDamage": 40378,
-      "buildPerks": [
-        "Trench Barrel"
-      ],
-      "buildDescription": "Lightweight shotgun · body, Assault Mag, Trench Barrel, reload cancelling"
-    },
-    "Arcane Embrace": {
-      "dps": 2197,
-      "totalDamage": 79522,
-      "buildPerks": [
-        "Fourth Time's the Charm",
-        "Aggregate Charge"
-      ],
-      "buildDescription": "Heavy burst shotgun · Appended Mag, Fourth Time's the Charm + e. Aggregate Charge x3"
-    },
-    "Deadlock": {
-      "dps": 2179,
-      "totalDamage": 32676,
-      "buildPerks": [
-        "Bait and Switch"
-      ],
-      "buildDescription": "Precision shotgun · body, no Backup Mag, Assault Mag, e. Bait and Switch, reload cancelling"
-    },
     "Final Warning": {
       "dps": 2115,
       "totalDamage": null,
       "buildPerks": [],
       "buildDescription": "15 shot half charge auto into tap fire burst, catalyst"
-    },
-    "Lionfish-4fr": {
-      "dps": 2112,
-      "totalDamage": 42656,
-      "buildPerks": [
-        "Controlled Burst",
-        "Reconstruction"
-      ],
-      "buildDescription": "Rapid-fire fusion rifle · Bandolier, Accelerated Coils, Charge MW, Reconstruction + Controlled Burst"
     },
     "Tessellation": {
       "dps": 2111,
@@ -715,24 +738,6 @@
       ],
       "buildDescription": "Rapid-fire machine gun · no Backup Mag, Tactical Mag, e. Fourth Time's the Charm + e. Target Lock"
     },
-    "Techeun Force": {
-      "dps": 2056,
-      "totalDamage": 46534,
-      "buildPerks": [
-        "Controlled Burst",
-        "Rewind Rounds"
-      ],
-      "buildDescription": "Adaptive fusion rifle · Accelerated Coils, Charge MW, e. Rewind Rounds + Controlled Burst"
-    },
-    "The Eremite": {
-      "dps": 2050,
-      "totalDamage": 64294,
-      "buildPerks": [
-        "Envious Assassin",
-        "Controlled Burst"
-      ],
-      "buildDescription": "High-impact fusion rifle · Accelerated Coils, Charge MW, Envious Assassin + Controlled Burst"
-    },
     "Salvation's Grip": {
       "dps": 2035,
       "totalDamage": 39291,
@@ -747,6 +752,15 @@
         "Target Lock"
       ],
       "buildDescription": "Aggressive machine gun · Appended Mag, Envious Assassin + e. Target Lock"
+    },
+    "Falling Guillotine": {
+      "dps": 1992,
+      "totalDamage": 72644,
+      "buildPerks": [
+        "Relentless Strikes",
+        "Whirlwind Blade"
+      ],
+      "buildDescription": "Vortex sword · 1H2L combo, Jagged Edge, Relentless Strikes + Whirlwind Blade, Lucent Blades x3, Pack Hunter"
     },
     "Tarrabah": {
       "dps": 1977,
@@ -771,12 +785,6 @@
       ],
       "buildDescription": "Adaptive SMG · no Backup Mag, Extended Mag, e. Rewind Rounds + e. Target Lock, Peacekeepers"
     },
-    "Touch of Malice": {
-      "dps": 1922,
-      "totalDamage": null,
-      "buildPerks": [],
-      "buildDescription": "final round, blighted"
-    },
     "Hammerhead": {
       "dps": 1890,
       "totalDamage": 212210,
@@ -785,15 +793,6 @@
         "Target Lock"
       ],
       "buildDescription": "Adaptive machine gun · Appended Mag, e. Fourth Time's the Charm + e. Target Lock"
-    },
-    "Axial Lacuna": {
-      "dps": 1856,
-      "totalDamage": 50830,
-      "buildPerks": [
-        "Controlled Burst",
-        "Reconstruction"
-      ],
-      "buildDescription": "Precision fusion rifle · no Backup Mag, Accelerated Coils, Charge MW, Reconstruction + Controlled Burst"
     },
     "Forerunner": {
       "dps": 1827,
@@ -834,6 +833,20 @@
       ],
       "buildDescription": "High-impact machine gun · Tactical Mag, Fourth Time's the Charm + e. Target Lock"
     },
+    "Greasy Luck": {
+      "dps": 1762,
+      "totalDamage": 43557,
+      "buildPerks": [
+        "Redirection"
+      ],
+      "buildDescription": "Rapid-fire glaive · no Backup Mag, projectile, Redirection x30"
+    },
+    "Heirloom": {
+      "dps": 1729,
+      "totalDamage": 108883,
+      "buildPerks": [],
+      "buildDescription": "fully charged, catalyst, approximate"
+    },
     "Arbalest": {
       "dps": 1726,
       "totalDamage": 42515,
@@ -861,25 +874,19 @@
       "buildPerks": [],
       "buildDescription": "auto-loaded, Composite Propellant x5"
     },
-    "Heirloom": {
-      "dps": 1639,
-      "totalDamage": 51727,
-      "buildPerks": [],
-      "buildDescription": "1 charge, catalyst"
+    "Forthcoming Deviance": {
+      "dps": 1635,
+      "totalDamage": 40427,
+      "buildPerks": [
+        "Chaos Reshaped"
+      ],
+      "buildDescription": "Rapid-fire glaive · no Backup Mag, projectile, Chaos Reshaped x2"
     },
     "Osteo Striga": {
       "dps": 1621,
       "totalDamage": null,
       "buildPerks": [],
       "buildDescription": "Peacekeepers"
-    },
-    "Greasy Luck": {
-      "dps": 1602,
-      "totalDamage": 39598,
-      "buildPerks": [
-        "Redirection"
-      ],
-      "buildDescription": "Rapid-fire glaive · no Backup Mag, projectile, Redirection x30"
     },
     "Ticuu's Divination": {
       "dps": 1546,
@@ -922,14 +929,6 @@
       "totalDamage": 97665,
       "buildPerks": [],
       "buildDescription": "Service of Luzaku"
-    },
-    "Forthcoming Deviance": {
-      "dps": 1486,
-      "totalDamage": 36752,
-      "buildPerks": [
-        "Chaos Reshaped"
-      ],
-      "buildDescription": "Rapid-fire glaive · no Backup Mag, projectile, Chaos Reshaped x2"
     },
     "Jötunn": {
       "dps": 1438,
@@ -1046,6 +1045,12 @@
       "buildPerks": [],
       "buildDescription": "16 marked shots"
     },
+    "Divinity": {
+      "dps": 986,
+      "totalDamage": 32975,
+      "buildPerks": [],
+      "buildDescription": "held down, approximate"
+    },
     "Graviton Spike": {
       "dps": 954,
       "totalDamage": null,
@@ -1089,12 +1094,6 @@
       "totalDamage": null,
       "buildPerks": [],
       "buildDescription": "successive mags, Vorpal Weapon"
-    },
-    "Divinity": {
-      "dps": 802,
-      "totalDamage": 26820,
-      "buildPerks": [],
-      "buildDescription": "held down"
     },
     "Quicksilver Storm": {
       "dps": 780,

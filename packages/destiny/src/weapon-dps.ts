@@ -1,5 +1,5 @@
 export const WEAPON_DPS_SHEET_ID = "1_5wtBjRYHHxuF4oJKDb_iOGZs-wTkzB6RYbnyNLbuz4";
-export const WEAPON_DPS_SHEET_GID = "1356041045";
+export const WEAPON_DPS_SHEET_GID = "1455724279";
 export const WEAPON_DPS_SHEET_NAME = "Sustained";
 
 export const WEAPON_DPS_SHEET_CSV_URL = `https://docs.google.com/spreadsheets/d/${WEAPON_DPS_SHEET_ID}/export?format=csv&gid=${WEAPON_DPS_SHEET_GID}`;
