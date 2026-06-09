@@ -4,8 +4,6 @@ import { useDeferredValue, useMemo } from "react";
 import type { ValueSuggestion } from "@repo/ui";
 import { bestGhostCompletion, suggestWeaponNames, type WeaponSummary } from "@repo/destiny";
 
-import { isFirefox } from "../lib/is-firefox";
-
 export interface UsePaletteGhostCompletionParams {
   enabled: boolean;
   query: string;
@@ -24,11 +22,12 @@ export function usePaletteGhostCompletion({
   recentValues,
 }: UsePaletteGhostCompletionParams) {
   const deferredQuery = useDeferredValue(query);
-  const ghostQuery = isFirefox() ? deferredQuery : query;
+  const deferredInlineSuggestions = useDeferredValue(inlineSuggestions);
+  const ghostQuery = deferredQuery;
 
   const candidates = useMemo(() => {
     if (!enabled || !ghostQuery.trim()) return [];
-    const items: { label: string; popularity?: number }[] = inlineSuggestions.map((s) => ({
+    const items: { label: string; popularity?: number }[] = deferredInlineSuggestions.map((s) => ({
       label: s.value,
     }));
     if (mode === "weapon") {
@@ -37,15 +36,16 @@ export function usePaletteGhostCompletion({
       }
     }
     return items;
-  }, [enabled, ghostQuery, inlineSuggestions, mode, weapons]);
+  }, [enabled, ghostQuery, deferredInlineSuggestions, mode, weapons]);
 
   const ghost = useMemo(
     () => (enabled ? bestGhostCompletion(ghostQuery, candidates, recentValues) : undefined),
     [enabled, ghostQuery, candidates, recentValues],
   );
+  const ready = ghostQuery === query;
 
   return {
-    ghostCompletion: ghost?.label,
-    ghostSuffix: ghost?.suffix,
+    ghostCompletion: ready ? ghost?.label : undefined,
+    ghostSuffix: ready ? ghost?.suffix : undefined,
   };
 }

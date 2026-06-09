@@ -222,10 +222,12 @@ function PreviewResultsExpand({
   const contentRef = useRef<HTMLDivElement>(null);
   const [height, setHeight] = useState(0);
   const [expanded, setExpanded] = useState(false);
+  const instantExpandRef = useRef(false);
   const itemsKey = useMemo(() => items.map((item) => itemKey(item)).join("\u0000"), [items]);
 
   useLayoutEffect(() => {
     if (items.length === 0) {
+      instantExpandRef.current = false;
       setHeight(0);
       setExpanded(false);
       return;
@@ -237,9 +239,21 @@ function PreviewResultsExpand({
     const measure = () => node.scrollHeight;
 
     if (instantExpand) {
+      instantExpandRef.current = true;
       setExpanded(true);
       setHeight(measure());
       return;
+    }
+
+    if (instantExpandRef.current) {
+      instantExpandRef.current = false;
+      setExpanded(true);
+      setHeight(measure());
+      const observer = new ResizeObserver(() => {
+        setHeight(measure());
+      });
+      observer.observe(node);
+      return () => observer.disconnect();
     }
 
     setExpanded(false);

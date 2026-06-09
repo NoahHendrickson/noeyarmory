@@ -41,6 +41,7 @@ import type { PaletteResultsMode } from "../lib/palette/results-mode";
 import { useOwnedArmor } from "../lib/use-owned-armor";
 import { useCustomWeaponFilters } from "../lib/use-custom-weapon-filters";
 import {
+  excludeCurrentRecentSearch,
   filterRecentSearches,
   formatRecentSearchLabel,
   useRecentSearches,
@@ -463,11 +464,12 @@ export function HomeSearch({
     const recents = query.trim()
       ? filterRecentSearches(getRecentForMode(mode), query)
       : getRecentForMode(mode);
-    return recents.map((search) => ({
-      id: search.id,
-      label: formatRecentSearchLabel(search.chips, search.query),
-    }));
-  }, [composingCustomFilter, getRecentForMode, mode, query]);
+    return excludeCurrentRecentSearch(recents, mode, query, chips)
+      .map((search) => ({
+        id: search.id,
+        label: formatRecentSearchLabel(search.chips, search.query),
+      }));
+  }, [composingCustomFilter, getRecentForMode, mode, query, chips]);
 
   const placeholder = composingCustomFilter
     ? customFilterComposer!.perkNames.length > 0

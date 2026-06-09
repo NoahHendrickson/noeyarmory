@@ -5,15 +5,10 @@ import type { PaletteChip, ValueSuggestion } from "@repo/ui";
 import { createOwnedArmorFuse, filterOwnedArmor, searchOwnedArmor, sortOwnedArmor } from "@repo/destiny";
 
 import type { OwnedArmorItem } from "../lib/armor-types";
-import { isFirefox } from "../lib/is-firefox";
-import {
-  MAX_PREVIEW_RESULTS,
-  MAX_PREVIEW_RESULTS_FIREFOX,
-  MAX_RESULTS,
-  MAX_SHOW_ALL,
-} from "../lib/palette/constants";
+import { MAX_RESULTS, MAX_SHOW_ALL } from "../lib/palette/constants";
 import { chipsToArmorFilters } from "../lib/palette/weapon-filters";
 import { buildArmorCategories } from "../lib/palette/armor-categories";
+import { usePalettePreviewInput } from "./use-palette-preview-input";
 
 export interface UseArmorSearchResultsParams {
   owned: OwnedArmorItem[];
@@ -38,13 +33,11 @@ export function useArmorSearchResults({
   const armorFilters = useMemo(() => chipsToArmorFilters(chips), [chips]);
   const armorFuse = useMemo(() => createOwnedArmorFuse(owned), [owned]);
   const deferredQuery = useDeferredValue(query);
-  const deferPreviewsForInput = isFirefox();
-  const previewResultLimit = deferPreviewsForInput ? MAX_PREVIEW_RESULTS_FIREFOX : MAX_PREVIEW_RESULTS;
-  const previewQuery = previewsEnabled
-    ? deferPreviewsForInput
-      ? deferredQuery
-      : query
-    : deferredQuery;
+  const { previewQuery, previewInlineSuggestions, previewResultLimit } = usePalettePreviewInput(
+    query,
+    null,
+    inlineSuggestions,
+  );
   const armorCategories = useMemo(() => buildArmorCategories(owned), [owned]);
 
   const armorResults = useMemo(() => {
@@ -80,7 +73,7 @@ export function useArmorSearchResults({
       ),
     );
 
-    for (const suggestion of inlineSuggestions) {
+    for (const suggestion of previewInlineSuggestions) {
       const category = armorCategories.find((c) => c.id === suggestion.categoryId);
       if (!category) continue;
       const filters = chipsToArmorFilters([
@@ -106,7 +99,7 @@ export function useArmorSearchResults({
     armorFilters,
     armorCategories,
     chips,
-    inlineSuggestions,
+    previewInlineSuggestions,
   ]);
 
   return {

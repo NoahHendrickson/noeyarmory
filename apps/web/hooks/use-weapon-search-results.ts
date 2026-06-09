@@ -17,15 +17,13 @@ import {
   type WeaponSummary,
 } from "@repo/destiny";
 
-import { isFirefox } from "../lib/is-firefox";
 import type { PaletteResultsMode } from "../lib/palette/results-mode";
 import {
-  MAX_PREVIEW_RESULTS,
-  MAX_PREVIEW_RESULTS_FIREFOX,
   MAX_RESULTS,
   MAX_SHOW_ALL,
 } from "../lib/palette/constants";
 import { chipsToWeaponFilters, withHypotheticalChip } from "../lib/palette/weapon-filters";
+import { usePalettePreviewInput } from "./use-palette-preview-input";
 
 export interface UseWeaponSearchResultsParams {
   weapons: WeaponSummary[];
@@ -91,20 +89,8 @@ export function useWeaponSearchResults({
 
   const weaponFuse = useMemo(() => createWeaponFuse(weapons), [weapons]);
   const deferredQuery = useDeferredValue(query);
-  const deferredPanelState = useDeferredValue(panelState);
-  const deferPreviewsForInput = isFirefox();
-  const previewResultLimit = deferPreviewsForInput ? MAX_PREVIEW_RESULTS_FIREFOX : MAX_PREVIEW_RESULTS;
-  // Live preview query in Chrome; Firefox defers to keep keystrokes off the critical path.
-  const previewQuery = previewsEnabled
-    ? deferPreviewsForInput
-      ? deferredQuery
-      : query
-    : deferredQuery;
-  const previewPanelState = previewsEnabled
-    ? deferPreviewsForInput
-      ? deferredPanelState
-      : panelState
-    : deferredPanelState;
+  const { previewQuery, previewPanelState, previewInlineSuggestions, previewResultLimit } =
+    usePalettePreviewInput(query, panelState, inlineSuggestions);
   const textSearchActive = resultsMode === "text";
 
   const weaponResults = useMemo(() => {
@@ -137,16 +123,6 @@ export function useWeaponSearchResults({
     };
 
     const q = previewQuery.trim();
-    if (q.length >= MIN_WEAPON_TEXT_QUERY_LENGTH) {
-      appendWeapons(
-        filterWeapons(
-          weaponsForPreviewQuery(weapons, weaponFuse, q, previewResultLimit),
-          base,
-          perks,
-        ),
-      );
-    }
-
     let filterSets: WeaponFilters[] = [];
 
     if (
@@ -164,13 +140,23 @@ export function useWeaponSearchResults({
           );
       }
     } else if (previewPanelState.panel === "categories" && q) {
-      filterSets = inlineSuggestions.map((s) =>
+      filterSets = previewInlineSuggestions.map((s) =>
         withHypotheticalChip(base, s.categoryId, s.value, s.valueId, customFilters),
       );
     }
 
-    for (const filters of filterSets) {
-      appendWeapons(filterWeapons(weapons, filters, perks));
+    if (filterSets.length > 0) {
+      for (const filters of filterSets) {
+        appendWeapons(filterWeapons(weapons, filters, perks));
+      }
+    } else if (q.length >= MIN_WEAPON_TEXT_QUERY_LENGTH) {
+      appendWeapons(
+        filterWeapons(
+          weaponsForPreviewQuery(weapons, weaponFuse, q, previewResultLimit),
+          base,
+          perks,
+        ),
+      );
     }
 
     if (candidates.length === 0) return [];
@@ -191,7 +177,7 @@ export function useWeaponSearchResults({
     sort,
     dpsByName,
     weaponFuse,
-    inlineSuggestions,
+    previewInlineSuggestions,
   ]);
 
   return {

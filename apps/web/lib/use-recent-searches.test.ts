@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import {
   clearRecentSearchesForMode,
   createRecentSearchEntries,
+  excludeCurrentRecentSearch,
   formatRecentSearchLabel,
   prependRecentSearches,
   removeRecentSearch,
@@ -75,6 +76,35 @@ describe("prependRecentSearches", () => {
     expect(updated).toHaveLength(2);
     expect(updated[0]?.chips).toEqual([trait2Surrounded]);
     expect(updated[1]?.chips).toEqual([weaponTypeFusion]);
+  });
+});
+
+describe("excludeCurrentRecentSearch", () => {
+  test("removes the exact current query-only search", () => {
+    const searches = createRecentSearchEntries("weapon", "Demolitionist", [], "t1");
+
+    expect(excludeCurrentRecentSearch(searches, "weapon", " demolitionist ", [])).toEqual([]);
+  });
+
+  test("removes the exact current chip search", () => {
+    const searches = createRecentSearchEntries("weapon", "", [trait2Surrounded], "t1");
+
+    expect(excludeCurrentRecentSearch(searches, "weapon", "", [trait2Surrounded])).toEqual([]);
+  });
+
+  test("keeps different modes and different chips", () => {
+    const armorSearch: RecentSearch = {
+      id: "armor",
+      mode: "armor",
+      query: "Demolitionist",
+      chips: [],
+      updatedAt: "t1",
+    };
+    const weaponSearch = createRecentSearchEntries("weapon", "", [weaponTypeFusion], "t1")[0]!;
+
+    expect(
+      excludeCurrentRecentSearch([armorSearch, weaponSearch], "weapon", "Demolitionist", []),
+    ).toEqual([armorSearch, weaponSearch]);
   });
 });
 
