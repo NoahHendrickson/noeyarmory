@@ -4,7 +4,6 @@ import {
   dormantSnapshotMatches,
   PANEL_TRANSITION_MS,
   shouldDeferPreviews,
-  stripPreviewItems,
 } from "./palette-reducer";
 import type { ClosingSnapshot, DormantSnapshot, ListMode, PaletteItem } from "./types";
 
@@ -45,10 +44,9 @@ export function usePaletteAnimation({
   const finishOpenAnimation = useCallback(
     (deferPreviews: boolean) => {
       clearOpenAnimationTimer();
-      clearOpeningSnapshot();
       if (deferPreviews) setPreviewsMounted(true);
     },
-    [clearOpenAnimationTimer, clearOpeningSnapshot],
+    [clearOpenAnimationTimer],
   );
 
   const startPreviewDeferTimer = useCallback(() => {
@@ -87,7 +85,7 @@ export function usePaletteAnimation({
       if (shouldDeferPreviews(query, chipsLength)) {
         dormantSnapshotRef.current = {
           mode: currentMode,
-          items: stripPreviewItems(currentItems),
+          items: [...currentItems],
           query: query.trim(),
           chipsLength,
         };
@@ -159,5 +157,6 @@ export function usePaletteAnimation({
     openingSnapshot,
     seedOpeningSnapshot,
     beginCloseAnimation,
+    clearOpeningSnapshot,
   };
 }

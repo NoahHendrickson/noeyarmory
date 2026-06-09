@@ -32,6 +32,14 @@ import type { CommandPaletteProps, ListMode, PaletteCategory, PaletteItem } from
 import { usePaletteAnimation } from "./use-palette-animation";
 import { usePaletteListSelection } from "./use-palette-list-selection";
 
+function useStableCallback<TArgs extends unknown[], TResult>(
+  callback: (...args: TArgs) => TResult,
+): (...args: TArgs) => TResult {
+  const callbackRef = useRef(callback);
+  callbackRef.current = callback;
+  return useCallback((...args: TArgs) => callbackRef.current(...args), []);
+}
+
 export type {
   CommandPaletteProps,
   PaletteAction,
@@ -183,6 +191,7 @@ export function CommandPalette({
     openingSnapshot,
     seedOpeningSnapshot,
     beginCloseAnimation,
+    clearOpeningSnapshot,
   } = usePaletteAnimation({
     open,
     query,
@@ -289,17 +298,42 @@ export function CommandPalette({
     ],
   );
 
-  function openPanel() {
+  useEffect(() => {
+    if (!open || !openingSnapshot) return;
+    const liveResults = items.filter((item) => item.kind === "result").length;
+    const snapshotResults = openingSnapshot.items.filter((item) => item.kind === "result").length;
+    if (snapshotResults === 0 || liveResults >= snapshotResults) {
+      clearOpeningSnapshot();
+    }
+  }, [open, openingSnapshot, items, clearOpeningSnapshot]);
+
+  const renderMode = open
+    ? (openingSnapshot?.mode ?? mode)
+    : (closingSnapshot?.mode ?? null);
+  const renderItems = open
+    ? (openingSnapshot?.items ?? items)
+    : (closingSnapshot?.items ?? []);
+  const latestRenderSnapshotRef = useRef<{ mode: ListMode | null; items: PaletteItem[] }>({
+    mode: null,
+    items: [],
+  });
+
+  useLayoutEffect(() => {
+    latestRenderSnapshotRef.current = { mode: renderMode, items: renderItems };
+  }, [renderMode, renderItems]);
+
+  const openPanel = useStableCallback(() => {
     seedOpeningSnapshot();
     dispatch({ type: "open" });
     onOpenChange?.(true);
-  }
+  });
 
-  function closePanel() {
-    beginCloseAnimation(mode, items);
+  const closePanel = useStableCallback(() => {
+    const snapshot = latestRenderSnapshotRef.current;
+    beginCloseAnimation(snapshot.mode, snapshot.items);
     dispatch({ type: "close" });
     onOpenChange?.(false);
-  }
+  });
 
   const activeIndex =
     state.activeIndex < 0 ? -1 : Math.min(state.activeIndex, Math.max(0, items.length - 1));
@@ -568,13 +602,6 @@ export function CommandPalette({
       : chips.length > 0 && onClearChips != null
         ? "Clear all filters"
         : "Clear search";
-
-  const renderMode = open
-    ? (openingSnapshot?.mode ?? mode)
-    : (closingSnapshot?.mode ?? null);
-  const renderItems = open
-    ? (openingSnapshot?.items ?? items)
-    : (closingSnapshot?.items ?? []);
 
   const comboboxProps = {
     role: "combobox" as const,
