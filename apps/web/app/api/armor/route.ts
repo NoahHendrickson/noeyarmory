@@ -29,6 +29,7 @@ export async function GET() {
         rolledMods: o.rolledMods.map((m) => ({ hash: m.hash, name: m.name, icon: m.icon })),
         isArmor30: o.isArmor30,
         setName: o.setName,
+        setBonuses: o.setBonuses,
         archetype: o.archetype,
         tertiaryStat: o.tertiaryStat,
         tunableStat: o.tunableStat,

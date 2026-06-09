@@ -209,10 +209,16 @@ export interface ArmorArchetypeRef {
   name: string;
 }
 
+export interface Armor30SetBonus {
+  requiredSetCount: number;
+  name: string;
+  description?: string;
+}
+
 export interface Armor30SetRef {
   hash: number;
   name: string;
-  perkNames: string[];
+  bonuses: Armor30SetBonus[];
 }
 
 export interface ArmorIndex {
