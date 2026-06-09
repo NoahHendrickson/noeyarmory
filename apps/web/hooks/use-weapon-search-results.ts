@@ -8,6 +8,7 @@ import {
   filterWeaponNames,
   filterWeapons,
   hasStrongWeaponNameMatch,
+  isCatalogWeapon,
   mergeWeaponFilters,
   MIN_WEAPON_TEXT_QUERY_LENGTH,
   planWeaponTextSearch,
@@ -67,7 +68,9 @@ function weaponsForPreviewQuery(
     (match) => match.searchRank === 0 && match.value.toLowerCase() === q.toLowerCase(),
   );
   if (exact) {
-    return nameIndex.byName.get(exact.value) ?? weapons.filter((weapon) => weapon.name === exact.value);
+    return (
+      nameIndex.byName.get(exact.value) ?? weapons.filter((weapon) => weapon.name === exact.value)
+    ).filter(isCatalogWeapon);
   }
 
   return weaponsMatchingTextQuery(weapons, weaponFuse, q, limit, nameIndex);

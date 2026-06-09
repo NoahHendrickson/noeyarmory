@@ -11,6 +11,7 @@ import {
   matchesWeaponSource,
   RAID_SOURCE_LABELS,
 } from "./weapon-provenance";
+import { isCatalogWeapon } from "./weapon-variants";
 
 export type { WeaponNameIndex } from "./weapon-name-index";
 export { buildWeaponNameIndex } from "./weapon-name-index";
@@ -193,6 +194,7 @@ export function filterWeapons(
   const originWanted = new Set((filters.originTrait ?? []).map(lower));
   const needsOwned = requiredPerks.length > 0 || customPerkGroups.length > 0;
   return weapons.filter((w) => {
+    if (!isCatalogWeapon(w)) return false;
     if (!matchesFacet(w.name, filters.name)) return false;
     if (!matchesFacet(w.element, filters.element)) return false;
     if (!matchesFacet(w.type, filters.type)) return false;
@@ -244,9 +246,11 @@ export function weaponsWithPerk(
   weapons: WeaponSummary[],
   perk: string | number,
 ): WeaponSummary[] {
-  if (typeof perk === "number") return weapons.filter((w) => w.perkHashes.includes(perk));
+  if (typeof perk === "number") {
+    return weapons.filter((w) => isCatalogWeapon(w) && w.perkHashes.includes(perk));
+  }
   const target = lower(perk);
-  return weapons.filter((w) => w.perksLower.includes(target));
+  return weapons.filter((w) => isCatalogWeapon(w) && w.perksLower.includes(target));
 }
 
 function weaponNameRank(nameLower: string, queryLower: string): number | null {
@@ -373,7 +377,9 @@ export function weaponsMatchingTextQuery(
   const rankedNames = sortFilteredWeaponNames(filterWeaponNames(weapons, q, index));
   for (const { value } of rankedNames) {
     // O(1) expansion via the prebuilt name index; fall back to a scan otherwise.
-    const named = index?.byName.get(value) ?? weapons.filter((weapon) => weapon.name === value);
+    const named = (
+      index?.byName.get(value) ?? weapons.filter((weapon) => weapon.name === value)
+    ).filter(isCatalogWeapon);
     appendUniqueWeapons(seen, merged, named);
   }
 
@@ -551,6 +557,7 @@ export function collectFacets(weapons: WeaponSummary[]): Record<string, FacetOpt
   let craftableNo = 0;
 
   for (const w of weapons) {
+    if (!isCatalogWeapon(w)) continue;
     if (w.element) element.set(w.element, (element.get(w.element) ?? 0) + 1);
     if (w.type) type.set(w.type, (type.get(w.type) ?? 0) + 1);
     if (w.ammo) ammo.set(w.ammo, (ammo.get(w.ammo) ?? 0) + 1);

@@ -74,6 +74,8 @@ export interface WeaponSummary {
   source?: string;
   /** Manifest investment-table index — proxy for add order when season is unknown. */
   releaseIndex: number;
+  /** Legacy item hash superseded by a newer craftable twin (still kept for direct URL / vault). */
+  superseded?: boolean;
   /** Base Ammo Generation display value (0–100); omitted when the weapon has no such stat. */
   ammoGeneration?: number;
   columns: InternedPerkColumn[];

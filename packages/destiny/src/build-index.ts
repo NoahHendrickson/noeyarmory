@@ -3,6 +3,7 @@ import type { DestinyInventoryItemDefinition } from "bungie-api-ts/destiny2";
 import type { DestinyIconDefinitionEntry, ManifestDefs } from "./manifest";
 import { internWeaponCatalog } from "./intern-weapons";
 import { normalizeWeaponSource, resolveWeaponSeason } from "./weapon-provenance";
+import { reconcileCraftableTwins } from "./weapon-variants";
 import { GENERIC_WEAPON_TYPE_ICONS } from "./weapon-type-icon-paths";
 import type {
   AmmoTypeRef,
@@ -363,7 +364,8 @@ export function buildWeaponIndex(
   }
 
   weapons.sort((a, b) => a.name.localeCompare(b.name));
-  const { index, detailIndex } = internWeaponCatalog(weapons, version);
+  const reconciled = reconcileCraftableTwins(weapons);
+  const { index, detailIndex } = internWeaponCatalog(reconciled, version);
   const statGroupHashes = new Set<number>();
   for (const weapon of weapons) {
     if (weapon.statGroupHash != null) statGroupHashes.add(weapon.statGroupHash);

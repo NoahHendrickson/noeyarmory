@@ -166,6 +166,7 @@ export {
   resolveWeaponSeason,
   type ResolvedWeaponSeason,
 } from "./weapon-provenance";
+export { isCatalogWeapon, reconcileCraftableTwins } from "./weapon-variants";
 export { sampleWeapons } from "./fixtures/sample-weapons";
 export { sampleDamageTypes } from "./fixtures/sample-damage-types";
 export { sampleWeaponTypes } from "./fixtures/sample-weapon-types";

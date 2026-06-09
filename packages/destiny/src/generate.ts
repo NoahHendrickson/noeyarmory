@@ -10,6 +10,7 @@ import { stripPerksLowerReplacer } from "./intern-weapons";
 import { downloadDestinyIconDefinitions, downloadManifest } from "./manifest";
 import { buildNewArmorIndex } from "./new-armor";
 import { serializeWeaponFuseIndex } from "./search";
+import { isCatalogWeapon } from "./weapon-variants";
 import type { ArmorIndex, NewArmorIndex } from "./types";
 import { writeSampleIndexes } from "./write-sample-indexes";
 
@@ -46,7 +47,7 @@ async function generateFromManifest(apiKey: string): Promise<void> {
   console.log("Flattening weapons…");
   const { index, detailIndex } = buildWeaponIndex(defs, version, ammoTypes);
   // Ship a prebuilt fuse.js index so the browser skips the cold-load tokenization pass.
-  index.fuseIndex = serializeWeaponFuseIndex(index.weapons);
+  index.fuseIndex = serializeWeaponFuseIndex(index.weapons.filter(isCatalogWeapon));
   // Drop `perksLower` from the on-disk index — it's a lowercased duplicate of
   // `perks`, re-derived at load by normalizeWeaponIndex. Saves payload + parse time.
   const weaponsContents = JSON.stringify(index, stripPerksLowerReplacer);
