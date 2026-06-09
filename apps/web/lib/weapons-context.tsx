@@ -139,7 +139,7 @@ async function fetchGeneratedDataFile<T>(key: GeneratedDataKey): Promise<T> {
   const path = generatedDataPath(manifest, key);
   try {
     return await fetchJson<T>(path);
-  } catch {
+  } catch (error) {
     const fallbackPath = DEFAULT_GENERATED_DATA_PATHS[key];
     if (path !== fallbackPath) {
       return fetchJson<T>(fallbackPath);
