@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Badge, cn } from "@repo/ui";
+import { cn } from "@repo/ui";
 import {
   computeWeaponStats,
   formatWeaponDpsParts,
@@ -75,7 +75,7 @@ function WeaponDpsSummary({ entry }: { entry: WeaponDpsEntry }) {
   const { total, dps } = formatWeaponDpsParts(entry);
   const hasBenchmarkPerks = entry.buildPerks.length > 0;
   const valueClassName =
-    "tabular-nums font-medium cursor-help underline decoration-dotted decoration-muted-foreground/50 underline-offset-2";
+    "tabular-nums font-medium underline decoration-dotted decoration-muted-foreground/50 underline-offset-2";
 
   return (
     <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-xs">
@@ -203,40 +203,43 @@ export function WeaponDetailView({
   const deltaBaseStats = currentStats;
 
   return (
-    <div>
+    <div className="mx-auto w-fit max-w-full">
       <header className="border-border/50 bg-black/[0.03] -mx-4 -mt-4 flex items-start gap-3 border-b px-4 pb-4 pt-4 backdrop-blur-sm sm:-mx-6 sm:-mt-6 sm:px-6 sm:pb-5 sm:pt-6">
         <WeaponThumbnail weapon={weapon} />
         <div className="min-w-0 flex-1">
           <h2 className="text-lg font-bold tracking-tight sm:text-xl">{weapon.name}</h2>
           <div className="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm leading-none">
-            <span className="inline-flex items-center" title={weapon.element} aria-label={weapon.element}>
-              <ElementIcon
-                element={weapon.element}
-                iconPath={elementIconPath}
-                colored
-                className="size-4"
-              />
-              <span className="sr-only">{weapon.element}</span>
+            <span className="inline-flex items-center gap-1">
+              <span className="inline-flex items-center" title={weapon.element} aria-label={weapon.element}>
+                <ElementIcon
+                  element={weapon.element}
+                  iconPath={elementIconPath}
+                  colored
+                  className="size-4"
+                />
+                <span className="sr-only">{weapon.element}</span>
+              </span>
+              <span
+                className="inline-flex items-center"
+                title={`${weapon.ammo} ammo`}
+                aria-label={`${weapon.ammo} ammo`}
+              >
+                <AmmoIcon ammo={weapon.ammo} iconPath={ammoIconPath} className="size-6" />
+                <span className="sr-only">{weapon.ammo} ammo</span>
+              </span>
+              {weapon.craftable && (
+                <span className="inline-flex items-center" title="Craftable">
+                  <CraftableBadge />
+                </span>
+              )}
             </span>
-            <span
-              className="inline-flex items-center"
-              title={`${weapon.ammo} ammo`}
-              aria-label={`${weapon.ammo} ammo`}
-            >
-              <AmmoIcon ammo={weapon.ammo} iconPath={ammoIconPath} className="size-8" />
-              <span className="sr-only">{weapon.ammo} ammo</span>
-            </span>
-            <span>
-              {weaponTypeLabel(weapon.type, weapon.frame)} {weapon.rarity}
-            </span>
-            {weapon.craftable && <CraftableBadge />}
-            {weapon.adept && <Badge>Adept</Badge>}
+            <span>{weaponTypeLabel(weapon.type, weapon.frame)}</span>
           </div>
         </div>
         <WeaponShareButton weaponHash={weapon.hash} />
       </header>
 
-      <div className="grid grid-cols-1 gap-6 pt-6 md:grid-cols-[minmax(220px,280px)_max-content]">
+      <div className="grid w-fit max-w-full grid-cols-1 gap-6 pt-6 md:grid-cols-[minmax(220px,280px)_max-content]">
         <div className="space-y-3 self-start">
           {dpsEntry && <WeaponDpsSummary entry={dpsEntry} />}
           <StatBars

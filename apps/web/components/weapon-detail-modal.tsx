@@ -48,7 +48,7 @@ export function WeaponDetailModal({
         />
         <DialogPopup
           className={cn(
-            "relative flex max-h-[85vh] w-full max-w-5xl flex-col gap-2 overflow-hidden border-0 bg-transparent p-0 shadow-none backdrop-blur-none",
+            "relative flex max-h-[85vh] w-full max-w-5xl flex-col gap-2 overflow-hidden border-0 bg-transparent p-0 shadow-none backdrop-blur-none md:w-fit",
             "transition-none motion-reduce:transition-none",
             "data-[starting-style]:opacity-100 data-[ending-style]:opacity-100",
           )}

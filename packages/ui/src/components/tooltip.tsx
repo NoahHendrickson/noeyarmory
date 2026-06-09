@@ -1,6 +1,7 @@
 import type { ComponentProps } from "react";
 import { Tooltip as BaseTooltip } from "@base-ui/react/tooltip";
 
+import { frostedSurface } from "../lib/frosted-surface";
 import { cn } from "../lib/utils";
 
 const TooltipProvider = BaseTooltip.Provider;
@@ -44,7 +45,8 @@ function TooltipPopup({ className, ...props }: ComponentProps<typeof BaseTooltip
   return (
     <BaseTooltip.Popup
       className={cn(
-        "bg-popover text-popover-foreground max-w-xs rounded-md border px-3 py-2 text-xs shadow-md outline-none",
+        frostedSurface("panel"),
+        "text-foreground max-w-xs rounded-md px-3 py-2 text-xs outline-none",
         "origin-[var(--transform-origin)] transition-[transform,opacity] duration-100 ease-out",
         "data-ending-style:scale-95 data-ending-style:opacity-0",
         "data-starting-style:scale-95 data-starting-style:opacity-0",

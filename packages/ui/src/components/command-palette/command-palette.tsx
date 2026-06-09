@@ -575,7 +575,7 @@ export function CommandPalette({
       <FrostedShell
         className={cn(
           "transition-[border-radius] duration-[var(--motion-duration-snappy)] ease-spring-snappy motion-reduce:transition-none",
-          open ? "rounded-[12px]" : "rounded-[1.75rem]",
+          open ? "rounded-[20px]" : "rounded-[1.75rem]",
         )}
       >
         <div className="flex flex-col">

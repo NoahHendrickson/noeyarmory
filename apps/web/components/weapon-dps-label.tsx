@@ -55,7 +55,7 @@ export function WeaponDpsMetricTooltip({
   description,
   buildDescription,
   tooltipSide = "left",
-  valueClassName = "inline-flex cursor-help underline decoration-dotted decoration-muted-foreground/50 underline-offset-2",
+  valueClassName = "inline-flex underline decoration-dotted decoration-muted-foreground/50 underline-offset-2",
   children,
 }: {
   label: string;

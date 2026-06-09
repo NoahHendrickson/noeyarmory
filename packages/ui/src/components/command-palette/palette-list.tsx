@@ -7,6 +7,9 @@ import { Kbd } from "../kbd";
 import { isSelectableItem, itemKey, splitPreviewTail } from "./palette-reducer";
 import type { ListMode, PaletteItem, PaletteResultItem } from "./types";
 
+/** FrostedShell uses rounded-[20px]; list inset is px-1.5/py-1.5 (6px) → 20 − 6 = 14px. */
+const PALETTE_NESTED_RADIUS = "rounded-[14px]" as const;
+
 export interface PaletteListProps {
   open: boolean;
   renderMode: ListMode | null;
@@ -65,6 +68,15 @@ export function PaletteList({
 }: PaletteListProps) {
   const { baseItems, previewItems } = useMemo(() => splitPreviewTail(renderItems), [renderItems]);
 
+  const nestFooterActionBottom = panelFooter == null && previewItems.length === 0;
+  const lastFooterActionIndex = useMemo(() => {
+    if (!nestFooterActionBottom || baseItems.length === 0) return -1;
+    let index = baseItems.length - 1;
+    while (index >= 0 && baseItems[index]?.kind === "action") index--;
+    const tailStart = index + 1;
+    return tailStart < baseItems.length ? baseItems.length - 1 : -1;
+  }, [baseItems, nestFooterActionBottom]);
+
   const [stickyHeaderGlass, setStickyHeaderGlass] = useState(false);
 
   const syncStickyHeaderGlass = useCallback(() => {
@@ -102,6 +114,7 @@ export function PaletteList({
         optionId={optionId(index)}
         selected={isSelectableItem(item) && displayIndex >= 0 && index === displayIndex}
         showEnterHint={isSelectableItem(item) && keyboardFocus && index === activeIndex}
+        nestBottomCorners={nestFooterActionBottom && index === lastFooterActionIndex}
         listScrollingRef={listScrollingRef}
         onHover={() => {
           onHoverIndex(index);
@@ -279,6 +292,7 @@ interface PaletteListRowProps {
   optionId: string;
   selected: boolean;
   showEnterHint: boolean;
+  nestBottomCorners?: boolean;
   listScrollingRef: React.MutableRefObject<boolean>;
   onHover: () => void;
   onSelect: () => void;
@@ -291,6 +305,7 @@ function PaletteListRow({
   optionId,
   selected,
   showEnterHint,
+  nestBottomCorners = false,
   listScrollingRef,
   onHover,
   onSelect,
@@ -322,7 +337,10 @@ function PaletteListRow({
               "list-none py-0",
               sectionHasHeaderAction ? "pointer-events-auto" : "pointer-events-none",
             )
-          : "flex cursor-pointer items-center justify-between gap-3 rounded-[8px] px-3 py-1.5 transition-[background-color,transform] duration-[var(--motion-duration-fast)] ease-spring-snappy active:scale-[0.985] motion-reduce:transition-none motion-reduce:active:scale-100",
+          : cn(
+              "flex cursor-pointer items-center justify-between gap-3 px-3 py-1.5 transition-[background-color,transform] duration-[var(--motion-duration-fast)] ease-spring-snappy active:scale-[0.985] motion-reduce:transition-none motion-reduce:active:scale-100",
+              nestBottomCorners ? PALETTE_NESTED_RADIUS : "rounded-[8px]",
+            ),
         selected && (item.kind === "result" ? "bg-white/[0.033]" : "bg-white/[0.05]"),
         item.kind === "action" && "mt-1 justify-center py-2",
         item.kind === "action" &&

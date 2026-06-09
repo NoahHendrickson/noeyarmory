@@ -1,4 +1,5 @@
-import { ArrowRight, Plus, Search, X } from "lucide-react";
+import { MagnifyingGlass } from "@phosphor-icons/react";
+import { ArrowRight, Plus, X } from "lucide-react";
 
 import { cn } from "../../lib/utils";
 import { Button } from "../button";
@@ -110,7 +111,7 @@ export function PaletteInputBar({
     >
       <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-2.5 overflow-x-auto">
         <span className="flex size-4 shrink-0 items-center justify-center text-muted-foreground">
-          {leftAdornment ?? <Search className="size-4" />}
+          {leftAdornment ?? <MagnifyingGlass className="size-4" weight="duotone" />}
         </span>
 
         {renderBarOverlay ?? (

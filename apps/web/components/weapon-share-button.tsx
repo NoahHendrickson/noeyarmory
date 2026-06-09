@@ -1,6 +1,6 @@
 "use client";
 
-import { Share2 } from "lucide-react";
+import { LinkSimple } from "@phosphor-icons/react";
 import { useCallback, type MouseEvent } from "react";
 import {
   Button,
@@ -43,7 +43,7 @@ export function WeaponShareButton({ weaponHash }: { weaponHash: number }) {
             />
           }
         >
-          <Share2 className="size-4" />
+          <LinkSimple className="size-4" weight="duotone" />
         </TooltipTrigger>
         <TooltipPortal>
           <TooltipPositioner side="bottom" align="end">
