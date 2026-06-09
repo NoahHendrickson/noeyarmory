@@ -47,7 +47,13 @@ function loadGeneratedDataManifest(): Promise<GeneratedDataManifest | null> {
 
 export async function fetchGeneratedDataFile<T>(key: GeneratedDataKey): Promise<T> {
   const preloadedWeapons = key === "weapons" ? getPreloadStore()?.weapons : undefined;
-  if (preloadedWeapons) return (await preloadedWeapons) as T;
+  if (preloadedWeapons) {
+    try {
+      return (await preloadedWeapons) as T;
+    } catch {
+      // Preload script can fail (e.g. stale inline bundle) — fall back to a normal fetch.
+    }
+  }
 
   const manifest = await loadGeneratedDataManifest();
   const path = generatedDataPath(manifest, key);
@@ -62,38 +68,42 @@ export async function fetchGeneratedDataFile<T>(key: GeneratedDataKey): Promise<
   }
 }
 
-function preloadWeaponIndex(config: { manifestUrl: string }): void {
-  const store = globalThis.__noeyarmoryPreloads || (globalThis.__noeyarmoryPreloads = {});
-  const fetchJson = (url: string, cache = "default") =>
-    fetch(url, { credentials: "same-origin", cache: cache as RequestCache }).then((res) => {
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return res.json();
-    });
-
-  if (!store.generatedDataManifest) {
-    store.generatedDataManifest = fetchJson(config.manifestUrl, "no-cache").catch(() => null);
-  }
-  if (!store.weapons) {
-    store.weapons = store.generatedDataManifest.then((manifest) => {
-      const path = generatedDataPath(manifest, "weapons");
-      const fallbackPath = DEFAULT_GENERATED_DATA_PATHS.weapons;
-      return fetchJson(path, generatedDataCacheMode(manifest, "weapons")).catch((error) => {
-        if (path !== fallbackPath) return fetchJson(fallbackPath);
-        throw error;
-      });
-    });
-  }
-}
-
 export function weaponIndexPreloadScript(): string {
   const config = {
     manifestUrl: GENERATED_DATA_MANIFEST_PATH,
   };
 
+  // Inline the preload IIFE — do not `.toString()` module functions (Turbopack leaves
+  // unresolved import bindings that throw ReferenceError in the browser).
   return `(() => {
 const DEFAULT_GENERATED_DATA_PATHS = ${JSON.stringify(DEFAULT_GENERATED_DATA_PATHS)};
-${generatedDataPath.toString()}
-${generatedDataCacheMode.toString()}
-(${preloadWeaponIndex.toString()})(${JSON.stringify(config)});
+function generatedDataPath(manifest, key) {
+  return manifest?.files[key]?.path ?? DEFAULT_GENERATED_DATA_PATHS[key];
+}
+function generatedDataCacheMode(manifest, key) {
+  return generatedDataPath(manifest, key) === DEFAULT_GENERATED_DATA_PATHS[key]
+    ? "default"
+    : "force-cache";
+}
+const store = globalThis.__noeyarmoryPreloads || (globalThis.__noeyarmoryPreloads = {});
+const fetchJson = (url, cache) =>
+  fetch(url, { credentials: "same-origin", cache: cache || "default" }).then((res) => {
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    return res.json();
+  });
+const config = ${JSON.stringify(config)};
+if (!store.generatedDataManifest) {
+  store.generatedDataManifest = fetchJson(config.manifestUrl, "no-cache").catch(() => null);
+}
+if (!store.weapons) {
+  store.weapons = store.generatedDataManifest.then((manifest) => {
+    const path = generatedDataPath(manifest, "weapons");
+    const fallbackPath = DEFAULT_GENERATED_DATA_PATHS.weapons;
+    return fetchJson(path, generatedDataCacheMode(manifest, "weapons")).catch(() => {
+      if (path !== fallbackPath) return fetchJson(fallbackPath);
+      throw new Error("Failed to load weapon index");
+    });
+  });
+}
 })();`;
 }
