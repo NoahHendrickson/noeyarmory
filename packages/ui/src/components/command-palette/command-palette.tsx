@@ -289,6 +289,20 @@ export function CommandPalette({
     ],
   );
 
+  const renderMode = open
+    ? (openingSnapshot?.mode ?? mode)
+    : (closingSnapshot?.mode ?? null);
+  const renderItems = open
+    ? (openingSnapshot?.items ?? items)
+    : (closingSnapshot?.items ?? []);
+  const latestRenderSnapshotRef = useRef<{ mode: ListMode | null; items: PaletteItem[] }>({
+    mode: null,
+    items: [],
+  });
+  const openPanelRef = useRef<() => void>(() => {});
+  const closePanelRef = useRef<() => void>(() => {});
+  latestRenderSnapshotRef.current = { mode: renderMode, items: renderItems };
+
   function openPanel() {
     seedOpeningSnapshot();
     dispatch({ type: "open" });
@@ -296,10 +310,13 @@ export function CommandPalette({
   }
 
   function closePanel() {
-    beginCloseAnimation(mode, items);
+    const snapshot = latestRenderSnapshotRef.current;
+    beginCloseAnimation(snapshot.mode, snapshot.items);
     dispatch({ type: "close" });
     onOpenChange?.(false);
   }
+  openPanelRef.current = openPanel;
+  closePanelRef.current = closePanel;
 
   const activeIndex =
     state.activeIndex < 0 ? -1 : Math.min(state.activeIndex, Math.max(0, items.length - 1));
@@ -355,7 +372,7 @@ export function CommandPalette({
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (shouldIgnoreSearchShortcut(e.target)) return;
       e.preventDefault();
-      openPanel();
+      openPanelRef.current();
       inputRef.current?.focus();
     }
     document.addEventListener("keydown", onKeyDown);
@@ -376,7 +393,7 @@ export function CommandPalette({
       ) {
         return;
       }
-      closePanel();
+      closePanelRef.current();
     }
     document.addEventListener("pointerdown", onPointerDown);
     return () => document.removeEventListener("pointerdown", onPointerDown);
@@ -568,13 +585,6 @@ export function CommandPalette({
       : chips.length > 0 && onClearChips != null
         ? "Clear all filters"
         : "Clear search";
-
-  const renderMode = open
-    ? (openingSnapshot?.mode ?? mode)
-    : (closingSnapshot?.mode ?? null);
-  const renderItems = open
-    ? (openingSnapshot?.items ?? items)
-    : (closingSnapshot?.items ?? []);
 
   const comboboxProps = {
     role: "combobox" as const,

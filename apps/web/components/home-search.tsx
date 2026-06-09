@@ -84,6 +84,13 @@ interface CustomFilterComposer {
   perkNames: string[];
 }
 
+function recentChipKey(chips: readonly { categoryId: string; valueId: string }[]): string {
+  return chips
+    .map((chip) => `${chip.categoryId}:${chip.valueId}`)
+    .sort()
+    .join("|");
+}
+
 export function HomeSearch({
   signedIn = false,
   initialMode = "weapon",
@@ -460,14 +467,22 @@ export function HomeSearch({
 
   const recentPaletteItems = useMemo<PaletteRecentItem[]>(() => {
     if (composingCustomFilter) return [];
+    const currentQuery = query.trim().toLowerCase();
+    const currentChipKey = recentChipKey(chips);
     const recents = query.trim()
       ? filterRecentSearches(getRecentForMode(mode), query)
       : getRecentForMode(mode);
-    return recents.map((search) => ({
-      id: search.id,
-      label: formatRecentSearchLabel(search.chips, search.query),
-    }));
-  }, [composingCustomFilter, getRecentForMode, mode, query]);
+    return recents
+      .filter(
+        (search) =>
+          search.query.trim().toLowerCase() !== currentQuery ||
+          recentChipKey(search.chips) !== currentChipKey,
+      )
+      .map((search) => ({
+        id: search.id,
+        label: formatRecentSearchLabel(search.chips, search.query),
+      }));
+  }, [composingCustomFilter, getRecentForMode, mode, query, chips]);
 
   const placeholder = composingCustomFilter
     ? customFilterComposer!.perkNames.length > 0
