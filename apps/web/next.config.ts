@@ -40,7 +40,20 @@ const nextConfig: NextConfig = {
       });
     }
 
-    return [{ source: "/:path*", headers }];
+    return [
+      {
+        source: "/data/:name.:hash([0-9a-f]{16}).json",
+        headers: [
+          ...headers,
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+        ],
+      },
+      {
+        source: "/data/:name.manifest.json",
+        headers: [...headers, { key: "Cache-Control", value: "no-cache" }],
+      },
+      { source: "/:path*", headers },
+    ];
   },
 };
 
