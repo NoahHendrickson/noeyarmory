@@ -224,3 +224,16 @@ export interface ArmorIndex {
   /** Armor 3.0 sets that have set bonus perks. */
   armor30Sets: Armor30SetRef[];
 }
+
+/** Armor newly introduced between two generated armor indexes. */
+export interface NewArmorIndex {
+  version: string;
+  generatedAt: string;
+  hasBaseline: boolean;
+  baselineVersion?: string;
+  baselineGeneratedAt?: string;
+  newArmorHashes: number[];
+  newSetHashes: number[];
+  armor: ArmorDoc[];
+  armor30Sets: Armor30SetRef[];
+}

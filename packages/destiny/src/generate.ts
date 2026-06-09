@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { config as loadEnv } from "dotenv";
@@ -8,7 +8,9 @@ import { buildAmmoTypeCatalog, buildWeaponIndex } from "./build-index";
 import { writeGeneratedDataFile, writeGeneratedDataManifest } from "./generated-data-files";
 import { stripPerksLowerReplacer } from "./intern-weapons";
 import { downloadDestinyIconDefinitions, downloadManifest } from "./manifest";
+import { buildNewArmorIndex } from "./new-armor";
 import { serializeWeaponFuseIndex } from "./search";
+import type { ArmorIndex } from "./types";
 import { writeSampleIndexes } from "./write-sample-indexes";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -19,11 +21,20 @@ const dataDir = resolve(repoRoot, "apps/web/public/data");
 const weaponsFile = resolve(dataDir, "weapons.json");
 const weaponsDetailFile = resolve(dataDir, "weapons-detail.json");
 const armorFile = resolve(dataDir, "armor.json");
+const newArmorFile = resolve(dataDir, "new-armor.json");
 
 function hasExistingGeneratedIndexes(): boolean {
   return (
     existsSync(weaponsFile) && existsSync(weaponsDetailFile) && existsSync(armorFile)
   );
+}
+
+function readPreviousArmorIndex(): ArmorIndex | undefined {
+  try {
+    return JSON.parse(readFileSync(armorFile, "utf8")) as ArmorIndex;
+  } catch {
+    return undefined;
+  }
 }
 
 async function generateFromManifest(apiKey: string): Promise<void> {
@@ -54,11 +65,18 @@ async function generateFromManifest(apiKey: string): Promise<void> {
   console.log(`✓ Wrote ${Object.keys(detailIndex.details).length} weapon details → ${weaponsDetailFile}`);
 
   console.log("Flattening armor…");
+  const previousArmorIndex = readPreviousArmorIndex();
   const armorIndex = buildArmorIndex(defs, version);
+  const newArmorIndex = buildNewArmorIndex(armorIndex, previousArmorIndex);
   const armorManifestFile = writeGeneratedDataFile({
     dataDir,
     basename: "armor",
     contents: JSON.stringify(armorIndex),
+  });
+  const newArmorManifestFile = writeGeneratedDataFile({
+    dataDir,
+    basename: "new-armor",
+    contents: JSON.stringify(newArmorIndex),
   });
   writeGeneratedDataManifest(dataDir, {
     version: index.version,
@@ -67,9 +85,11 @@ async function generateFromManifest(apiKey: string): Promise<void> {
       weapons: weaponsManifestFile,
       weaponDetails: detailsManifestFile,
       armor: armorManifestFile,
+      newArmor: newArmorManifestFile,
     },
   });
   console.log(`✓ Wrote ${armorIndex.armor.length} armor → ${armorFile}`);
+  console.log(`✓ Wrote ${newArmorIndex.armor.length} new armor → ${newArmorFile}`);
 }
 
 function fallbackAfterManifestFailure(err: unknown): void {
@@ -84,7 +104,7 @@ function fallbackAfterManifestFailure(err: unknown): void {
   console.warn(
     `Bungie manifest download failed (${message}) — writing bundled sample indexes.`,
   );
-  writeSampleIndexes(weaponsFile, weaponsDetailFile, armorFile);
+  writeSampleIndexes(weaponsFile, weaponsDetailFile, armorFile, newArmorFile);
 }
 
 async function main(): Promise<void> {
@@ -94,7 +114,7 @@ async function main(): Promise<void> {
       "Missing BUNGIE_API_KEY — writing bundled sample indexes. " +
         "Set BUNGIE_API_KEY (Vercel: scope to Build) for the full weapon + armor catalog.",
     );
-    writeSampleIndexes(weaponsFile, weaponsDetailFile, armorFile);
+    writeSampleIndexes(weaponsFile, weaponsDetailFile, armorFile, newArmorFile);
     return;
   }
 

@@ -5,6 +5,7 @@ export const DEFAULT_GENERATED_DATA_PATHS = {
   weapons: "/data/weapons.json",
   weaponDetails: "/data/weapons-detail.json",
   armor: "/data/armor.json",
+  newArmor: "/data/new-armor.json",
 } as const;
 
 export type GeneratedDataKey = keyof typeof DEFAULT_GENERATED_DATA_PATHS;
