@@ -2,9 +2,11 @@ import type { PaletteCategory } from "@repo/ui";
 import {
   collectColumnPerks,
   collectFacets,
+  collectRaidSourceFacets,
   createPerkNameFuse,
   filterPerkNames,
   filterWeaponNames,
+  raidSourceMatchesQuery,
   type FacetOption,
   type ModOption,
   type PerkOption,
@@ -32,6 +34,34 @@ function filterFacetOptions(options: FacetOption[], q: string): FacetOption[] {
   const ql = q.trim().toLowerCase();
   if (!ql) return options;
   return options.filter((o) => o.value.toLowerCase().includes(ql));
+}
+
+function filterRaidSourceOptions(options: FacetOption[], q: string): FacetOption[] {
+  const ql = q.trim();
+  if (!ql) return options;
+  return options.filter((option) => raidSourceMatchesQuery(option.value, ql));
+}
+
+export function raidSourceCategory(options: FacetOption[]): PaletteCategory {
+  return {
+    id: "source",
+    label: "Source",
+    matchCategoryListByValues: true,
+    inlineMaxRank: 3,
+    examples: formatExamples(options.map((option) => option.value)),
+    getValues: (q) => {
+      const ql = q.trim().toLowerCase();
+      return filterRaidSourceOptions(options, q).map((option) => {
+        const labelMatches = ql.length > 0 && option.value.toLowerCase().includes(ql);
+        return {
+          id: option.value.toLowerCase(),
+          label: option.value,
+          hint: String(option.count),
+          searchRank: !labelMatches && ql.length > 0 ? 2 : undefined,
+        };
+      });
+    },
+  };
 }
 
 export function weaponNameCategory(weapons: WeaponSummary[]): PaletteCategory {
@@ -178,6 +208,8 @@ export function buildWeaponCategories(
     facetCategory("element", "Element", facets.element ?? []),
     facetCategory("slot", "Slot", facets.slot ?? []),
     facetCategory("ammo", "Ammo type", facets.ammo ?? []),
+    raidSourceCategory(collectRaidSourceFacets(weapons)),
+    facetCategory("season", "Season", facets.season ?? []),
     facetCategory("frame", "Frame", facets.frame ?? [], { omitWeakInlineMatches: true }),
     facetCategory("craftable", "Craftable", facets.craftable ?? []),
     facetCategory("rarity", "Rarity", facets.rarity ?? []),

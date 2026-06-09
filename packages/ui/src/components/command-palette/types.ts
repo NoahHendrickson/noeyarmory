@@ -27,6 +27,13 @@ export interface PaletteCategory {
    * (e.g. frame "The Fate of All Fools" on query "fate"). Drill-down still lists them.
    */
   omitWeakInlineMatches?: boolean;
+  /**
+   * When true, keep this category visible in the filter list while typing if `getValues`
+   * returns matches (e.g. Source · Root of Nightmares on query "root").
+   */
+  matchCategoryListByValues?: boolean;
+  /** Per-category inline suggestion rank ceiling (default: scan options `maxRank`). */
+  inlineMaxRank?: number;
   /** Values for this category, filtered by the in-category query. */
   getValues: (query: string) => PaletteValueOption[];
 }

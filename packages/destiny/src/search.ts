@@ -5,6 +5,12 @@ import { matchRank } from "@repo/search-rank";
 import type { InternedPerkColumn, PerkRef, SerializedWeaponFuseIndex, WeaponSummary } from "./types";
 import type { WeaponDpsLookup } from "./weapon-dps";
 import type { WeaponNameIndex } from "./weapon-name-index";
+import {
+  canonicalRaidSource,
+  isRaidSource,
+  matchesWeaponSource,
+  RAID_SOURCE_LABELS,
+} from "./weapon-provenance";
 
 export type { WeaponNameIndex } from "./weapon-name-index";
 export { buildWeaponNameIndex } from "./weapon-name-index";
@@ -76,6 +82,10 @@ export interface WeaponFilters {
   ammo?: string[];
   rarity?: string[];
   frame?: string[];
+  /** Acquisition source, e.g. "Root of Nightmares". */
+  source?: string[];
+  /** Release season name or number, e.g. "Season of the Wish" or "23". */
+  season?: string[];
   /** Equipment slot: "Kinetic" | "Energy" | "Power". */
   slot?: string[];
   /** Perk rollable in the FIRST trait column (OR within). */
@@ -101,6 +111,31 @@ const lower = (s: string) => s.toLowerCase();
 function matchesFacet(value: string, selected?: string[]): boolean {
   if (!selected || selected.length === 0) return true;
   return selected.some((s) => lower(s) === lower(value));
+}
+
+function seasonFacetValue(weapon: WeaponSummary): string | undefined {
+  if (weapon.seasonName) return weapon.seasonName;
+  return weapon.seasonNumber != null ? `Season ${weapon.seasonNumber}` : undefined;
+}
+
+function matchesOptionalFacet(
+  value: string | undefined,
+  selected?: string[],
+  aliases: readonly string[] = [],
+): boolean {
+  if (!selected || selected.length === 0) return true;
+  if (!value) return false;
+  const accepted = new Set([value, ...aliases].map(lower));
+  return selected.some((s) => {
+    const wanted = lower(s.trim());
+    return wanted.length > 0 && accepted.has(wanted);
+  });
+}
+
+function seasonAliases(weapon: WeaponSummary): string[] {
+  return weapon.seasonNumber != null
+    ? [String(weapon.seasonNumber), `Season ${weapon.seasonNumber}`]
+    : [];
 }
 
 function matchesCraftable(craftable: boolean, selected?: string[]): boolean {
@@ -165,6 +200,8 @@ export function filterWeapons(
     if (!matchesFacet(w.rarity, filters.rarity)) return false;
     if (!matchesFacet(w.slot, filters.slot)) return false;
     if (filters.frame?.length && !matchesFacet(w.frame ?? "", filters.frame)) return false;
+    if (!matchesWeaponSource(w.source, filters.source)) return false;
+    if (!matchesOptionalFacet(seasonFacetValue(w), filters.season, seasonAliases(w))) return false;
     if (!matchesCraftable(w.craftable, filters.craftable)) return false;
     if (filters.adept != null && w.adept !== filters.adept) return false;
     if (trait1Wanted.size || trait2Wanted.size) {
@@ -476,6 +513,29 @@ function sortFacetCounts(counts: Map<string, number>): FacetOption[] {
     .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value));
 }
 
+export interface CollectRaidSourceFacetsOptions {
+  /** List every known raid even when the count is zero (armor vault browse). */
+  includeAllRaidLabels?: boolean;
+}
+
+/** Raid-only source facets for the Source filter palette category. */
+export function collectRaidSourceFacets(
+  items: ReadonlyArray<{ source?: string }>,
+  options?: CollectRaidSourceFacetsOptions,
+): FacetOption[] {
+  const source = new Map<string, number>();
+  if (options?.includeAllRaidLabels) {
+    for (const label of RAID_SOURCE_LABELS) source.set(label, 0);
+  }
+  for (const item of items) {
+    if (!item.source || !isRaidSource(item.source)) continue;
+    const canonical = canonicalRaidSource(item.source);
+    if (!canonical) continue;
+    source.set(canonical, (source.get(canonical) ?? 0) + 1);
+  }
+  return sortFacetCounts(source);
+}
+
 /** Distinct facet values (with counts) for building filter UIs. */
 export function collectFacets(weapons: WeaponSummary[]): Record<string, FacetOption[]> {
   const element = new Map<string, number>();
@@ -484,6 +544,8 @@ export function collectFacets(weapons: WeaponSummary[]): Record<string, FacetOpt
   const rarity = new Map<string, number>();
   const slot = new Map<string, number>();
   const frame = new Map<string, number>();
+  const source = new Map<string, number>();
+  const season = new Map<string, number>();
 
   let craftableYes = 0;
   let craftableNo = 0;
@@ -495,6 +557,9 @@ export function collectFacets(weapons: WeaponSummary[]): Record<string, FacetOpt
     if (w.rarity) rarity.set(w.rarity, (rarity.get(w.rarity) ?? 0) + 1);
     if (w.slot) slot.set(w.slot, (slot.get(w.slot) ?? 0) + 1);
     if (w.frame) frame.set(w.frame, (frame.get(w.frame) ?? 0) + 1);
+    if (w.source) source.set(w.source, (source.get(w.source) ?? 0) + 1);
+    const seasonValue = seasonFacetValue(w);
+    if (seasonValue) season.set(seasonValue, (season.get(seasonValue) ?? 0) + 1);
     if (w.craftable) craftableYes++;
     else craftableNo++;
   }
@@ -506,6 +571,8 @@ export function collectFacets(weapons: WeaponSummary[]): Record<string, FacetOpt
     rarity: sortFacetCounts(rarity),
     slot: sortFacetCounts(slot),
     frame: sortFacetCounts(frame),
+    source: sortFacetCounts(source),
+    season: sortFacetCounts(season),
     craftable: [
       { value: "Yes", count: craftableYes },
       { value: "No", count: craftableNo },

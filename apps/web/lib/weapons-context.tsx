@@ -33,6 +33,7 @@ import {
   type ReactNode,
 } from "react";
 
+import { fetchGeneratedDataFile } from "./generated-data-client";
 import { scheduleIdle } from "./schedule-idle";
 
 export interface WeaponsState {
@@ -117,9 +118,7 @@ async function loadWeaponDetails(): Promise<Map<number, WeaponDetailFields>> {
   if (!detailLoadPromise) {
     detailLoadPromise = (async () => {
       try {
-        const res = await fetch("/data/weapons-detail.json");
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const index = (await res.json()) as WeaponDetailIndex;
+        const index = await fetchGeneratedDataFile<WeaponDetailIndex>("weaponDetails");
         seedDetails(index);
         enrichSummariesIfReady();
         return detailCache!;
@@ -177,9 +176,7 @@ async function fetchWeaponIndex(): Promise<{ lookups: WeaponIndexLookups; isSamp
   if (!loadPromise) {
     loadPromise = (async () => {
       try {
-        const res = await fetch("/data/weapons.json");
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const index = (await res.json()) as WeaponIndex;
+        const index = await fetchGeneratedDataFile<WeaponIndex>("weapons");
         const lookups = buildWeaponIndexLookups(index);
         moduleCache = lookups;
         isSampleCache = false;

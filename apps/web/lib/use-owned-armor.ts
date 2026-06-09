@@ -13,13 +13,24 @@ export interface OwnedArmorState {
 let cache: OwnedArmorItem[] | null = null;
 let inflight: Promise<OwnedArmorItem[]> | null = null;
 
+/** Pre-source API responses never included `source` — refetch once after deploy. */
+function isOwnedArmorCacheStale(armor: OwnedArmorItem[]): boolean {
+  return armor.length > 0 && !armor.some((piece) => piece.source != null && piece.source !== "");
+}
+
 /** Drop the client armor cache so the next fetch hits the server. */
 export function clearOwnedArmorCache(): void {
   cache = null;
 }
 
 function fetchOwnedArmor(): Promise<OwnedArmorItem[]> {
-  if (cache !== null) return Promise.resolve(cache);
+  if (cache !== null) {
+    if (isOwnedArmorCacheStale(cache)) {
+      cache = null;
+    } else {
+      return Promise.resolve(cache);
+    }
+  }
   if (inflight) return inflight;
 
   inflight = fetch("/api/armor")
@@ -71,8 +82,12 @@ export function useOwnedArmor(enabled: boolean): OwnedArmorState & { refetch: ()
     }
 
     if (cache !== null) {
-      setState({ armor: cache, loading: false });
-      return;
+      if (isOwnedArmorCacheStale(cache)) {
+        clearOwnedArmorCache();
+      } else {
+        setState({ armor: cache, loading: false });
+        return;
+      }
     }
 
     let active = true;

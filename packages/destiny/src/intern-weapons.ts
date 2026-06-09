@@ -181,6 +181,8 @@ export function internWeaponCatalog(
       craftable: weapon.craftable,
       adept: weapon.adept,
       seasonNumber: weapon.seasonNumber,
+      seasonName: weapon.seasonName,
+      source: weapon.source,
       releaseIndex: weapon.releaseIndex,
       ...(ammoGeneration != null ? { ammoGeneration } : {}),
       columns,

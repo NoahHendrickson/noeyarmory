@@ -82,6 +82,8 @@ export {
   serializeWeaponFuseIndex,
   fuzzySearchWeapons,
   collectFacets,
+  collectRaidSourceFacets,
+  type CollectRaidSourceFacetsOptions,
   collectPerks,
   collectColumnPerks,
   filterWeaponNames,
@@ -118,6 +120,16 @@ export {
   type WeaponIndexLookups,
 } from "./weapon-index-lookups";
 export {
+  DEFAULT_GENERATED_DATA_PATHS,
+  GENERATED_DATA_MANIFEST_FILENAME,
+  GENERATED_DATA_MANIFEST_PATH,
+  generatedDataCacheMode,
+  generatedDataPath,
+  type GeneratedDataKey,
+  type GeneratedDataManifest,
+  type GeneratedDataManifestFile,
+} from "./generated-data-manifest";
+export {
   filterArmor,
   sortArmor,
   createArmorFuse,
@@ -139,6 +151,18 @@ export {
   type OwnedArmorFilters,
   type OwnedArmorSearchItem,
 } from "./owned-armor-search";
+export {
+  ACTIVITY_INTRO_SEASON,
+  RAID_SOURCE_ALIASES,
+  RAID_SOURCE_LABELS,
+  canonicalRaidSource,
+  isRaidSource,
+  matchesWeaponSource,
+  normalizeWeaponSource,
+  raidSourceMatchesQuery,
+  resolveWeaponSeason,
+  type ResolvedWeaponSeason,
+} from "./weapon-provenance";
 export { sampleWeapons } from "./fixtures/sample-weapons";
 export { sampleDamageTypes } from "./fixtures/sample-damage-types";
 export { sampleWeaponTypes } from "./fixtures/sample-weapon-types";

@@ -1,7 +1,6 @@
 import "server-only";
 
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
 
 import {
   buildWeaponIndexLookups,
@@ -14,13 +13,15 @@ import {
   type WeaponSummary,
 } from "@repo/destiny";
 
+import { generatedDataFilePath } from "./generated-data-server";
+
 let cache: WeaponIndexLookups | null = null;
 let detailCache: Map<number, WeaponDetailFields> | null = null;
 
 function loadWeaponDetails(): Map<number, WeaponDetailFields> {
   if (detailCache) return detailCache;
   try {
-    const file = join(process.cwd(), "public", "data", "weapons-detail.json");
+    const file = generatedDataFilePath("weaponDetails");
     const index = JSON.parse(readFileSync(file, "utf8")) as WeaponDetailIndex;
     detailCache = new Map(
       Object.entries(index.details).map(([hash, detail]) => [Number(hash), detail]),
@@ -34,7 +35,7 @@ function loadWeaponDetails(): Map<number, WeaponDetailFields> {
 /** Load and cache the generated weapon browse index (server-only). */
 export function getWeaponIndex(): WeaponIndexLookups {
   if (cache) return cache;
-  const file = join(process.cwd(), "public", "data", "weapons.json");
+  const file = generatedDataFilePath("weapons");
   const index = JSON.parse(readFileSync(file, "utf8")) as WeaponIndex;
   cache = buildWeaponIndexLookups(index);
   return cache;

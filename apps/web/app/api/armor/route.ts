@@ -25,6 +25,7 @@ export async function GET() {
         classType: o.armor.classType,
         type: o.armor.type,
         rarity: o.armor.rarity,
+        source: o.armor.source,
         rolledMods: o.rolledMods.map((m) => ({ hash: m.hash, name: m.name, icon: m.icon })),
         isArmor30: o.isArmor30,
         setName: o.setName,

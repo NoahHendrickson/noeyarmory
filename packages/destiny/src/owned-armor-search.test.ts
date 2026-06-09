@@ -12,6 +12,7 @@ const sampleOwned: OwnedArmorSearchItem[] = [
   {
     name: "Virtuous Helm",
     classType: "Hunter",
+    source: "Root of Nightmares",
     setName: "Virtuous",
     archetype: "Paragon",
     tertiaryStat: "Melee",
@@ -41,6 +42,13 @@ describe("filterOwnedArmor", () => {
     expect(
       filterOwnedArmor(sampleOwned, { archetype: ["Paragon"] }).map((a) => a.name),
     ).toEqual(["Virtuous Helm"]);
+  });
+
+  test("source facet matches raid activity fragments", () => {
+    expect(filterOwnedArmor(sampleOwned, { source: ["nightmares"] }).map((a) => a.name)).toEqual([
+      "Virtuous Helm",
+    ]);
+    expect(filterOwnedArmor(sampleOwned, { source: ["Vault of Glass"] })).toEqual([]);
   });
 });
 

@@ -156,7 +156,7 @@ export function PaletteList({
         <div
           ref={scrollRef}
           className={cn(
-            "max-h-[min(560px,calc(100dvh-10rem))] min-h-0 touch-pan-y overflow-y-auto overscroll-contain px-1.5 tracking-body [overflow-anchor:none] sm:max-h-[560px]",
+            "max-h-[min(640px,calc(100dvh-9rem))] min-h-0 touch-pan-y overscroll-contain overflow-y-auto px-1.5 tracking-body [overflow-anchor:none] sm:max-h-[640px]",
             renderMode === "results" && resultsHeader != null ? "pb-1.5" : "py-1.5",
             panelFooter != null && "pb-0",
           )}
@@ -193,7 +193,7 @@ export function PaletteList({
                   ? results.map((result) => result.id).join("\u0000")
                   : renderMode
               }
-              className="flex flex-col gap-0.5"
+              className="flex flex-col gap-0"
               onMouseLeave={onClearHover}
             >
               {baseItems.map((item, i) => renderRow(item, i))}
