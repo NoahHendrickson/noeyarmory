@@ -12,6 +12,7 @@ import type { PerkRef, WeaponDetailFields, WeaponDoc } from "./types";
 import {
   collectColumnPerks,
   collectFacets,
+  collectRaidSourceFacets,
   collectPerks,
   filterWeaponNames,
   filterWeapons,
@@ -129,11 +130,16 @@ describe("filterWeapons", () => {
     ]);
   });
 
-  test("source facet requires exact source names", () => {
+  test("source facet matches activity fragments", () => {
     expect(
       names(filterWeapons(sampleSummaries, { source: ["Root of Nightmares"] }, samplePerks)),
     ).toEqual(["Stormcharge"]);
-    expect(filterWeapons(sampleSummaries, { source: ["Nightmares"] }, samplePerks)).toEqual([]);
+    expect(names(filterWeapons(sampleSummaries, { source: ["nightmares"] }, samplePerks))).toEqual([
+      "Stormcharge",
+    ]);
+    expect(names(filterWeapons(sampleSummaries, { source: ["vault"] }, samplePerks))).toEqual([
+      "Fatebringer",
+    ]);
   });
 
   test("season facet supports season labels and season numbers", () => {
@@ -223,6 +229,21 @@ describe("facets + perks", () => {
     const seasons = Object.fromEntries(facets.season!.map((f) => [f.value, f.count]));
     expect(sources).toMatchObject({ "Root of Nightmares": 1, "Vault of Glass": 1 });
     expect(seasons).toMatchObject({ "Season of the Splicer": 1, "Season of the Wish": 1 });
+  });
+
+  test("collectRaidSourceFacets keeps only raid sources", () => {
+    const raids = Object.fromEntries(
+      collectRaidSourceFacets(sampleSummaries).map((facet) => [facet.value, facet.count]),
+    );
+    expect(raids).toEqual({ "Root of Nightmares": 1, "Vault of Glass": 1 });
+    expect(raids).not.toHaveProperty("Solstice");
+  });
+
+  test("collectRaidSourceFacets can list every raid label for armor browse", () => {
+    const raids = collectRaidSourceFacets([], { includeAllRaidLabels: true });
+    expect(raids.length).toBeGreaterThan(10);
+    expect(raids.every((facet) => facet.count === 0)).toBe(true);
+    expect(raids.some((facet) => facet.value === "Root of Nightmares")).toBe(true);
   });
 
   test("collectPerks counts weapons per perk", () => {

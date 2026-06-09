@@ -2,6 +2,7 @@ import type { DestinyInventoryItemDefinition } from "bungie-api-ts/destiny2";
 
 import type { DestinyIconDefinitionEntry, ManifestDefs } from "./manifest";
 import { internWeaponCatalog } from "./intern-weapons";
+import { normalizeWeaponSource, resolveWeaponSeason } from "./weapon-provenance";
 import { GENERIC_WEAPON_TYPE_ICONS } from "./weapon-type-icon-paths";
 import type {
   AmmoTypeRef,
@@ -51,11 +52,6 @@ function isEnhancedPlug(def: DestinyInventoryItemDefinition): boolean {
 function plugDescription(def: DestinyInventoryItemDefinition): string | undefined {
   const description = def.displayProperties?.description?.trim();
   return description || undefined;
-}
-
-function cleanSourceString(source: string | undefined): string | undefined {
-  const value = source?.replace(/\s+/g, " ").replace(/^Source:\s*/i, "").trim();
-  return value || undefined;
 }
 
 /** Non-conditional investment stat modifiers from a plug definition. */
@@ -256,8 +252,8 @@ export function buildWeaponIndex(
   const plugSets = defs.DestinyPlugSetDefinition;
   const stats = defs.DestinyStatDefinition;
   const damageTypes = defs.DestinyDamageTypeDefinition;
-  const seasons = defs.DestinySeasonDefinition;
   const collectibles = defs.DestinyCollectibleDefinition;
+  const presentationNodes = defs.DestinyPresentationNodeDefinition;
 
   const weapons: WeaponDoc[] = [];
 
@@ -319,10 +315,14 @@ export function buildWeaponIndex(
       (item.defaultDamageTypeHash != null
         ? damageTypes[item.defaultDamageTypeHash]?.displayProperties?.name
         : undefined) ?? "Kinetic";
-    const season = item.seasonHash != null ? seasons[item.seasonHash] : undefined;
     const collectible =
       item.collectibleHash != null ? collectibles[item.collectibleHash] : undefined;
-    const source = cleanSourceString(collectible?.sourceString);
+    const source = normalizeWeaponSource(
+      collectible?.sourceString,
+      presentationNodes,
+      collectible?.parentNodeHashes,
+    );
+    const season = resolveWeaponSeason(item, collectible, defs);
 
     const perkNames: string[] = [];
     const perkHashes: number[] = [];
@@ -350,7 +350,7 @@ export function buildWeaponIndex(
       craftable: item.inventory?.recipeItemHash != null,
       adept: /\((Adept|Timelost|Harrowed)\)/.test(name),
       seasonNumber: season?.seasonNumber,
-      seasonName: season?.displayProperties?.name || undefined,
+      seasonName: season?.seasonName,
       source,
       releaseIndex: item.index,
       stats: weaponStats,

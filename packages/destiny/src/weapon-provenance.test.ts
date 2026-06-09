@@ -1,0 +1,129 @@
+import { describe, expect, test } from "vitest";
+
+import {
+  canonicalRaidSource,
+  isRaidSource,
+  matchesWeaponSource,
+  normalizeWeaponSource,
+  raidSourceMatchesQuery,
+  resolveWeaponSeason,
+} from "./weapon-provenance";
+
+const presentationNodes = {
+  1154828558: {
+    displayProperties: { name: "Raid: Vault of Glass" },
+    parentNodeHashes: [498211331],
+    hash: 1154828558,
+  },
+  1968454484: {
+    displayProperties: { name: "Raid: Root of Nightmares" },
+    parentNodeHashes: [498211331],
+    hash: 1968454484,
+  },
+  239187336: {
+    displayProperties: { name: "Season of the Haunted" },
+    parentNodeHashes: [3790247699],
+    hash: 239187336,
+  },
+} as const;
+
+const seasons = {
+  1743682818: {
+    hash: 1743682818,
+    seasonNumber: 8,
+    displayProperties: { name: "Season of the Undying" },
+  },
+  1743682820: {
+    hash: 1743682820,
+    seasonNumber: 20,
+    displayProperties: { name: "Season of Defiance" },
+  },
+  193596630: {
+    hash: 193596630,
+    seasonNumber: 26,
+    displayProperties: { name: "Episode: Heresy" },
+  },
+} as const;
+
+describe("normalizeWeaponSource", () => {
+  test("extracts quoted raid names from Bungie source strings", () => {
+    expect(
+      normalizeWeaponSource('Source: "Root of Nightmares" Raid', presentationNodes, []),
+    ).toBe("Root of Nightmares");
+  });
+
+  test("falls back to presentation parents for raid nodes", () => {
+    expect(
+      normalizeWeaponSource(undefined, presentationNodes, [1154828558]),
+    ).toBe("Vault of Glass");
+  });
+});
+
+describe("raid source helpers", () => {
+  test("canonicalRaidSource normalizes armor-style raid strings", () => {
+    expect(canonicalRaidSource("Last Wish raid")).toBe("Last Wish");
+    expect(canonicalRaidSource('Source: "Vault of Glass" Raid')).toBe("Vault of Glass");
+  });
+
+  test("isRaidSource recognizes canonical raid labels only", () => {
+    expect(isRaidSource("Root of Nightmares")).toBe(true);
+    expect(isRaidSource("Last Wish raid")).toBe(true);
+    expect(isRaidSource("Prophecy")).toBe(false);
+    expect(isRaidSource("Complete Crucible matches")).toBe(false);
+  });
+
+  test("raidSourceMatchesQuery supports shorthand raid tokens", () => {
+    expect(raidSourceMatchesQuery("Root of Nightmares", "root")).toBe(true);
+    expect(raidSourceMatchesQuery("Root of Nightmares", "ron")).toBe(true);
+    expect(raidSourceMatchesQuery("Vault of Glass", "vog")).toBe(true);
+  });
+});
+
+describe("matchesWeaponSource", () => {
+  test("matches activity fragments case-insensitively", () => {
+    expect(matchesWeaponSource("Root of Nightmares", ["root of nightmares"])).toBe(true);
+    expect(matchesWeaponSource("Root of Nightmares", ["nightmares"])).toBe(true);
+    expect(matchesWeaponSource("Vault of Glass", ["root"])).toBe(false);
+  });
+});
+
+describe("resolveWeaponSeason", () => {
+  test("maps episode activity sources onto seasons", () => {
+    const season = resolveWeaponSeason(
+      { hash: 1, itemType: 3 } as never,
+      { sourceString: "Source: Episode: Heresy Activities", parentNodeHashes: [] } as never,
+      { DestinySeasonDefinition: seasons, DestinyPresentationNodeDefinition: presentationNodes },
+    );
+    expect(season).toEqual({
+      seasonNumber: 26,
+      seasonName: "Episode: Heresy",
+    });
+  });
+
+  test("maps normalized raid sources onto intro seasons", () => {
+    const season = resolveWeaponSeason(
+      { hash: 2, itemType: 3 } as never,
+      {
+        sourceString: 'Source: "Root of Nightmares" Raid',
+        parentNodeHashes: [1968454484],
+      } as never,
+      { DestinySeasonDefinition: seasons, DestinyPresentationNodeDefinition: presentationNodes },
+    );
+    expect(season).toEqual({
+      seasonNumber: 20,
+      seasonName: "Season of Defiance",
+    });
+  });
+
+  test("uses item seasonHash when Bungie provides it", () => {
+    const season = resolveWeaponSeason(
+      { hash: 3, itemType: 3, seasonHash: 1743682818 } as never,
+      undefined,
+      { DestinySeasonDefinition: seasons, DestinyPresentationNodeDefinition: presentationNodes },
+    );
+    expect(season).toEqual({
+      seasonNumber: 8,
+      seasonName: "Season of the Undying",
+    });
+  });
+});

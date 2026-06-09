@@ -187,6 +187,8 @@ export interface ArmorDoc {
   /** itemTypeDisplayName, e.g. "Helmet" */
   type: string;
   rarity: string;
+  /** Acquisition source from the collectible definition, e.g. "Root of Nightmares". */
+  source?: string;
   seasonNumber?: number;
   releaseIndex: number;
   stats: ArmorStat[];

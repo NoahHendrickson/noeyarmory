@@ -24,6 +24,8 @@ export interface OwnedArmorItem {
   classType: string;
   type: string;
   rarity: string;
+  /** Raid or activity source, e.g. "Root of Nightmares". */
+  source?: string;
   rolledMods: OwnedArmorMod[];
   isArmor30?: boolean;
   setName?: string;

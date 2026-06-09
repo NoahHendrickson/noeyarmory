@@ -5,6 +5,12 @@ import { matchRank } from "@repo/search-rank";
 import type { InternedPerkColumn, PerkRef, SerializedWeaponFuseIndex, WeaponSummary } from "./types";
 import type { WeaponDpsLookup } from "./weapon-dps";
 import type { WeaponNameIndex } from "./weapon-name-index";
+import {
+  canonicalRaidSource,
+  isRaidSource,
+  matchesWeaponSource,
+  RAID_SOURCE_LABELS,
+} from "./weapon-provenance";
 
 export type { WeaponNameIndex } from "./weapon-name-index";
 export { buildWeaponNameIndex } from "./weapon-name-index";
@@ -194,7 +200,7 @@ export function filterWeapons(
     if (!matchesFacet(w.rarity, filters.rarity)) return false;
     if (!matchesFacet(w.slot, filters.slot)) return false;
     if (filters.frame?.length && !matchesFacet(w.frame ?? "", filters.frame)) return false;
-    if (!matchesOptionalFacet(w.source, filters.source)) return false;
+    if (!matchesWeaponSource(w.source, filters.source)) return false;
     if (!matchesOptionalFacet(seasonFacetValue(w), filters.season, seasonAliases(w))) return false;
     if (!matchesCraftable(w.craftable, filters.craftable)) return false;
     if (filters.adept != null && w.adept !== filters.adept) return false;
@@ -505,6 +511,29 @@ function sortFacetCounts(counts: Map<string, number>): FacetOption[] {
   return [...counts.entries()]
     .map(([value, count]) => ({ value, count }))
     .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value));
+}
+
+export interface CollectRaidSourceFacetsOptions {
+  /** List every known raid even when the count is zero (armor vault browse). */
+  includeAllRaidLabels?: boolean;
+}
+
+/** Raid-only source facets for the Source filter palette category. */
+export function collectRaidSourceFacets(
+  items: ReadonlyArray<{ source?: string }>,
+  options?: CollectRaidSourceFacetsOptions,
+): FacetOption[] {
+  const source = new Map<string, number>();
+  if (options?.includeAllRaidLabels) {
+    for (const label of RAID_SOURCE_LABELS) source.set(label, 0);
+  }
+  for (const item of items) {
+    if (!item.source || !isRaidSource(item.source)) continue;
+    const canonical = canonicalRaidSource(item.source);
+    if (!canonical) continue;
+    source.set(canonical, (source.get(canonical) ?? 0) + 1);
+  }
+  return sortFacetCounts(source);
 }
 
 /** Distinct facet values (with counts) for building filter UIs. */
