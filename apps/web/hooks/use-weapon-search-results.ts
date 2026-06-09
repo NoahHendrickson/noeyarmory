@@ -4,10 +4,12 @@ import { useDeferredValue, useMemo } from "react";
 import type { PaletteCategory, PaletteChip, PalettePanelState, ValueSuggestion } from "@repo/ui";
 import {
   buildWeaponNameIndex,
+  createLruCache,
   createWeaponFuse,
   filterWeaponNames,
   filterWeapons,
   MIN_WEAPON_TEXT_QUERY_LENGTH,
+  parseWeaponQuery,
   rankWeaponResults,
   sortFilteredWeaponNames,
   weaponsMatchingTextQuery,
@@ -26,6 +28,7 @@ import {
   MAX_SHOW_ALL,
 } from "../lib/palette/constants";
 import { chipsToWeaponFilters, withHypotheticalChip } from "../lib/palette/weapon-filters";
+import { mergeWeaponFilters } from "../lib/palette/merge-weapon-filters";
 import { useSearchPopularity } from "../lib/use-search-popularity";
 import { usePalettePreviewInput } from "./use-palette-preview-input";
 
@@ -69,6 +72,10 @@ function weaponsForPreviewQuery(
   return weaponsMatchingTextQuery(weapons, weaponFuse, q, limit, nameIndex);
 }
 
+function hasKeywordFilters(filters: WeaponFilters): boolean {
+  return Object.keys(filters).length > 0;
+}
+
 export function useWeaponSearchResults({
   weapons,
   perks,
@@ -100,14 +107,33 @@ export function useWeaponSearchResults({
     usePalettePreviewInput(query, panelState, inlineSuggestions);
   const textSearchActive = resultsMode === "text";
 
+  // Cross-render result cache (B4): rebuilt whenever the underlying catalog,
+  // popularity signal, or perk pool changes so cached lists can never go stale.
+  const resultCache = useMemo(
+    () => createLruCache<string, WeaponSummary[]>(32),
+    [weapons, nameIndex, popularity, perks],
+  );
+
   const weaponResults = useMemo(() => {
-    const q = deferredQuery.trim();
+    const raw = deferredQuery.trim();
+    const parsed = textSearchActive ? parseWeaponQuery(deferredQuery) : { filters: {}, text: raw };
+    const textQuery = parsed.text.trim();
+    const mergedFilters = textSearchActive
+      ? mergeWeaponFilters(weaponFilters, parsed.filters)
+      : weaponFilters;
+
+    const cacheKey = `${textSearchActive ? "t" : "f"}|${sort}|${raw}|${JSON.stringify(mergedFilters)}`;
+    const cached = resultCache.get(cacheKey);
+    if (cached) return cached;
+
     const base =
-      textSearchActive && q.length >= MIN_WEAPON_TEXT_QUERY_LENGTH
-        ? weaponsMatchingTextQuery(weapons, weaponFuse, q, MAX_SHOW_ALL, nameIndex)
+      textSearchActive && textQuery.length >= MIN_WEAPON_TEXT_QUERY_LENGTH
+        ? weaponsMatchingTextQuery(weapons, weaponFuse, textQuery, MAX_SHOW_ALL, nameIndex)
         : weapons;
-    const filtered = filterWeapons(base, weaponFilters, perks);
-    return rankWeaponResults(filtered, q, sort, dpsByName, nameIndex, popularity);
+    const filtered = filterWeapons(base, mergedFilters, perks);
+    const ranked = rankWeaponResults(filtered, textQuery, sort, dpsByName, nameIndex, popularity);
+    resultCache.set(cacheKey, ranked);
+    return ranked;
   }, [
     weaponFuse,
     weapons,
@@ -119,6 +145,7 @@ export function useWeaponSearchResults({
     textSearchActive,
     nameIndex,
     popularity,
+    resultCache,
   ]);
 
   const resultLimit = showAllResults ? MAX_SHOW_ALL : MAX_RESULTS;
@@ -168,18 +195,22 @@ export function useWeaponSearchResults({
         appendWeapons(filterWeapons(weapons, filters, perks));
       }
     } else if (q.length >= MIN_WEAPON_TEXT_QUERY_LENGTH) {
-      appendWeapons(
-        filterWeapons(
-          weaponsForPreviewQuery(weapons, weaponFuse, q, previewResultLimit, nameIndex),
-          base,
-          perks,
-        ),
-      );
+      // Parse keyword syntax (element:solar, is:adept, …) live in the preview too.
+      const parsed = parseWeaponQuery(previewQuery);
+      const previewFilters = mergeWeaponFilters(base, parsed.filters);
+      const textBase =
+        parsed.text.trim().length >= MIN_WEAPON_TEXT_QUERY_LENGTH
+          ? weaponsForPreviewQuery(weapons, weaponFuse, parsed.text, previewResultLimit, nameIndex)
+          : hasKeywordFilters(parsed.filters)
+            ? weapons
+            : weaponsForPreviewQuery(weapons, weaponFuse, q, previewResultLimit, nameIndex);
+      appendWeapons(filterWeapons(textBase, previewFilters, perks));
     }
 
     if (candidates.length === 0) return [];
 
-    return rankWeaponResults(candidates, q, sort, dpsByName, nameIndex, popularity).slice(
+    const rankQuery = parseWeaponQuery(previewQuery).text.trim() || q;
+    return rankWeaponResults(candidates, rankQuery, sort, dpsByName, nameIndex, popularity).slice(
       0,
       previewResultLimit,
     );
