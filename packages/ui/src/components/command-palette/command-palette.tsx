@@ -574,7 +574,7 @@ export function CommandPalette({
     >
       <FrostedShell
         className={cn(
-          "duration-motion-snappy transition-[border-radius] ease-spring-snappy motion-reduce:transition-none",
+          "transition-[border-radius] duration-[var(--motion-duration-snappy)] ease-spring-snappy motion-reduce:transition-none",
           open ? "rounded-[12px]" : "rounded-[1.75rem]",
         )}
       >

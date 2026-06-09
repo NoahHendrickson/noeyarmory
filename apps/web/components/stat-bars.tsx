@@ -96,17 +96,17 @@ function StatBarTrack({
           {baseValue != null && delta > 0 ? (
             <>
               <div
-                className="duration-motion-medium h-full shrink-0 bg-primary transition-[width] ease-spring-smooth motion-reduce:transition-none"
+                className="h-full shrink-0 bg-primary transition-[width] duration-[var(--motion-duration-medium)] ease-spring-smooth motion-reduce:transition-none"
                 style={{ width: `${clampBarPercent(baseValue)}%` }}
               />
               <div
-                className="duration-motion-medium h-full shrink-0 bg-primary/45 transition-[width] ease-spring-smooth motion-reduce:transition-none"
+                className="h-full shrink-0 bg-primary/45 transition-[width] duration-[var(--motion-duration-medium)] ease-spring-smooth motion-reduce:transition-none"
                 style={{ width: `${clampBarPercent(delta)}%` }}
               />
             </>
           ) : (
             <div
-              className="duration-motion-medium h-full rounded bg-primary transition-[width] ease-spring-smooth motion-reduce:transition-none"
+              className="h-full rounded bg-primary transition-[width] duration-[var(--motion-duration-medium)] ease-spring-smooth motion-reduce:transition-none"
               style={{ width: `${clampBarPercent(value)}%` }}
             />
           )}

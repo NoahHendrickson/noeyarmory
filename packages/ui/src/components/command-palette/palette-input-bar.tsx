@@ -102,7 +102,7 @@ export function PaletteInputBar({
     // eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events
     <div
       className={cn(
-        "duration-motion-snappy flex min-h-12 items-center justify-between gap-2 border-b pl-3 transition-[border-color] ease-spring-smooth motion-reduce:transition-none sm:h-14 sm:gap-3 sm:pl-[18px]",
+        "flex min-h-12 items-center justify-between gap-2 border-b pl-3 transition-[border-color] duration-[var(--motion-duration-snappy)] ease-spring-smooth motion-reduce:transition-none sm:h-14 sm:gap-3 sm:pl-[18px]",
         showClearButton ? "pr-6" : "pr-[18px]",
         open ? "border-white/16" : "border-transparent",
       )}

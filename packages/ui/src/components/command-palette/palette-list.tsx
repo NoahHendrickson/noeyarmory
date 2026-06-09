@@ -87,7 +87,7 @@ export function PaletteList({
   }, [open, renderMode, resultsHeader, results.length, syncStickyHeaderGlass]);
 
   const stickyHeaderClass = cn(
-    "sticky top-0 z-10 -mx-1.5 px-3 py-1.5 transition-[background-color,backdrop-filter,border-color] duration-motion-fast ease-spring-smooth motion-reduce:transition-none",
+    "sticky top-0 z-10 -mx-1.5 px-3 py-1.5 transition-[background-color,backdrop-filter,border-color] duration-[var(--motion-duration-fast)] ease-spring-smooth motion-reduce:transition-none",
     stickyHeaderGlass
       ? frostedSurface("barBordered")
       : "border-b border-transparent bg-transparent",
@@ -116,7 +116,7 @@ export function PaletteList({
   return (
     <div
       className={cn(
-        "duration-motion-snappy grid transition-[grid-template-rows] ease-spring-smooth motion-reduce:transition-none",
+        "grid transition-[grid-template-rows] duration-[var(--motion-duration-snappy)] ease-spring-smooth motion-reduce:transition-none",
         open ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
       )}
       inert={open ? undefined : true}
@@ -259,7 +259,7 @@ function PreviewResultsExpand({
         className={cn(
           "overflow-hidden",
           !instantExpand &&
-            "duration-motion-snappy transition-[max-height] ease-spring-smooth motion-reduce:transition-none",
+            "transition-[max-height] duration-[var(--motion-duration-snappy)] ease-spring-smooth motion-reduce:transition-none",
         )}
         style={{
           maxHeight: expanded ? height : 0,
@@ -322,7 +322,7 @@ function PaletteListRow({
               "list-none py-0",
               sectionHasHeaderAction ? "pointer-events-auto" : "pointer-events-none",
             )
-          : "duration-motion-fast flex cursor-pointer items-center justify-between gap-3 rounded-[8px] px-3 py-1.5 transition-[background-color,transform] ease-spring-snappy active:scale-[0.985] motion-reduce:transition-none motion-reduce:active:scale-100",
+          : "flex cursor-pointer items-center justify-between gap-3 rounded-[8px] px-3 py-1.5 transition-[background-color,transform] duration-[var(--motion-duration-fast)] ease-spring-snappy active:scale-[0.985] motion-reduce:transition-none motion-reduce:active:scale-100",
         selected && (item.kind === "result" ? "bg-white/[0.033]" : "bg-white/[0.05]"),
         item.kind === "action" && "mt-1 justify-center py-2",
         item.kind === "action" &&

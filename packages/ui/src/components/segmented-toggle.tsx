@@ -48,7 +48,7 @@ function SegmentedToggle<T extends string>({
       {options.length > 0 && (
         <span
           aria-hidden
-          className="duration-motion-snappy pointer-events-none absolute top-0.5 bottom-0.5 left-0.5 rounded-[10px] border border-white/30 bg-white/[0.16] shadow-sm transition-transform ease-spring-snappy motion-reduce:transition-none"
+          className="pointer-events-none absolute top-0.5 bottom-0.5 left-0.5 rounded-[10px] border border-white/30 bg-white/[0.16] shadow-sm transition-transform duration-[var(--motion-duration-snappy)] ease-spring-snappy motion-reduce:transition-none"
           style={{
             width: `calc((100% - 0.25rem) / ${optionCount})`,
             transform: `translateX(${safeActiveIndex * 100}%)`,
@@ -78,7 +78,7 @@ function SegmentedToggle<T extends string>({
               }
             }}
             className={cn(
-              "duration-motion-fast relative z-10 h-7 cursor-pointer rounded-[10px] border border-transparent bg-transparent px-3 text-xs font-medium whitespace-nowrap transition-colors ease-spring-smooth outline-none",
+              "relative z-10 h-7 cursor-pointer rounded-[10px] border border-transparent bg-transparent px-3 text-xs font-medium whitespace-nowrap transition-colors duration-[var(--motion-duration-fast)] ease-spring-smooth outline-none",
               "focus-visible:ring-2 focus-visible:ring-ring",
               active
                 ? "text-foreground"
