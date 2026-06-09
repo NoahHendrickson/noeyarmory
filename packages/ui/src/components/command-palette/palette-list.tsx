@@ -2,10 +2,9 @@ import { ArrowDown, CornerDownLeft, History, ListFilter, X } from "lucide-react"
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { frostedSurface } from "../../lib/frosted-surface";
-import { motion } from "../../lib/motion";
 import { cn } from "../../lib/utils";
 import { Kbd } from "../kbd";
-import { isSelectableItem, itemKey, splitPreviewTail } from "./palette-reducer";
+import { isSelectableItem, itemKey, PANEL_TRANSITION_MS, splitPreviewTail } from "./palette-reducer";
 import type { ListMode, PaletteItem, PaletteResultItem } from "./types";
 
 /** FrostedShell uses rounded-[20px]; list inset is px-1.5/py-1.5 (6px) → 20 − 6 = 14px. */
@@ -67,7 +66,10 @@ export function PaletteList({
   onSelectItem,
   instantPreviewExpand = false,
 }: PaletteListProps) {
-  const { baseItems, previewItems } = useMemo(() => splitPreviewTail(renderItems), [renderItems]);
+  const { baseItems, previewItems } = useMemo(
+    () => splitPreviewTail(renderItems),
+    [renderItems],
+  );
 
   const nestFooterActionBottom = panelFooter == null && previewItems.length === 0;
   const lastFooterActionIndex = useMemo(() => {
@@ -100,11 +102,8 @@ export function PaletteList({
   }, [open, renderMode, resultsHeader, results.length, syncStickyHeaderGlass]);
 
   const stickyHeaderClass = cn(
-    "sticky top-0 z-10 -mx-1.5 px-3 py-1.5 transition-[background-color,backdrop-filter,border-color]",
-    motion("fastSmooth"),
-    stickyHeaderGlass
-      ? frostedSurface("barBordered")
-      : "border-b border-transparent bg-transparent",
+    "sticky top-0 z-10 -mx-1.5 px-3 py-1.5 transition-[background-color,backdrop-filter,border-color] duration-150 ease-out motion-reduce:transition-none",
+    stickyHeaderGlass ? frostedSurface("barBordered") : "border-b border-transparent bg-transparent",
   );
 
   function renderRow(item: PaletteItem, index: number, as: "li" | "div" = "li") {
@@ -131,8 +130,7 @@ export function PaletteList({
   return (
     <div
       className={cn(
-        "grid transition-[grid-template-rows]",
-        motion("snappySmooth"),
+        "grid transition-[grid-template-rows] duration-200 ease-out motion-reduce:transition-none",
         open ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
       )}
       inert={open ? undefined : true}
@@ -142,7 +140,7 @@ export function PaletteList({
         <div
           ref={scrollRef}
           className={cn(
-            "max-h-[min(560px,calc(100dvh-10rem))] min-h-0 touch-pan-y overflow-y-auto overscroll-contain px-1.5 tracking-body [overflow-anchor:none] sm:max-h-[560px]",
+            "max-h-[min(560px,calc(100dvh-10rem))] min-h-0 touch-pan-y overscroll-contain overflow-y-auto px-1.5 tracking-body [overflow-anchor:none] sm:max-h-[560px]",
             renderMode === "results" && resultsHeader != null ? "pb-1.5" : "py-1.5",
             panelFooter != null && "pb-0",
           )}
@@ -163,11 +161,11 @@ export function PaletteList({
             </div>
           )}
           {open && renderMode === "results" && results.length === 0 ? (
-            <div className="px-3 py-6 text-center text-base tracking-body text-muted-foreground">
+            <div className="text-muted-foreground px-3 py-6 text-center text-base tracking-body">
               {resultsEmpty ?? "No matches"}
             </div>
           ) : open && renderItems.length === 0 ? (
-            <div className="px-3 py-6 text-center text-xs tracking-body text-muted-foreground">
+            <div className="text-muted-foreground px-3 py-6 text-center text-xs tracking-body">
               No matches
             </div>
           ) : renderItems.length > 0 ? (
@@ -192,13 +190,15 @@ export function PaletteList({
             </ul>
           ) : null}
           {renderMode === "results" && resultsFooter != null && (
-            <div className="px-3 py-2 text-center text-base tracking-body text-muted-foreground">
+            <div className="text-muted-foreground px-3 py-2 text-center text-base tracking-body">
               {resultsFooter}
             </div>
           )}
         </div>
         {panelFooter != null && (open || panelClosing) && (
-          <div className={frostedSurface("barTop", "shrink-0")}>{panelFooter}</div>
+          <div className={frostedSurface("barTop", "shrink-0")}>
+            {panelFooter}
+          </div>
         )}
       </div>
     </div>
@@ -288,13 +288,19 @@ function PreviewResultsExpand({
       <div
         className={cn(
           "overflow-hidden",
-          !instantExpand && motion("snappySmooth", "transition-[max-height]"),
+          !instantExpand && "motion-reduce:transition-none",
         )}
         style={{
           maxHeight: expanded ? height : 0,
+          transitionProperty: instantExpand ? "none" : "max-height",
+          transitionDuration: instantExpand ? undefined : `${PANEL_TRANSITION_MS}ms`,
+          transitionTimingFunction: instantExpand ? undefined : "ease-out",
         }}
       >
-        <div ref={contentRef} className="flex flex-col gap-0.5 [&_*]:![content-visibility:visible]">
+        <div
+          ref={contentRef}
+          className="flex flex-col gap-0.5 [&_*]:![content-visibility:visible]"
+        >
           {items.map((item, i) => renderRow(item, baseIndex + i, "div"))}
         </div>
       </div>
@@ -355,7 +361,6 @@ function PaletteListRow({
             )
           : cn(
               "flex cursor-pointer items-center justify-between gap-3 px-3 py-1.5",
-              motion("pressFeedback"),
               nestBottomCorners ? PALETTE_NESTED_RADIUS : "rounded-[8px]",
             ),
         selected && (item.kind === "result" ? "bg-white/[0.033]" : "bg-white/[0.05]"),
@@ -381,11 +386,7 @@ function PaletteListRow({
           "p-0 [contain-intrinsic-size:auto_3.5rem] [content-visibility:auto] [&_*]:hover:bg-transparent [&_*]:focus-visible:bg-transparent",
       )}
     >
-      <PaletteListRowContent
-        item={item}
-        showEnterHint={showEnterHint}
-        renderResult={renderResult}
-      />
+      <PaletteListRowContent item={item} showEnterHint={showEnterHint} renderResult={renderResult} />
     </RowTag>
   );
 }
@@ -403,10 +404,10 @@ function PaletteListRowContent({
     return (
       <>
         <span className="flex min-w-0 items-center gap-2 text-xs font-normal">
-          <ListFilter className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+          <ListFilter className="text-muted-foreground size-3.5 shrink-0" aria-hidden />
           <span className="text-white">{item.category.label}:</span>
           {item.category.examples && (
-            <span className="hidden truncate text-muted-foreground sm:inline">
+            <span className="text-muted-foreground hidden truncate sm:inline">
               {item.category.examples}
             </span>
           )}
@@ -484,7 +485,7 @@ function PaletteListRowContent({
                   e.stopPropagation();
                   item.headerAction!.onClick();
                 }}
-                className="cursor-pointer text-muted-foreground transition-colors hover:text-white"
+                className="text-muted-foreground hover:text-white cursor-pointer transition-colors"
               >
                 {item.headerAction.label}
               </button>
@@ -499,12 +500,12 @@ function PaletteListRowContent({
     return (
       <>
         <span className="flex min-w-0 items-center gap-2 text-xs font-normal">
-          <History className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+          <History className="text-muted-foreground size-3.5 shrink-0" aria-hidden />
           <span className="truncate text-white">{item.recent.label}</span>
         </span>
         <span className="flex shrink-0 items-center gap-2">
           {item.recent.hint != null && (
-            <span className="text-xs text-muted-foreground">{item.recent.hint}</span>
+            <span className="text-muted-foreground text-xs">{item.recent.hint}</span>
           )}
           {item.onRemove != null && (
             <button
@@ -551,7 +552,7 @@ function PaletteListRowContent({
         </span>
         <span className="flex shrink-0 items-center gap-2">
           {item.option.hint != null && (
-            <span className="text-xs text-muted-foreground">{item.option.hint}</span>
+            <span className="text-muted-foreground text-xs">{item.option.hint}</span>
           )}
           {showEnterHint ? (
             <Kbd className="hidden sm:inline-flex">
@@ -571,12 +572,14 @@ function PaletteListRowContent({
   if (item.kind === "value") {
     return (
       <>
-        <span className={cn("truncate text-xs font-normal", item.option.dimmed && "opacity-45")}>
+        <span
+          className={cn("truncate text-xs font-normal", item.option.dimmed && "opacity-45")}
+        >
           {item.option.label}
         </span>
         <span className="flex shrink-0 items-center gap-2">
           {item.option.hint != null && (
-            <span className="text-xs text-muted-foreground">{item.option.hint}</span>
+            <span className="text-muted-foreground text-xs">{item.option.hint}</span>
           )}
           {showEnterHint ? (
             <Kbd className="hidden sm:inline-flex">
