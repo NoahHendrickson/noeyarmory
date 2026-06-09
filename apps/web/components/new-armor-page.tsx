@@ -18,6 +18,8 @@ interface NewArmorSetGroup {
   pieces: ArmorDoc[];
 }
 
+type SetBonus = NonNullable<Armor30SetRef["perks"]>[number];
+
 function formatDate(value?: string): string | undefined {
   if (!value) return undefined;
   const date = new Date(value);
@@ -77,18 +79,18 @@ function ArmorIcon({ armor }: { armor: ArmorDoc }) {
   return (
     <div
       className={cn(
-        "relative size-12 shrink-0 overflow-hidden rounded ring-1",
+        "relative size-9 shrink-0 overflow-hidden rounded ring-1",
         RARITY_RING[armor.rarity] ?? "ring-border",
       )}
     >
-      {icon && <Image src={icon} alt="" width={48} height={48} className="size-12" unoptimized />}
+      {icon && <Image src={icon} alt="" width={36} height={36} className="size-9" unoptimized />}
       {watermark && (
         <Image
           src={watermark}
           alt=""
-          width={48}
-          height={48}
-          className="absolute inset-0 size-12"
+          width={36}
+          height={36}
+          className="absolute inset-0 size-9"
           unoptimized
         />
       )}
@@ -96,13 +98,26 @@ function ArmorIcon({ armor }: { armor: ArmorDoc }) {
   );
 }
 
+function SetBonusFrame({ perk }: { perk: SetBonus }) {
+  return (
+    <li className="rounded-lg border border-primary/25 bg-primary/8 px-2.5 py-2">
+      <div className="text-xs font-medium leading-none text-primary">{perk.name}</div>
+      {perk.description && (
+        <p className="mt-1.5 text-[11px] leading-snug whitespace-pre-line text-foreground/75">
+          {perk.description}
+        </p>
+      )}
+    </li>
+  );
+}
+
 function ArmorPiece({ armor }: { armor: ArmorDoc }) {
   return (
-    <li className="bg-card/80 flex gap-3 rounded-lg border border-white/10 p-3">
+    <li className="bg-card/70 flex items-center gap-2 rounded-md border border-white/10 p-2">
       <ArmorIcon armor={armor} />
       <div className="min-w-0">
-        <div className="truncate text-sm font-medium">{armor.name}</div>
-        <div className="text-muted-foreground text-xs">
+        <div className="truncate text-xs font-medium">{armor.name}</div>
+        <div className="text-muted-foreground text-[11px] leading-tight">
           {armor.classType} · {armor.slot}
         </div>
       </div>
@@ -111,15 +126,18 @@ function ArmorPiece({ armor }: { armor: ArmorDoc }) {
 }
 
 function NewArmorSetCard({ group }: { group: NewArmorSetGroup }) {
+  const setBonuses: SetBonus[] | undefined =
+    group.set?.perks ?? group.set?.perkNames.map((name) => ({ name }));
+
   return (
-    <section className="bg-background/70 rounded-2xl border border-white/12 p-4 shadow-lg shadow-black/20 backdrop-blur">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <section className="bg-background/70 rounded-xl border border-white/12 p-3 shadow-lg shadow-black/20 backdrop-blur">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 space-y-1">
           <div className="text-muted-foreground text-xs tracking-wide uppercase">
             {group.source ?? "New armor"}
           </div>
-          <h2 className="text-lg font-semibold tracking-tight">{group.name}</h2>
-          <p className="text-muted-foreground text-sm">
+          <h2 className="text-base font-semibold tracking-tight">{group.name}</h2>
+          <p className="text-muted-foreground text-xs">
             {group.pieces.length} new piece{group.pieces.length === 1 ? "" : "s"}
           </p>
         </div>
@@ -129,25 +147,20 @@ function NewArmorSetCard({ group }: { group: NewArmorSetGroup }) {
         </div>
       </div>
 
-      {group.set?.perkNames.length ? (
-        <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.03] p-3">
+      {setBonuses?.length ? (
+        <div className="mt-3 rounded-lg border border-white/10 bg-white/[0.03] p-2.5">
           <h3 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
             Set bonuses
           </h3>
-          <ul className="mt-2 flex flex-wrap gap-2">
-            {group.set.perkNames.map((perkName) => (
-              <li
-                key={perkName}
-                className="rounded-pill border border-primary/30 bg-primary/10 px-3 py-1 text-xs text-primary"
-              >
-                {perkName}
-              </li>
+          <ul className="mt-2 grid gap-2 lg:grid-cols-2">
+            {setBonuses.map((perk) => (
+              <SetBonusFrame key={perk.name} perk={perk} />
             ))}
           </ul>
         </div>
       ) : null}
 
-      <ul className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+      <ul className="mt-3 grid gap-1.5 sm:grid-cols-3 lg:grid-cols-5">
         {group.pieces.map((piece) => (
           <ArmorPiece key={piece.hash} armor={piece} />
         ))}
@@ -219,7 +232,7 @@ export function NewArmorPage({ index }: { index?: NewArmorIndex }) {
           The latest generated armor index did not contain armor hashes missing from the baseline.
         </EmptyState>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {groups.map((group) => (
             <NewArmorSetCard key={group.key} group={group} />
           ))}

@@ -213,6 +213,10 @@ export interface Armor30SetRef {
   hash: number;
   name: string;
   perkNames: string[];
+  perks?: {
+    name: string;
+    description?: string;
+  }[];
 }
 
 export interface ArmorIndex {

@@ -7,6 +7,16 @@ const rootSet: Armor30SetRef = {
   hash: 7001,
   name: "Root of Nightmares",
   perkNames: ["Nightmare Synergy", "Resonant Fury"],
+  perks: [
+    {
+      name: "Nightmare Synergy",
+      description: "Increases weapon damage against Tormentors.",
+    },
+    {
+      name: "Resonant Fury",
+      description: "Final blows grant bonus armor charge.",
+    },
+  ],
 };
 
 function armor(overrides: Partial<ArmorDoc> & Pick<ArmorDoc, "hash" | "name">): ArmorDoc {
@@ -85,6 +95,7 @@ describe("buildNewArmorIndex", () => {
 
     expect(result.newSetHashes).toEqual([rootSet.hash]);
     expect(result.armor30Sets).toEqual([rootSet]);
+    expect(result.armor30Sets[0]?.perks).toEqual(rootSet.perks);
   });
 
   test("includes an existing Armor 3.0 set when one new piece is added to it", () => {

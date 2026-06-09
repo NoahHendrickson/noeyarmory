@@ -10,7 +10,7 @@ import { stripPerksLowerReplacer } from "./intern-weapons";
 import { downloadDestinyIconDefinitions, downloadManifest } from "./manifest";
 import { buildNewArmorIndex } from "./new-armor";
 import { serializeWeaponFuseIndex } from "./search";
-import type { ArmorIndex } from "./types";
+import type { ArmorIndex, NewArmorIndex } from "./types";
 import { writeSampleIndexes } from "./write-sample-indexes";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -32,6 +32,14 @@ function hasExistingGeneratedIndexes(): boolean {
 function readPreviousArmorIndex(): ArmorIndex | undefined {
   try {
     return JSON.parse(readFileSync(armorFile, "utf8")) as ArmorIndex;
+  } catch {
+    return undefined;
+  }
+}
+
+function readPreviousNewArmorIndex(): NewArmorIndex | undefined {
+  try {
+    return JSON.parse(readFileSync(newArmorFile, "utf8")) as NewArmorIndex;
   } catch {
     return undefined;
   }
@@ -66,8 +74,15 @@ async function generateFromManifest(apiKey: string): Promise<void> {
 
   console.log("Flattening armor…");
   const previousArmorIndex = readPreviousArmorIndex();
+  const previousNewArmorIndex = readPreviousNewArmorIndex();
   const armorIndex = buildArmorIndex(defs, version);
-  const newArmorIndex = buildNewArmorIndex(armorIndex, previousArmorIndex);
+  const computedNewArmorIndex = buildNewArmorIndex(armorIndex, previousArmorIndex);
+  const newArmorIndex =
+    computedNewArmorIndex.armor.length === 0 &&
+    previousNewArmorIndex?.version === armorIndex.version &&
+    previousNewArmorIndex.armor.length > 0
+      ? previousNewArmorIndex
+      : computedNewArmorIndex;
   const armorManifestFile = writeGeneratedDataFile({
     dataDir,
     basename: "armor",

@@ -549,11 +549,11 @@ export function HomeSearch({
       <main className="mx-auto flex w-full flex-1 flex-col px-4 pt-4 sm:pt-[12vh]">
           <div
             className={cn(
-              "mx-auto flex w-full max-w-[calc(100vw-2rem)] flex-col sm:w-fit",
+              "mx-auto flex w-full max-w-[calc(100vw-2rem)] flex-col sm:w-[min(calc(100vw-2rem),calc(640px+var(--chip-count,0)*96px))]",
               selectedHash != null && "pointer-events-none invisible",
             )}
           >
-            <div className="mb-4 flex items-center gap-2">
+            <div className="mb-4 flex flex-wrap items-center justify-end gap-2 sm:justify-between">
               {mode === "weapon" && pinnedFilters.length > 0 ? (
                 <PinnedFilterPills
                   filters={pinnedFilters}
@@ -563,7 +563,7 @@ export function HomeSearch({
               ) : null}
               <div
                 data-palette-ignore-close
-                className="ml-auto shrink-0"
+                className="shrink-0"
                 onClick={(e) => e.stopPropagation()}
                 onPointerDown={(e) => e.stopPropagation()}
               >
