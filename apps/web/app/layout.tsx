@@ -27,17 +27,18 @@ const weaponIndexPreloadScript = `(() => {
   const manifestUrl = ${JSON.stringify(GENERATED_DATA_MANIFEST_PATH)};
   const stableWeaponsUrl = ${JSON.stringify(DEFAULT_GENERATED_DATA_PATHS.weapons)};
   const store = globalThis.__noeyarmoryPreloads || (globalThis.__noeyarmoryPreloads = {});
-  const fetchJson = (url) => fetch(url, { credentials: "same-origin" }).then((res) => {
+  const fetchJson = (url, cache = "default") => fetch(url, { credentials: "same-origin", cache }).then((res) => {
     if (!res.ok) throw new Error("HTTP " + res.status);
     return res.json();
   });
   if (!store.generatedDataManifest) {
-    store.generatedDataManifest = fetchJson(manifestUrl).catch(() => null);
+    store.generatedDataManifest = fetchJson(manifestUrl, "no-cache").catch(() => null);
   }
   if (!store.weapons) {
     store.weapons = store.generatedDataManifest.then((manifest) => {
       const url = manifest?.files?.weapons?.path || stableWeaponsUrl;
-      return fetchJson(url).catch((error) => {
+      const cache = url === stableWeaponsUrl ? "default" : "force-cache";
+      return fetchJson(url, cache).catch((error) => {
         if (url !== stableWeaponsUrl) return fetchJson(stableWeaponsUrl);
         throw error;
       });

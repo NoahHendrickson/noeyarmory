@@ -105,8 +105,8 @@ let isSampleCache = false;
 
 const DETAIL_PRELOAD_DELAY_MS = 1500;
 
-async function fetchJson<T>(url: string): Promise<T> {
-  const res = await fetch(url, { credentials: "same-origin" });
+async function fetchJson<T>(url: string, cache: RequestCache = "default"): Promise<T> {
+  const res = await fetch(url, { credentials: "same-origin", cache });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return (await res.json()) as T;
 }
@@ -117,7 +117,7 @@ function getPreloadStore(): NoeyarmoryPreloadStore | undefined {
 
 async function fetchGeneratedDataManifest(): Promise<GeneratedDataManifest | null> {
   try {
-    return await fetchJson<GeneratedDataManifest>(GENERATED_DATA_MANIFEST_PATH);
+    return await fetchJson<GeneratedDataManifest>(GENERATED_DATA_MANIFEST_PATH, "no-cache");
   } catch (error) {
     return null;
   }
@@ -137,10 +137,10 @@ async function fetchGeneratedDataFile<T>(key: GeneratedDataKey): Promise<T> {
 
   const manifest = await loadGeneratedDataManifest();
   const path = generatedDataPath(manifest, key);
+  const fallbackPath = DEFAULT_GENERATED_DATA_PATHS[key];
   try {
-    return await fetchJson<T>(path);
+    return await fetchJson<T>(path, path === fallbackPath ? "default" : "force-cache");
   } catch (error) {
-    const fallbackPath = DEFAULT_GENERATED_DATA_PATHS[key];
     if (path !== fallbackPath) {
       return fetchJson<T>(fallbackPath);
     }
