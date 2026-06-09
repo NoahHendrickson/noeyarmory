@@ -33,7 +33,23 @@ import {
   type ReactNode,
 } from "react";
 
+import {
+  DEFAULT_GENERATED_DATA_PATHS,
+  GENERATED_DATA_MANIFEST_PATH,
+  generatedDataPath,
+  type GeneratedDataKey,
+  type GeneratedDataManifest,
+} from "./generated-data";
 import { scheduleIdle } from "./schedule-idle";
+
+interface NoeyarmoryPreloadStore {
+  generatedDataManifest?: Promise<GeneratedDataManifest | null>;
+  weapons?: Promise<WeaponIndex>;
+}
+
+declare global {
+  var __noeyarmoryPreloads: NoeyarmoryPreloadStore | undefined;
+}
 
 export interface WeaponsState {
   weapons: WeaponSummary[];
@@ -84,9 +100,53 @@ let detailCache: Map<number, WeaponDetailFields> | null = null;
 let statGroupsCache: Record<string, StatGroupRef> | undefined;
 let loadPromise: Promise<WeaponIndexLookups> | null = null;
 let detailLoadPromise: Promise<Map<number, WeaponDetailFields>> | null = null;
+let generatedDataManifestPromise: Promise<GeneratedDataManifest | null> | null = null;
 let isSampleCache = false;
 
 const DETAIL_PRELOAD_DELAY_MS = 1500;
+
+async function fetchJson<T>(url: string): Promise<T> {
+  const res = await fetch(url, { credentials: "same-origin" });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return (await res.json()) as T;
+}
+
+function getPreloadStore(): NoeyarmoryPreloadStore | undefined {
+  return globalThis.__noeyarmoryPreloads;
+}
+
+async function fetchGeneratedDataManifest(): Promise<GeneratedDataManifest | null> {
+  try {
+    return await fetchJson<GeneratedDataManifest>(GENERATED_DATA_MANIFEST_PATH);
+  } catch (error) {
+    return null;
+  }
+}
+
+function loadGeneratedDataManifest(): Promise<GeneratedDataManifest | null> {
+  if (!generatedDataManifestPromise) {
+    generatedDataManifestPromise =
+      getPreloadStore()?.generatedDataManifest ?? fetchGeneratedDataManifest();
+  }
+  return generatedDataManifestPromise;
+}
+
+async function fetchGeneratedDataFile<T>(key: GeneratedDataKey): Promise<T> {
+  const preloadedWeapons = key === "weapons" ? getPreloadStore()?.weapons : undefined;
+  if (preloadedWeapons) return (await preloadedWeapons) as T;
+
+  const manifest = await loadGeneratedDataManifest();
+  const path = generatedDataPath(manifest, key);
+  try {
+    return await fetchJson<T>(path);
+  } catch {
+    const fallbackPath = DEFAULT_GENERATED_DATA_PATHS[key];
+    if (path !== fallbackPath) {
+      return fetchJson<T>(fallbackPath);
+    }
+    throw error;
+  }
+}
 
 function seedDetails(index: WeaponDetailIndex): void {
   detailCache = new Map(
@@ -117,9 +177,7 @@ async function loadWeaponDetails(): Promise<Map<number, WeaponDetailFields>> {
   if (!detailLoadPromise) {
     detailLoadPromise = (async () => {
       try {
-        const res = await fetch("/data/weapons-detail.json");
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const index = (await res.json()) as WeaponDetailIndex;
+        const index = await fetchGeneratedDataFile<WeaponDetailIndex>("weaponDetails");
         seedDetails(index);
         enrichSummariesIfReady();
         return detailCache!;
@@ -177,9 +235,7 @@ async function fetchWeaponIndex(): Promise<{ lookups: WeaponIndexLookups; isSamp
   if (!loadPromise) {
     loadPromise = (async () => {
       try {
-        const res = await fetch("/data/weapons.json");
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const index = (await res.json()) as WeaponIndex;
+        const index = await fetchGeneratedDataFile<WeaponIndex>("weapons");
         const lookups = buildWeaponIndexLookups(index);
         moduleCache = lookups;
         isSampleCache = false;
