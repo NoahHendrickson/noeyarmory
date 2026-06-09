@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useDeferredValue, useMemo } from "react";
 import type { PaletteCategory, PaletteChip } from "@repo/ui";
 import { availableCategories, scanValueSuggestions, type ValueSuggestion } from "@repo/ui";
 
@@ -22,12 +22,16 @@ export function usePaletteInlineSuggestions({
   recentValues,
   limit = 20,
 }: UsePaletteInlineSuggestionsParams): ValueSuggestion[] {
+  const deferredEnabled = useDeferredValue(enabled);
+  const deferredQuery = useDeferredValue(query);
+
   return useMemo(() => {
-    if (!enabled || !query.trim()) return [];
-    return scanValueSuggestions(availableCategories(categories, chips), query, chips, {
+    if (!query.trim() || !deferredEnabled || !deferredQuery.trim()) return [];
+    return scanValueSuggestions(availableCategories(categories, chips), deferredQuery, chips, {
       limit,
+      perCategoryLimit: limit,
       recentValues,
       maxRank: 2,
     });
-  }, [enabled, categories, chips, query, recentValues, limit]);
+  }, [query, deferredEnabled, deferredQuery, categories, chips, recentValues, limit]);
 }

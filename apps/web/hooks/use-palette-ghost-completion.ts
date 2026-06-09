@@ -2,16 +2,19 @@
 
 import { useDeferredValue, useMemo } from "react";
 import type { ValueSuggestion } from "@repo/ui";
-import { bestGhostCompletion, suggestWeaponNames, type WeaponSummary } from "@repo/destiny";
-
-import { isFirefox } from "../lib/is-firefox";
+import {
+  bestGhostCompletion,
+  ghostSuffix,
+  suggestWeaponNamesFromIndex,
+  type WeaponNameIndex,
+} from "@repo/destiny";
 
 export interface UsePaletteGhostCompletionParams {
   enabled: boolean;
   query: string;
   mode: "weapon" | "armor";
   inlineSuggestions: ValueSuggestion[];
-  weapons: WeaponSummary[];
+  weaponNameIndex: WeaponNameIndex;
   recentValues: ReadonlySet<string>;
 }
 
@@ -20,29 +23,34 @@ export function usePaletteGhostCompletion({
   query,
   mode,
   inlineSuggestions,
-  weapons,
+  weaponNameIndex,
   recentValues,
 }: UsePaletteGhostCompletionParams) {
+  const deferredEnabled = useDeferredValue(enabled);
   const deferredQuery = useDeferredValue(query);
-  const ghostQuery = isFirefox() ? deferredQuery : query;
+  const ghostQuery = deferredQuery;
 
   const candidates = useMemo(() => {
-    if (!enabled || !ghostQuery.trim()) return [];
+    if (!deferredEnabled || !ghostQuery.trim()) return [];
     const items: { label: string; popularity?: number }[] = inlineSuggestions.map((s) => ({
       label: s.value,
     }));
     if (mode === "weapon") {
-      for (const weapon of suggestWeaponNames(weapons, ghostQuery, 5)) {
+      for (const weapon of suggestWeaponNamesFromIndex(weaponNameIndex, ghostQuery, 5)) {
         items.push({ label: weapon.value, popularity: weapon.count });
       }
     }
     return items;
-  }, [enabled, ghostQuery, inlineSuggestions, mode, weapons]);
+  }, [deferredEnabled, ghostQuery, inlineSuggestions, mode, weaponNameIndex]);
 
-  const ghost = useMemo(
-    () => (enabled ? bestGhostCompletion(ghostQuery, candidates, recentValues) : undefined),
-    [enabled, ghostQuery, candidates, recentValues],
-  );
+  const ghost = useMemo(() => {
+    if (!deferredEnabled) return undefined;
+    const completion = bestGhostCompletion(ghostQuery, candidates, recentValues);
+    if (!completion) return undefined;
+    const suffix = ghostSuffix(completion.label, query);
+    if (!suffix) return undefined;
+    return { label: completion.label, suffix };
+  }, [deferredEnabled, ghostQuery, candidates, recentValues, query]);
 
   return {
     ghostCompletion: ghost?.label,

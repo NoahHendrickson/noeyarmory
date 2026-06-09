@@ -42,13 +42,15 @@ export function weaponNameCategory(weapons: WeaponSummary[]): PaletteCategory {
     single: true,
     inlineSuggestions: false,
     examples,
-    getValues: (q) =>
-      filterWeaponNames(weapons, q).map((o) => ({
-        id: o.value.toLowerCase(),
-        label: o.value,
-        hint: String(o.count),
-        searchRank: o.searchRank,
-      })),
+    getValues: (q, options) =>
+      filterWeaponNames(weapons, q)
+        .slice(0, options?.limit)
+        .map((o) => ({
+          id: o.value.toLowerCase(),
+          label: o.value,
+          hint: String(o.count),
+          searchRank: o.searchRank,
+        })),
   };
 }
 
@@ -63,12 +65,14 @@ export function facetCategory(
     label,
     omitWeakInlineMatches: config?.omitWeakInlineMatches,
     examples: formatExamples(options.map((option) => option.value)),
-    getValues: (q) =>
-      filterFacetOptions(options, q).map((o) => ({
-        id: o.value.toLowerCase(),
-        label: o.value,
-        hint: String(o.count),
-      })),
+    getValues: (q, getValueOptions) =>
+      filterFacetOptions(options, q)
+        .slice(0, getValueOptions?.limit)
+        .map((o) => ({
+          id: o.value.toLowerCase(),
+          label: o.value,
+          hint: String(o.count),
+        })),
   };
 }
 
@@ -79,6 +83,7 @@ export function perkCategory(
   perkFuse: ReturnType<typeof createPerkNameFuse> | null = null,
 ): PaletteCategory {
   const names = options.map((o) => o.name);
+  const optionByName = new Map(options.map((o) => [o.name, o] as const));
   return {
     id,
     label,
@@ -87,18 +92,19 @@ export function perkCategory(
       options.slice(0, 2).map((option) => option.name),
       2,
     ),
-    getValues: (q) => {
+    getValues: (q, getValueOptions) => {
       const ql = q.trim();
+      const limit = getValueOptions?.limit ?? options.length;
       if (!ql) {
-        return options.map((o) => ({
+        return options.slice(0, limit).map((o) => ({
           id: o.name.toLowerCase(),
           label: o.name,
           hint: String(o.count),
           dimmed: "currentlyCanRoll" in o && o.currentlyCanRoll === false,
         }));
       }
-      return filterPerkNames(names, ql, perkFuse, options.length).flatMap((entry) => {
-        const source = options.find((o) => o.name === entry.name);
+      return filterPerkNames(names, ql, perkFuse, limit).flatMap((entry) => {
+        const source = optionByName.get(entry.name);
         if (!source) return [];
         return [
           {
@@ -137,12 +143,12 @@ export function customFilterCategory(filters: CustomWeaponFilter[]): PaletteCate
       filters.slice(0, 2).map((filter) => filter.name),
       2,
     ),
-    getValues: (q) => {
+    getValues: (q, getValueOptions) => {
       const ql = q.trim().toLowerCase();
       const matched = ql
         ? filters.filter((filter) => filter.name.toLowerCase().includes(ql))
         : filters;
-      return matched.map((filter) => ({
+      return matched.slice(0, getValueOptions?.limit).map((filter) => ({
         id: filter.id,
         label: filter.name,
         hint: `${filter.perkNames.length} ${filter.perkNames.length === 1 ? "perk" : "perks"}`,

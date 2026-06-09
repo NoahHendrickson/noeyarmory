@@ -50,6 +50,8 @@ export interface ValueSuggestion {
 
 export interface ScanValueSuggestionsOptions {
   limit?: number;
+  /** Per-category cap passed to `getValues` before global ranking. Defaults to `limit`. */
+  perCategoryLimit?: number;
   recentValues?: ReadonlySet<string>;
   /** Drop matches above this rank (inline chip suggestions use 2 = word-boundary prefix). */
   maxRank?: number;
@@ -80,6 +82,7 @@ export function scanValueSuggestions(
       ? { limit: limitOrOptions, recentValues: legacyRecent }
       : limitOrOptions;
   const limit = options.limit ?? MAX_VALUE_SUGGESTIONS;
+  const perCategoryLimit = options.perCategoryLimit ?? limit;
   const recentValues = options.recentValues ?? legacyRecent;
   const maxRank = options.maxRank;
 
@@ -92,7 +95,7 @@ export function scanValueSuggestions(
   for (const category of categories) {
     if (categoryIsFull(category, chips)) continue;
     if (category.inlineSuggestions === false) continue;
-    for (const option of category.getValues(q)) {
+    for (const option of category.getValues(q, { limit: perCategoryLimit, usage: "inline" })) {
       if (applied.has(`${category.id}:${option.id}`)) continue;
       const baseRank = resolveMatchRank(option.label, q, option.searchRank);
       if (baseRank == null) continue;

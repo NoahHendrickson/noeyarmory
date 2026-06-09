@@ -80,13 +80,35 @@ describe("scanValueSuggestions", () => {
     const trait: PaletteCategory = {
       id: "trait1",
       label: "Trait 1",
-      getValues: () => [
-        { id: "surrounded", label: "Surrounded", hint: "50", searchRank: 4 },
-      ],
+      getValues: () => [{ id: "surrounded", label: "Surrounded", hint: "50", searchRank: 4 }],
     };
 
     const suggestions = scanValueSuggestions([trait], "suround", [], { maxRank: 2 });
 
     expect(suggestions).toEqual([]);
+  });
+
+  test("passes a per-category limit to predictive value scans", () => {
+    const seenLimits: Array<number | undefined> = [];
+    const trait: PaletteCategory = {
+      id: "trait1",
+      label: "Trait 1",
+      getValues: (_query, options) => {
+        seenLimits.push(options?.limit);
+        return [
+          { id: "firefly", label: "Firefly", hint: "30" },
+          { id: "firing-line", label: "Firing Line", hint: "10" },
+          { id: "frenzy", label: "Frenzy", hint: "20" },
+        ].slice(0, options?.limit);
+      },
+    };
+
+    const suggestions = scanValueSuggestions([trait], "fi", [], {
+      limit: 5,
+      perCategoryLimit: 2,
+    });
+
+    expect(seenLimits).toEqual([2]);
+    expect(suggestions.map((s) => s.value)).toEqual(["Firefly", "Firing Line"]);
   });
 });

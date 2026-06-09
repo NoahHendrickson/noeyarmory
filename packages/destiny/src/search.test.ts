@@ -13,12 +13,15 @@ import {
   collectColumnPerks,
   collectFacets,
   collectPerks,
+  createWeaponNameIndex,
+  filterWeaponNamesFromIndex,
   filterWeaponNames,
   filterWeapons,
   fuzzySearchWeapons,
   rankWeaponResults,
   sortWeapons,
   suggestWeaponNames,
+  suggestWeaponNamesFromIndex,
   sortFilteredWeaponNames,
   weaponsMatchingTextQuery,
   weaponsWithPerk,
@@ -140,7 +143,12 @@ describe("filterWeapons", () => {
   test("multiple custom perk groups require one match from each group", () => {
     const result = filterWeapons(
       sampleSummaries,
-      { customPerkGroups: [["Firefly", "Chill Clip"], ["Explosive Payload", "Frenzy"]] },
+      {
+        customPerkGroups: [
+          ["Firefly", "Chill Clip"],
+          ["Explosive Payload", "Frenzy"],
+        ],
+      },
       samplePerks,
     );
     expect(names(result)).toEqual(["Fatebringer", "Sunshot Scout"]);
@@ -256,7 +264,11 @@ describe("position-aware trait, slot + origin filters", () => {
       ),
     ).toEqual(["Fatebringer"]);
     expect(
-      filterWeapons(sampleSummaries, { name: ["Fatebringer"], trait2: ["Surrounded"] }, samplePerks),
+      filterWeapons(
+        sampleSummaries,
+        { name: ["Fatebringer"], trait2: ["Surrounded"] },
+        samplePerks,
+      ),
     ).toEqual([]);
   });
 });
@@ -266,6 +278,14 @@ describe("filterWeaponNames", () => {
     const matches = filterWeaponNames(sampleSummaries, "fate");
     expect(matches.some((m) => m.value === "Fatebringer")).toBe(true);
     expect(matches.find((m) => m.value === "Fatebringer")?.searchRank).toBeLessThanOrEqual(1);
+  });
+
+  test("indexed filtering matches direct weapon-name filtering", () => {
+    const index = createWeaponNameIndex(sampleSummaries);
+
+    expect(sortFilteredWeaponNames(filterWeaponNamesFromIndex(index, "sun"))).toEqual(
+      sortFilteredWeaponNames(filterWeaponNames(sampleSummaries, "sun")),
+    );
   });
 });
 
@@ -369,6 +389,14 @@ describe("suggestWeaponNames", () => {
   test("ranks partial name matches with Fatebringer first", () => {
     const suggestions = suggestWeaponNames(sampleSummaries, "fate");
     expect(suggestions[0]?.value).toBe("Fatebringer");
+  });
+
+  test("indexed suggestions match direct weapon-name suggestions", () => {
+    const index = createWeaponNameIndex(sampleSummaries);
+
+    expect(suggestWeaponNamesFromIndex(index, "sun")).toEqual(
+      suggestWeaponNames(sampleSummaries, "sun"),
+    );
   });
 
   test("returns empty for no matches", () => {

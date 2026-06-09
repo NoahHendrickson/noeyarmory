@@ -13,6 +13,13 @@ export interface PaletteValueOption {
   dimmed?: boolean;
 }
 
+export interface PaletteGetValuesOptions {
+  /** Maximum number of filtered values needed by the caller. */
+  limit?: number;
+  /** Calling surface, for categories that can use cheaper predictive searches. */
+  usage?: "inline" | "values" | "preview";
+}
+
 export interface PaletteCategory {
   id: string;
   label: string;
@@ -28,7 +35,7 @@ export interface PaletteCategory {
    */
   omitWeakInlineMatches?: boolean;
   /** Values for this category, filtered by the in-category query. */
-  getValues: (query: string) => PaletteValueOption[];
+  getValues: (query: string, options?: PaletteGetValuesOptions) => PaletteValueOption[];
 }
 
 export interface PaletteChip {

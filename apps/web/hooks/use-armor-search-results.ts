@@ -2,7 +2,12 @@
 
 import { useDeferredValue, useMemo } from "react";
 import type { PaletteChip, ValueSuggestion } from "@repo/ui";
-import { createOwnedArmorFuse, filterOwnedArmor, searchOwnedArmor, sortOwnedArmor } from "@repo/destiny";
+import {
+  createOwnedArmorFuse,
+  filterOwnedArmor,
+  searchOwnedArmor,
+  sortOwnedArmor,
+} from "@repo/destiny";
 
 import type { OwnedArmorItem } from "../lib/armor-types";
 import { isFirefox } from "../lib/is-firefox";
@@ -38,13 +43,8 @@ export function useArmorSearchResults({
   const armorFilters = useMemo(() => chipsToArmorFilters(chips), [chips]);
   const armorFuse = useMemo(() => createOwnedArmorFuse(owned), [owned]);
   const deferredQuery = useDeferredValue(query);
-  const deferPreviewsForInput = isFirefox();
-  const previewResultLimit = deferPreviewsForInput ? MAX_PREVIEW_RESULTS_FIREFOX : MAX_PREVIEW_RESULTS;
-  const previewQuery = previewsEnabled
-    ? deferPreviewsForInput
-      ? deferredQuery
-      : query
-    : deferredQuery;
+  const previewResultLimit = isFirefox() ? MAX_PREVIEW_RESULTS_FIREFOX : MAX_PREVIEW_RESULTS;
+  const previewQuery = deferredQuery;
   const armorCategories = useMemo(() => buildArmorCategories(owned), [owned]);
 
   const armorResults = useMemo(() => {

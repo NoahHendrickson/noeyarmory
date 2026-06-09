@@ -9,7 +9,13 @@ import type {
   PaletteValueOption,
 } from "@repo/ui";
 import { valueSuggestionsToChipItems } from "@repo/ui";
-import type { PerkRef, WeaponDpsEntry, WeaponSort, WeaponSummary } from "@repo/destiny";
+import type {
+  PerkRef,
+  WeaponDpsEntry,
+  WeaponNameIndex,
+  WeaponSort,
+  WeaponSummary,
+} from "@repo/destiny";
 
 import type { PaletteResultsMode } from "../lib/palette/results-mode";
 import type { OwnedArmorItem } from "../lib/armor-types";
@@ -36,6 +42,7 @@ function draftPerkChips(perkNames: string[]): PaletteChip[] {
 export interface UseHomeSearchPaletteStateParams {
   mode: "weapon" | "armor";
   weapons: WeaponSummary[];
+  weaponNameIndex: WeaponNameIndex;
   perks: PerkRef[];
   owned: OwnedArmorItem[];
   customFilters: CustomWeaponFilter[];
@@ -64,6 +71,7 @@ export interface UseHomeSearchPaletteStateParams {
 export function useHomeSearchPaletteState({
   mode,
   weapons,
+  weaponNameIndex,
   perks,
   owned,
   customFilters,
@@ -153,6 +161,7 @@ export function useHomeSearchPaletteState({
     shownCount: weaponShownCount,
   } = useWeaponSearchResults({
     weapons,
+    weaponNameIndex,
     perks,
     chips,
     customFilters,
@@ -190,14 +199,14 @@ export function useHomeSearchPaletteState({
     query,
     mode,
     inlineSuggestions,
-    weapons,
+    weaponNameIndex,
     recentValues,
   });
 
   const handleSubmit = usePaletteSubmit({
     query,
     mode,
-    weapons,
+    weaponNameIndex,
     composingCustomFilter,
     addChip,
     setQuery,

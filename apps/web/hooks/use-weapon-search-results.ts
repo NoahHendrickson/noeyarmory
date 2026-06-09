@@ -4,7 +4,7 @@ import { useDeferredValue, useMemo } from "react";
 import type { PaletteCategory, PaletteChip, PalettePanelState, ValueSuggestion } from "@repo/ui";
 import {
   createWeaponFuse,
-  filterWeaponNames,
+  filterWeaponNamesFromIndex,
   filterWeapons,
   MIN_WEAPON_TEXT_QUERY_LENGTH,
   rankWeaponResults,
@@ -13,6 +13,7 @@ import {
   type PerkRef,
   type WeaponDpsEntry,
   type WeaponFilters,
+  type WeaponNameIndex,
   type WeaponSort,
   type WeaponSummary,
 } from "@repo/destiny";
@@ -29,6 +30,7 @@ import { chipsToWeaponFilters, withHypotheticalChip } from "../lib/palette/weapo
 
 export interface UseWeaponSearchResultsParams {
   weapons: WeaponSummary[];
+  weaponNameIndex: WeaponNameIndex;
   perks: PerkRef[];
   chips: PaletteChip[];
   customFilters: import("../lib/use-custom-weapon-filters").CustomWeaponFilter[];
@@ -49,6 +51,7 @@ export interface UseWeaponSearchResultsParams {
 
 function weaponsForPreviewQuery(
   weapons: WeaponSummary[],
+  weaponNameIndex: WeaponNameIndex,
   weaponFuse: ReturnType<typeof createWeaponFuse>,
   query: string,
   limit: number,
@@ -56,7 +59,7 @@ function weaponsForPreviewQuery(
   const q = query.trim();
   if (q.length < MIN_WEAPON_TEXT_QUERY_LENGTH) return weapons;
 
-  const exact = sortFilteredWeaponNames(filterWeaponNames(weapons, q)).find(
+  const exact = sortFilteredWeaponNames(filterWeaponNamesFromIndex(weaponNameIndex, q)).find(
     (match) => match.searchRank === 0 && match.value.toLowerCase() === q.toLowerCase(),
   );
   if (exact) {
@@ -68,6 +71,7 @@ function weaponsForPreviewQuery(
 
 export function useWeaponSearchResults({
   weapons,
+  weaponNameIndex,
   perks,
   chips,
   customFilters,
@@ -92,19 +96,9 @@ export function useWeaponSearchResults({
   const weaponFuse = useMemo(() => createWeaponFuse(weapons), [weapons]);
   const deferredQuery = useDeferredValue(query);
   const deferredPanelState = useDeferredValue(panelState);
-  const deferPreviewsForInput = isFirefox();
-  const previewResultLimit = deferPreviewsForInput ? MAX_PREVIEW_RESULTS_FIREFOX : MAX_PREVIEW_RESULTS;
-  // Live preview query in Chrome; Firefox defers to keep keystrokes off the critical path.
-  const previewQuery = previewsEnabled
-    ? deferPreviewsForInput
-      ? deferredQuery
-      : query
-    : deferredQuery;
-  const previewPanelState = previewsEnabled
-    ? deferPreviewsForInput
-      ? deferredPanelState
-      : panelState
-    : deferredPanelState;
+  const previewResultLimit = isFirefox() ? MAX_PREVIEW_RESULTS_FIREFOX : MAX_PREVIEW_RESULTS;
+  const previewQuery = deferredQuery;
+  const previewPanelState = deferredPanelState;
   const textSearchActive = resultsMode === "text";
 
   const weaponResults = useMemo(() => {
@@ -140,7 +134,7 @@ export function useWeaponSearchResults({
     if (q.length >= MIN_WEAPON_TEXT_QUERY_LENGTH) {
       appendWeapons(
         filterWeapons(
-          weaponsForPreviewQuery(weapons, weaponFuse, q, previewResultLimit),
+          weaponsForPreviewQuery(weapons, weaponNameIndex, weaponFuse, q, previewResultLimit),
           base,
           perks,
         ),
@@ -157,8 +151,7 @@ export function useWeaponSearchResults({
       const category = weaponCategories.find((c) => c.id === previewPanelState.categoryId);
       if (category) {
         filterSets = category
-          .getValues(previewPanelState.valueQuery)
-          .slice(0, previewResultLimit)
+          .getValues(previewPanelState.valueQuery, { limit: previewResultLimit, usage: "preview" })
           .map((option) =>
             withHypotheticalChip(base, category.id, option.label, option.id, customFilters),
           );
@@ -187,6 +180,7 @@ export function useWeaponSearchResults({
     previewQuery,
     previewResultLimit,
     weapons,
+    weaponNameIndex,
     perks,
     sort,
     dpsByName,

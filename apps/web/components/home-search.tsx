@@ -20,6 +20,7 @@ import {
   collectColumnPerks,
   collectFacets,
   createPerkNameFuse,
+  createWeaponNameIndex,
   type WeaponSort,
 } from "@repo/destiny";
 
@@ -118,6 +119,7 @@ export function HomeSearch({
   const { weapon: selected, loading: selectedLoading } = useWeaponDetail(selectedHash);
 
   const weaponColumnPerks = useMemo(() => collectColumnPerks(weapons, perks), [weapons, perks]);
+  const weaponNameIndex = useMemo(() => createWeaponNameIndex(weapons), [weapons]);
 
   // Facets depend only on weapons; the perk fuse only on the column perks. Memoizing
   // them apart from customFilters avoids rebuilding the fuzzy index when a custom
@@ -187,6 +189,7 @@ export function HomeSearch({
   } = useHomeSearchPaletteState({
     mode,
     weapons,
+    weaponNameIndex,
     perks,
     owned,
     customFilters,

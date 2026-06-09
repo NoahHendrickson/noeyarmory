@@ -5,12 +5,7 @@ import { matchRank } from "@repo/search-rank";
 import type { InternedPerkColumn, PerkRef, WeaponSummary } from "./types";
 import type { WeaponDpsLookup } from "./weapon-dps";
 
-export type WeaponSort =
-  | "name"
-  | "season-desc"
-  | "season-asc"
-  | "dps-desc"
-  | "ammo-gen-desc";
+export type WeaponSort = "name" | "season-desc" | "season-asc" | "dps-desc" | "ammo-gen-desc";
 
 /** Composite key for season ordering: season number dominates, release index breaks ties. */
 function seasonSortKey(weapon: WeaponSummary): number {
@@ -160,7 +155,11 @@ export function filterWeapons(
     }
     if (
       originWanted.size &&
-      !columnRollsAny(w.columns.find((c) => c.kind === "Origin Trait"), originWanted, perks)
+      !columnRollsAny(
+        w.columns.find((c) => c.kind === "Origin Trait"),
+        originWanted,
+        perks,
+      )
     ) {
       return false;
     }
@@ -174,9 +173,7 @@ export function filterWeapons(
 }
 
 /** Lowercase perk name → weapons that can roll it. */
-export function buildWeaponsByPerkName(
-  weapons: WeaponSummary[],
-): Map<string, WeaponSummary[]> {
+export function buildWeaponsByPerkName(weapons: WeaponSummary[]): Map<string, WeaponSummary[]> {
   const map = new Map<string, WeaponSummary[]>();
   for (const weapon of weapons) {
     for (const key of weapon.perksLower) {
@@ -189,10 +186,7 @@ export function buildWeaponsByPerkName(
 }
 
 /** Every weapon that can roll a given perk (by name or hash). */
-export function weaponsWithPerk(
-  weapons: WeaponSummary[],
-  perk: string | number,
-): WeaponSummary[] {
+export function weaponsWithPerk(weapons: WeaponSummary[], perk: string | number): WeaponSummary[] {
   if (typeof perk === "number") return weapons.filter((w) => w.perkHashes.includes(perk));
   const target = lower(perk);
   return weapons.filter((w) => w.perksLower.includes(target));
@@ -210,26 +204,50 @@ export interface FilteredWeaponName {
   searchRank: number;
 }
 
-/** Flat weapon-name matches for palette ranking — no sort (caller ranks). */
-export function filterWeaponNames(
-  weapons: WeaponSummary[],
-  query: string,
-): FilteredWeaponName[] {
-  const ql = query.trim().toLowerCase();
-  if (!ql) return [];
+export interface WeaponNameIndexEntry {
+  value: string;
+  valueLower: string;
+  count: number;
+}
 
+export type WeaponNameIndex = WeaponNameIndexEntry[];
+
+/** Precompute distinct weapon names and counts for predictive name searches. */
+export function createWeaponNameIndex(weapons: WeaponSummary[]): WeaponNameIndex {
   const counts = new Map<string, number>();
   for (const w of weapons) {
     counts.set(w.name, (counts.get(w.name) ?? 0) + 1);
   }
 
+  return [...counts.entries()].map(([value, count]) => ({
+    value,
+    valueLower: value.toLowerCase(),
+    count,
+  }));
+}
+
+/** Flat weapon-name matches for palette ranking — no sort (caller ranks). */
+export function filterWeaponNamesFromIndex(
+  index: WeaponNameIndex,
+  query: string,
+): FilteredWeaponName[] {
+  const ql = query.trim().toLowerCase();
+  if (!ql) return [];
+
   const matches: FilteredWeaponName[] = [];
-  for (const [name, count] of counts) {
-    const rank = weaponNameRank(name.toLowerCase(), ql);
-    if (rank != null) matches.push({ value: name, count, searchRank: rank });
+  for (const entry of index) {
+    const rank = weaponNameRank(entry.valueLower, ql);
+    if (rank != null) {
+      matches.push({ value: entry.value, count: entry.count, searchRank: rank });
+    }
   }
 
   return matches;
+}
+
+/** Flat weapon-name matches for palette ranking — no sort (caller ranks). */
+export function filterWeaponNames(weapons: WeaponSummary[], query: string): FilteredWeaponName[] {
+  return filterWeaponNamesFromIndex(createWeaponNameIndex(weapons), query);
 }
 
 /** Minimum query length before text search and name-match pinning apply. */
@@ -238,10 +256,7 @@ export const MIN_WEAPON_TEXT_QUERY_LENGTH = 2;
 /** Canonical tie-break order for `filterWeaponNames` results across search surfaces. */
 export function sortFilteredWeaponNames(matches: FilteredWeaponName[]): FilteredWeaponName[] {
   return [...matches].sort(
-    (a, b) =>
-      a.searchRank - b.searchRank ||
-      b.count - a.count ||
-      a.value.localeCompare(b.value),
+    (a, b) => a.searchRank - b.searchRank || b.count - a.count || a.value.localeCompare(b.value),
   );
 }
 
@@ -303,8 +318,7 @@ function sortNameMatchedWeapons(
   return [...weapons].sort(
     (a, b) =>
       (rankByName.get(a.name) ?? Number.MAX_SAFE_INTEGER) -
-        (rankByName.get(b.name) ?? Number.MAX_SAFE_INTEGER) ||
-      a.name.localeCompare(b.name),
+        (rankByName.get(b.name) ?? Number.MAX_SAFE_INTEGER) || a.name.localeCompare(b.name),
   );
 }
 
@@ -339,10 +353,18 @@ export function suggestWeaponNames(
   query: string,
   limit = 20,
 ): FacetOption[] {
+  return suggestWeaponNamesFromIndex(createWeaponNameIndex(weapons), query, limit);
+}
+
+export function suggestWeaponNamesFromIndex(
+  index: WeaponNameIndex,
+  query: string,
+  limit = 20,
+): FacetOption[] {
   const ql = query.trim().toLowerCase();
   if (!ql) return [];
 
-  return sortFilteredWeaponNames(filterWeaponNames(weapons, query))
+  return sortFilteredWeaponNames(filterWeaponNamesFromIndex(index, query))
     .slice(0, limit)
     .map(({ value, count }) => ({ value, count }));
 }
@@ -456,10 +478,7 @@ export interface ColumnPerkOptions {
 }
 
 /** Distinct perks per position-aware column for filter palette categories. */
-export function collectColumnPerks(
-  weapons: WeaponSummary[],
-  perks: PerkRef[],
-): ColumnPerkOptions {
+export function collectColumnPerks(weapons: WeaponSummary[], perks: PerkRef[]): ColumnPerkOptions {
   const trait1 = new Map<string, PerkOption>();
   const trait2 = new Map<string, PerkOption>();
   const originTrait = new Map<string, PerkOption>();
