@@ -53,6 +53,11 @@ function plugDescription(def: DestinyInventoryItemDefinition): string | undefine
   return description || undefined;
 }
 
+function cleanSourceString(source: string | undefined): string | undefined {
+  const value = source?.replace(/\s+/g, " ").replace(/^Source:\s*/i, "").trim();
+  return value || undefined;
+}
+
 /** Non-conditional investment stat modifiers from a plug definition. */
 function plugStatMods(def: DestinyInventoryItemDefinition): StatMod[] | undefined {
   const mods: StatMod[] = [];
@@ -252,6 +257,7 @@ export function buildWeaponIndex(
   const stats = defs.DestinyStatDefinition;
   const damageTypes = defs.DestinyDamageTypeDefinition;
   const seasons = defs.DestinySeasonDefinition;
+  const collectibles = defs.DestinyCollectibleDefinition;
 
   const weapons: WeaponDoc[] = [];
 
@@ -313,6 +319,10 @@ export function buildWeaponIndex(
       (item.defaultDamageTypeHash != null
         ? damageTypes[item.defaultDamageTypeHash]?.displayProperties?.name
         : undefined) ?? "Kinetic";
+    const season = item.seasonHash != null ? seasons[item.seasonHash] : undefined;
+    const collectible =
+      item.collectibleHash != null ? collectibles[item.collectibleHash] : undefined;
+    const source = cleanSourceString(collectible?.sourceString);
 
     const perkNames: string[] = [];
     const perkHashes: number[] = [];
@@ -339,8 +349,10 @@ export function buildWeaponIndex(
       frame: columns.find((c) => c.kind === "Intrinsic")?.perks[0]?.name,
       craftable: item.inventory?.recipeItemHash != null,
       adept: /\((Adept|Timelost|Harrowed)\)/.test(name),
-      seasonNumber:
-        item.seasonHash != null ? seasons[item.seasonHash]?.seasonNumber : undefined,
+      seasonNumber: season?.seasonNumber,
+      seasonName: season?.displayProperties?.name || undefined,
+      source,
+      sourceHash: collectible?.sourceHash,
       releaseIndex: item.index,
       stats: weaponStats,
       investmentStats: investmentStats.length > 0 ? investmentStats : undefined,

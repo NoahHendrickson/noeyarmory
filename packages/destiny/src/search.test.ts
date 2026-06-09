@@ -128,6 +128,24 @@ describe("filterWeapons", () => {
     ]);
   });
 
+  test("source facet supports exact and partial source names", () => {
+    expect(
+      names(filterWeapons(sampleSummaries, { source: ["Root of Nightmares"] }, samplePerks)),
+    ).toEqual(["Stormcharge"]);
+    expect(names(filterWeapons(sampleSummaries, { source: ["Nightmares"] }, samplePerks))).toEqual([
+      "Stormcharge",
+    ]);
+  });
+
+  test("season facet supports season labels and season numbers", () => {
+    expect(
+      names(filterWeapons(sampleSummaries, { season: ["Season of the Wish"] }, samplePerks)),
+    ).toEqual(["Stormcharge"]);
+    expect(names(filterWeapons(sampleSummaries, { season: ["23"] }, samplePerks))).toEqual([
+      "Stormcharge",
+    ]);
+  });
+
   test("custom perk groups match any listed perk in the group", () => {
     const result = filterWeapons(
       sampleSummaries,
@@ -198,6 +216,14 @@ describe("facets + perks", () => {
       collectFacets(sampleSummaries).element!.map((f) => [f.value, f.count]),
     );
     expect(byValue).toEqual({ Arc: 2, Solar: 2 });
+  });
+
+  test("collectFacets counts sources and seasons", () => {
+    const facets = collectFacets(sampleSummaries);
+    const sources = Object.fromEntries(facets.source!.map((f) => [f.value, f.count]));
+    const seasons = Object.fromEntries(facets.season!.map((f) => [f.value, f.count]));
+    expect(sources).toMatchObject({ "Root of Nightmares": 1, "Vault of Glass": 1 });
+    expect(seasons).toMatchObject({ "Season of the Splicer": 1, "Season of the Wish": 1 });
   });
 
   test("collectPerks counts weapons per perk", () => {

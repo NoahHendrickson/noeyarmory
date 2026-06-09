@@ -178,6 +178,8 @@ export function buildWeaponCategories(
     facetCategory("element", "Element", facets.element ?? []),
     facetCategory("slot", "Slot", facets.slot ?? []),
     facetCategory("ammo", "Ammo type", facets.ammo ?? []),
+    facetCategory("source", "Source", facets.source ?? []),
+    facetCategory("season", "Season", facets.season ?? []),
     facetCategory("frame", "Frame", facets.frame ?? [], { omitWeakInlineMatches: true }),
     facetCategory("craftable", "Craftable", facets.craftable ?? []),
     facetCategory("rarity", "Rarity", facets.rarity ?? []),

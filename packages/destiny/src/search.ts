@@ -76,6 +76,10 @@ export interface WeaponFilters {
   ammo?: string[];
   rarity?: string[];
   frame?: string[];
+  /** Acquisition source, e.g. "Root of Nightmares". */
+  source?: string[];
+  /** Release season name or number, e.g. "Season of the Wish" or "23". */
+  season?: string[];
   /** Equipment slot: "Kinetic" | "Energy" | "Power". */
   slot?: string[];
   /** Perk rollable in the FIRST trait column (OR within). */
@@ -101,6 +105,36 @@ const lower = (s: string) => s.toLowerCase();
 function matchesFacet(value: string, selected?: string[]): boolean {
   if (!selected || selected.length === 0) return true;
   return selected.some((s) => lower(s) === lower(value));
+}
+
+function matchesSource(value: string | undefined, selected?: string[]): boolean {
+  if (!selected || selected.length === 0) return true;
+  if (!value) return false;
+  const valueLower = lower(value);
+  return selected.some((s) => {
+    const wanted = lower(s.trim());
+    return wanted.length > 0 && (valueLower === wanted || valueLower.includes(wanted));
+  });
+}
+
+function seasonFacetValue(weapon: WeaponSummary): string | undefined {
+  if (weapon.seasonName) return weapon.seasonName;
+  return weapon.seasonNumber != null ? `Season ${weapon.seasonNumber}` : undefined;
+}
+
+function matchesSeason(weapon: WeaponSummary, selected?: string[]): boolean {
+  if (!selected || selected.length === 0) return true;
+  const label = seasonFacetValue(weapon);
+  if (!label && weapon.seasonNumber == null) return false;
+  return selected.some((s) => {
+    const wanted = lower(s.trim());
+    if (!wanted) return false;
+    if (label && lower(label) === wanted) return true;
+    return (
+      weapon.seasonNumber != null &&
+      (wanted === String(weapon.seasonNumber) || wanted === `season ${weapon.seasonNumber}`)
+    );
+  });
 }
 
 function matchesCraftable(craftable: boolean, selected?: string[]): boolean {
@@ -165,6 +199,8 @@ export function filterWeapons(
     if (!matchesFacet(w.rarity, filters.rarity)) return false;
     if (!matchesFacet(w.slot, filters.slot)) return false;
     if (filters.frame?.length && !matchesFacet(w.frame ?? "", filters.frame)) return false;
+    if (!matchesSource(w.source, filters.source)) return false;
+    if (!matchesSeason(w, filters.season)) return false;
     if (!matchesCraftable(w.craftable, filters.craftable)) return false;
     if (filters.adept != null && w.adept !== filters.adept) return false;
     if (trait1Wanted.size || trait2Wanted.size) {
@@ -465,6 +501,8 @@ export function collectFacets(weapons: WeaponSummary[]): Record<string, FacetOpt
   const rarity = new Map<string, number>();
   const slot = new Map<string, number>();
   const frame = new Map<string, number>();
+  const source = new Map<string, number>();
+  const season = new Map<string, number>();
 
   let craftableYes = 0;
   let craftableNo = 0;
@@ -476,6 +514,9 @@ export function collectFacets(weapons: WeaponSummary[]): Record<string, FacetOpt
     if (w.rarity) rarity.set(w.rarity, (rarity.get(w.rarity) ?? 0) + 1);
     if (w.slot) slot.set(w.slot, (slot.get(w.slot) ?? 0) + 1);
     if (w.frame) frame.set(w.frame, (frame.get(w.frame) ?? 0) + 1);
+    if (w.source) source.set(w.source, (source.get(w.source) ?? 0) + 1);
+    const seasonValue = seasonFacetValue(w);
+    if (seasonValue) season.set(seasonValue, (season.get(seasonValue) ?? 0) + 1);
     if (w.craftable) craftableYes++;
     else craftableNo++;
   }
@@ -487,6 +528,8 @@ export function collectFacets(weapons: WeaponSummary[]): Record<string, FacetOpt
     rarity: sortFacetCounts(rarity),
     slot: sortFacetCounts(slot),
     frame: sortFacetCounts(frame),
+    source: sortFacetCounts(source),
+    season: sortFacetCounts(season),
     craftable: [
       { value: "Yes", count: craftableYes },
       { value: "No", count: craftableNo },
