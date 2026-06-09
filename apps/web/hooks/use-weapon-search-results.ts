@@ -92,19 +92,12 @@ export function useWeaponSearchResults({
   const weaponFuse = useMemo(() => createWeaponFuse(weapons), [weapons]);
   const deferredQuery = useDeferredValue(query);
   const deferredPanelState = useDeferredValue(panelState);
+  const deferredInlineSuggestions = useDeferredValue(inlineSuggestions);
   const deferPreviewsForInput = isFirefox();
   const previewResultLimit = deferPreviewsForInput ? MAX_PREVIEW_RESULTS_FIREFOX : MAX_PREVIEW_RESULTS;
-  // Live preview query in Chrome; Firefox defers to keep keystrokes off the critical path.
-  const previewQuery = previewsEnabled
-    ? deferPreviewsForInput
-      ? deferredQuery
-      : query
-    : deferredQuery;
-  const previewPanelState = previewsEnabled
-    ? deferPreviewsForInput
-      ? deferredPanelState
-      : panelState
-    : deferredPanelState;
+  // Preview rows can fan out into many full-weapon scans; keep them off the input's urgent path.
+  const previewQuery = deferredQuery;
+  const previewPanelState = deferredPanelState;
   const textSearchActive = resultsMode === "text";
 
   const weaponResults = useMemo(() => {
@@ -164,7 +157,7 @@ export function useWeaponSearchResults({
           );
       }
     } else if (previewPanelState.panel === "categories" && q) {
-      filterSets = inlineSuggestions.map((s) =>
+      filterSets = deferredInlineSuggestions.map((s) =>
         withHypotheticalChip(base, s.categoryId, s.value, s.valueId, customFilters),
       );
     }
@@ -191,7 +184,7 @@ export function useWeaponSearchResults({
     sort,
     dpsByName,
     weaponFuse,
-    inlineSuggestions,
+    deferredInlineSuggestions,
   ]);
 
   return {
