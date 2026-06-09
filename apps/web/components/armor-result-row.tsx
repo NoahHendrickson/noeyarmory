@@ -4,13 +4,9 @@ import { Button, ResultRow } from "@repo/ui";
 
 import { bungieIcon } from "../lib/bungie";
 import type { OwnedArmorItem } from "../lib/armor-types";
-import { ArmorStatsSubtitle } from "./armor-stats-subtitle";
+import { ArmorResultSubtitle } from "./armor-result-subtitle";
 
 const CLASS_CHARACTERS = new Set(["Titan", "Hunter", "Warlock"]);
-
-function legacyArmorSubtitle(armor: OwnedArmorItem): string {
-  return `${armor.slot} · ${armor.classType}`;
-}
 
 function canTargetClass(classType: string): boolean {
   return CLASS_CHARACTERS.has(classType);
@@ -68,12 +64,7 @@ export const ArmorResultRow = memo(function ArmorResultRow({
   const icon = bungieIcon(armor.icon);
   const watermark = bungieIcon(armor.watermark);
 
-  const subtitle =
-    armor.isArmor30 && armor.stats && armor.stats.length > 0 ? (
-      <ArmorStatsSubtitle stats={armor.stats} tunableStat={armor.tunableStat} />
-    ) : (
-      legacyArmorSubtitle(armor)
-    );
+  const subtitle = <ArmorResultSubtitle armor={armor} />;
 
   const isPending = actionState?.pendingInstanceId === armor.instanceId;
   const equipPending = isPending && actionState?.pendingAction === "equip";

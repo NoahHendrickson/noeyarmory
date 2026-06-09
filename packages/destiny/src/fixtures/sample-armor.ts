@@ -1,4 +1,5 @@
-import type { ArmorDoc, PerkRef } from "../types";
+import { ARMOR3_STAT_HASHES } from "../armor30-constants";
+import type { Armor30SetRef, ArmorDoc, PerkRef } from "../types";
 
 const p = (hash: number, name: string, currentlyCanRoll = true): PerkRef => ({
   hash,
@@ -41,8 +42,8 @@ export const sampleArmor: ArmorDoc[] = [
     seasonNumber: 19,
     releaseIndex: 40,
     stats: [
-      { hash: 3, name: "Strength", value: 20 },
-      { hash: 4, name: "Discipline", value: 10 },
+      { hash: ARMOR3_STAT_HASHES.Melee, name: "Melee", value: 20 },
+      { hash: ARMOR3_STAT_HASHES.Grenade, name: "Grenade", value: 10 },
     ],
     columns: [
       { kind: "Intrinsic", perks: [p(204, "Iron Banner", false)] },
@@ -61,8 +62,8 @@ export const sampleArmor: ArmorDoc[] = [
     seasonNumber: 1,
     releaseIndex: 10,
     stats: [
-      { hash: 5, name: "Intellect", value: 30 },
-      { hash: 6, name: "Discipline", value: 30 },
+      { hash: ARMOR3_STAT_HASHES.Super, name: "Super", value: 30 },
+      { hash: ARMOR3_STAT_HASHES.Grenade, name: "Grenade", value: 30 },
     ],
     columns: [
       { kind: "Perk", perks: [p(207, "Starfire Protocol", false)] },
@@ -70,5 +71,25 @@ export const sampleArmor: ArmorDoc[] = [
     ],
     mods: ["Starfire Protocol", "Ashes to Assets"],
     modHashes: [207, 208],
+  },
+];
+
+/** Sample Armor 3.0 set bonuses for Virtuous (dev / test fallback). */
+export const sampleArmor30Sets: Armor30SetRef[] = [
+  {
+    hash: 9001,
+    name: "Virtuous",
+    bonuses: [
+      {
+        requiredSetCount: 2,
+        name: "Virtuous Synergy",
+        description: "Rapidly defeating targets increases weapon damage.",
+      },
+      {
+        requiredSetCount: 4,
+        name: "Virtuous Purpose",
+        description: "Defeating targets extends the duration of Virtuous Synergy.",
+      },
+    ],
   },
 ];

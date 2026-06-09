@@ -16,6 +16,7 @@ export type {
   ArmorDoc,
   ArmorIndex,
   ArmorArchetypeRef,
+  Armor30SetBonus,
   Armor30SetRef,
   StatMod,
   StatGroupRef,

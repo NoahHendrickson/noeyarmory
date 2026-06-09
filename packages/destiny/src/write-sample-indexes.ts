@@ -1,6 +1,6 @@
 import { dirname } from "node:path";
 
-import { sampleArmor } from "./fixtures/sample-armor";
+import { sampleArmor, sampleArmor30Sets } from "./fixtures/sample-armor";
 import { sampleAmmoTypes } from "./fixtures/sample-ammo-types";
 import { sampleDamageTypes } from "./fixtures/sample-damage-types";
 import { sampleWeaponTypes } from "./fixtures/sample-weapon-types";
@@ -26,7 +26,7 @@ export function buildSampleArmorIndex(): ArmorIndex {
     generatedAt: new Date().toISOString(),
     armor: sampleArmor,
     archetypes: [],
-    armor30Sets: [],
+    armor30Sets: sampleArmor30Sets,
   };
 }
 
