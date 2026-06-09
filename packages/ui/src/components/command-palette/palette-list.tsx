@@ -177,7 +177,7 @@ export function PaletteList({
                   ? results.map((result) => result.id).join("\u0000")
                   : renderMode
               }
-              className="flex flex-col gap-0.5"
+              className="flex flex-col gap-0"
               onMouseLeave={onClearHover}
             >
               {baseItems.map((item, i) => renderRow(item, i))}
