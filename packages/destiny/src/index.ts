@@ -9,6 +9,7 @@ export type {
   WeaponDetailFields,
   WeaponIndex,
   WeaponDetailIndex,
+  SerializedWeaponFuseIndex,
   DamageTypeRef,
   WeaponTypeRef,
   AmmoTypeRef,
@@ -78,6 +79,7 @@ export {
   sortWeapons,
   weaponsWithPerk,
   createWeaponFuse,
+  serializeWeaponFuseIndex,
   fuzzySearchWeapons,
   collectFacets,
   collectPerks,
@@ -90,12 +92,25 @@ export {
   suggestWeaponNames,
   buildPerkMap,
   buildWeaponsByPerkName,
+  buildWeaponNameIndex,
   type WeaponSort,
   type WeaponFilters,
   type FacetOption,
   type PerkOption,
   type ColumnPerkOptions,
+  type WeaponNameIndex,
+  type PopularityLookup,
 } from "./search";
+export {
+  parseWeaponQuery,
+  planWeaponTextSearch,
+  mergeWeaponFilters,
+  ARRAY_FACET_KEYS,
+  type ParsedWeaponQuery,
+  type WeaponTextSearchPlan,
+} from "./query-language";
+export { expandWeaponQueryAliases, WEAPON_NAME_ALIASES } from "./aliases";
+export { createLruCache, type LruCache } from "./lru-cache";
 export {
   buildWeaponIndexLookups,
   refreshWeaponSummaries,
