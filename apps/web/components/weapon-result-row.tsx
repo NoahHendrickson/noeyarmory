@@ -1,10 +1,10 @@
 import { memo } from "react";
 import { ResultRow } from "@repo/ui";
 import type { WeaponDpsEntry, WeaponSummary } from "@repo/destiny";
-import { Pin } from "lucide-react";
 
 import { CraftableBadge } from "./craftable-badge";
 import { ElementIcon } from "./element-icon";
+import { PinToggleButton } from "./pin-toggle-button";
 import { WeaponDpsLabel } from "./weapon-dps-label";
 import { bungieIcon } from "../lib/bungie";
 
@@ -57,27 +57,11 @@ export const WeaponResultRow = memo(function WeaponResultRow({
     ) : null;
   const pinButton =
     onTogglePin != null ? (
-      <button
-        type="button"
-        aria-label={`${pinned ? "Unpin" : "Pin"} ${weapon.name}`}
-        aria-pressed={pinned}
-        onMouseDown={(event) => {
-          event.preventDefault();
-          event.stopPropagation();
-        }}
-        onClick={(event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          onTogglePin();
-        }}
-        className={
-          pinned
-            ? "flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-full text-primary transition-colors hover:bg-white/10"
-            : "flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
-        }
-      >
-        <Pin className={pinned ? "size-3.5 fill-current" : "size-3.5"} />
-      </button>
+      <PinToggleButton
+        pinned={pinned}
+        label={`${pinned ? "Unpin" : "Pin"} ${weapon.name}`}
+        onToggle={onTogglePin}
+      />
     ) : null;
 
   return (

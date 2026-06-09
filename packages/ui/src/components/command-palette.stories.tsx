@@ -122,18 +122,36 @@ function PinValueDemo() {
         ]);
       }}
       onRemoveChip={(id) => setChips((prev) => prev.filter((c) => c.id !== id))}
-      isValuePinned={(categoryId, option) => pinnedKeys.has(`${categoryId}:${option.id}`)}
-      onToggleValuePin={(categoryId, option) => {
+      renderValueTrailing={(categoryId, option) => {
+        const category = CATEGORIES.find((candidate) => candidate.id === categoryId);
         const key = `${categoryId}:${option.id}`;
-        setPinnedKeys((prev) => {
-          const next = new Set(prev);
-          if (next.has(key)) {
-            next.delete(key);
-          } else {
-            next.add(key);
-          }
-          return next;
-        });
+        const pinned = pinnedKeys.has(key);
+        return (
+          <button
+            type="button"
+            aria-label={`${pinned ? "Unpin" : "Pin"} ${category?.label ?? categoryId}: ${option.label}`}
+            aria-pressed={pinned}
+            onMouseDown={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+            }}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              setPinnedKeys((prev) => {
+                const next = new Set(prev);
+                if (next.has(key)) {
+                  next.delete(key);
+                } else {
+                  next.add(key);
+                }
+                return next;
+              });
+            }}
+          >
+            {pinned ? "Unpin" : "Pin"}
+          </button>
+        );
       }}
     />
   );

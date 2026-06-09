@@ -1,4 +1,4 @@
-import { ArrowDown, CornerDownLeft, History, ListFilter, Pin, X } from "lucide-react";
+import { ArrowDown, CornerDownLeft, History, ListFilter, X } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { frostedSurface } from "../../lib/frosted-surface";
@@ -42,8 +42,7 @@ export interface PaletteListProps {
   listScrollingRef: React.MutableRefObject<boolean>;
   renderResult?: (id: string) => React.ReactNode;
   activeCategory?: PaletteCategory | null;
-  isValuePinned?: (categoryId: string, option: PaletteValueOption) => boolean;
-  onToggleValuePin?: (categoryId: string, option: PaletteValueOption) => void;
+  renderValueTrailing?: (categoryId: string, option: PaletteValueOption) => React.ReactNode;
   onScroll: () => void;
   onHoverIndex: (index: number) => void;
   onClearHover: () => void;
@@ -74,8 +73,7 @@ export function PaletteList({
   listScrollingRef,
   renderResult,
   activeCategory,
-  isValuePinned,
-  onToggleValuePin,
+  renderValueTrailing,
   onScroll,
   onHoverIndex,
   onClearHover,
@@ -140,8 +138,7 @@ export function PaletteList({
         onSelect={() => onSelectItem(item)}
         renderResult={renderResult}
         activeCategory={activeCategory}
-        isValuePinned={isValuePinned}
-        onToggleValuePin={onToggleValuePin}
+        renderValueTrailing={renderValueTrailing}
       />
     );
   }
@@ -331,8 +328,7 @@ interface PaletteListRowProps {
   onSelect: () => void;
   renderResult?: (id: string) => React.ReactNode;
   activeCategory?: PaletteCategory | null;
-  isValuePinned?: (categoryId: string, option: PaletteValueOption) => boolean;
-  onToggleValuePin?: (categoryId: string, option: PaletteValueOption) => void;
+  renderValueTrailing?: (categoryId: string, option: PaletteValueOption) => React.ReactNode;
 }
 
 function PaletteListRow({
@@ -347,8 +343,7 @@ function PaletteListRow({
   onSelect,
   renderResult,
   activeCategory,
-  isValuePinned,
-  onToggleValuePin,
+  renderValueTrailing,
 }: PaletteListRowProps) {
   const sectionHasHeaderAction = item.kind === "section" && item.headerAction != null;
   const RowTag = as;
@@ -408,8 +403,7 @@ function PaletteListRow({
         showEnterHint={showEnterHint}
         renderResult={renderResult}
         activeCategory={activeCategory}
-        isValuePinned={isValuePinned}
-        onToggleValuePin={onToggleValuePin}
+        renderValueTrailing={renderValueTrailing}
       />
     </RowTag>
   );
@@ -420,15 +414,13 @@ function PaletteListRowContent({
   showEnterHint,
   renderResult,
   activeCategory,
-  isValuePinned,
-  onToggleValuePin,
+  renderValueTrailing,
 }: {
   item: PaletteItem;
   showEnterHint: boolean;
   renderResult?: (id: string) => React.ReactNode;
   activeCategory?: PaletteCategory | null;
-  isValuePinned?: (categoryId: string, option: PaletteValueOption) => boolean;
-  onToggleValuePin?: (categoryId: string, option: PaletteValueOption) => void;
+  renderValueTrailing?: (categoryId: string, option: PaletteValueOption) => React.ReactNode;
 }) {
   if (item.kind === "category") {
     return (
@@ -600,38 +592,13 @@ function PaletteListRowContent({
   }
 
   if (item.kind === "value") {
-    const pinned =
-      activeCategory != null ? (isValuePinned?.(activeCategory.id, item.option) ?? false) : false;
     return (
       <>
         <span className={cn("truncate text-xs font-normal", item.option.dimmed && "opacity-45")}>
           {item.option.label}
         </span>
         <span className="flex shrink-0 items-center gap-2">
-          {activeCategory != null && onToggleValuePin != null && (
-            <button
-              type="button"
-              aria-label={`${pinned ? "Unpin" : "Pin"} ${activeCategory.label}: ${item.option.label}`}
-              aria-pressed={pinned}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-              }}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onToggleValuePin(activeCategory.id, item.option);
-              }}
-              className={cn(
-                "flex size-5 shrink-0 cursor-pointer items-center justify-center rounded-full transition-colors",
-                pinned
-                  ? "text-primary hover:bg-white/10"
-                  : "text-muted-foreground hover:bg-white/10 hover:text-white",
-              )}
-            >
-              <Pin className={cn("size-3", pinned && "fill-current")} />
-            </button>
-          )}
+          {activeCategory != null && renderValueTrailing?.(activeCategory.id, item.option)}
           {item.option.hint != null && (
             <span className="text-xs text-muted-foreground">{item.option.hint}</span>
           )}

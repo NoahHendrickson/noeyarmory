@@ -111,8 +111,7 @@ export function CommandPalette({
   chipSuggestions,
   onPanelStateChange,
   onPreviewsReadyChange,
-  isValuePinned,
-  onToggleValuePin,
+  renderValueTrailing,
   instantPreviewExpand = false,
   instantInputSizing = false,
   className,
@@ -661,8 +660,7 @@ export function CommandPalette({
             onSelectItem={selectItem}
             renderResult={renderResult}
             activeCategory={activeCategory}
-            isValuePinned={isValuePinned}
-            onToggleValuePin={onToggleValuePin}
+            renderValueTrailing={renderValueTrailing}
             instantPreviewExpand={instantPreviewExpand}
           />
         </div>
