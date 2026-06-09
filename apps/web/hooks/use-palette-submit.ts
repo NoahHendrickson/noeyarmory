@@ -1,16 +1,12 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
-import {
-  buildWeaponNameIndex,
-  matchRank,
-  suggestWeaponNames,
-  type WeaponSummary,
-} from "@repo/destiny";
+import { useCallback } from "react";
+import { matchRank, suggestWeaponNames, type WeaponSummary } from "@repo/destiny";
 import type { PaletteValueOption } from "@repo/ui";
 
 import type { PaletteResultsMode } from "../lib/palette/results-mode";
 import { useSearchPopularity } from "../lib/use-search-popularity";
+import { useWeapons } from "../lib/weapons-context";
 
 export interface UsePaletteSubmitParams {
   query: string;
@@ -31,7 +27,8 @@ export function usePaletteSubmit({
   setQuery,
   setResultsMode,
 }: UsePaletteSubmitParams) {
-  const nameIndex = useMemo(() => buildWeaponNameIndex(weapons), [weapons]);
+  // Built-once name index from context (B1) — not rebuilt per hook.
+  const { nameIndex } = useWeapons();
   const popularity = useSearchPopularity();
 
   return useCallback(() => {

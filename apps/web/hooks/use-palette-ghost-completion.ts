@@ -2,14 +2,10 @@
 
 import { useDeferredValue, useMemo } from "react";
 import type { ValueSuggestion } from "@repo/ui";
-import {
-  bestGhostCompletion,
-  buildWeaponNameIndex,
-  suggestWeaponNames,
-  type WeaponSummary,
-} from "@repo/destiny";
+import { bestGhostCompletion, suggestWeaponNames, type WeaponSummary } from "@repo/destiny";
 
 import { useSearchPopularity } from "../lib/use-search-popularity";
+import { useWeapons } from "../lib/weapons-context";
 
 export interface UsePaletteGhostCompletionParams {
   enabled: boolean;
@@ -31,7 +27,8 @@ export function usePaletteGhostCompletion({
   const deferredQuery = useDeferredValue(query);
   const deferredInlineSuggestions = useDeferredValue(inlineSuggestions);
   const ghostQuery = deferredQuery;
-  const nameIndex = useMemo(() => buildWeaponNameIndex(weapons), [weapons]);
+  // Built-once name index from context (B1) — not rebuilt per hook.
+  const { nameIndex } = useWeapons();
   const popularity = useSearchPopularity();
 
   const candidates = useMemo(() => {
