@@ -68,6 +68,10 @@ export interface WeaponSummary {
   adept: boolean;
   /** Destiny season number when introduced (from manifest seasonHash). */
   seasonNumber?: number;
+  /** Destiny season display name, e.g. "Season of the Wish". */
+  seasonName?: string;
+  /** Acquisition source from the collectible definition, e.g. "Root of Nightmares". */
+  source?: string;
   /** Manifest investment-table index — proxy for add order when season is unknown. */
   releaseIndex: number;
   /** Base Ammo Generation display value (0–100); omitted when the weapon has no such stat. */
@@ -183,6 +187,8 @@ export interface ArmorDoc {
   /** itemTypeDisplayName, e.g. "Helmet" */
   type: string;
   rarity: string;
+  /** Acquisition source from the collectible definition, e.g. "Root of Nightmares". */
+  source?: string;
   seasonNumber?: number;
   releaseIndex: number;
   stats: ArmorStat[];

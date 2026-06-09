@@ -2,6 +2,7 @@ import type { DestinyInventoryItemDefinition } from "bungie-api-ts/destiny2";
 
 import type { DestinyIconDefinitionEntry, ManifestDefs } from "./manifest";
 import { internWeaponCatalog } from "./intern-weapons";
+import { normalizeWeaponSource, resolveWeaponSeason } from "./weapon-provenance";
 import { GENERIC_WEAPON_TYPE_ICONS } from "./weapon-type-icon-paths";
 import type {
   AmmoTypeRef,
@@ -251,7 +252,8 @@ export function buildWeaponIndex(
   const plugSets = defs.DestinyPlugSetDefinition;
   const stats = defs.DestinyStatDefinition;
   const damageTypes = defs.DestinyDamageTypeDefinition;
-  const seasons = defs.DestinySeasonDefinition;
+  const collectibles = defs.DestinyCollectibleDefinition;
+  const presentationNodes = defs.DestinyPresentationNodeDefinition;
 
   const weapons: WeaponDoc[] = [];
 
@@ -313,6 +315,14 @@ export function buildWeaponIndex(
       (item.defaultDamageTypeHash != null
         ? damageTypes[item.defaultDamageTypeHash]?.displayProperties?.name
         : undefined) ?? "Kinetic";
+    const collectible =
+      item.collectibleHash != null ? collectibles[item.collectibleHash] : undefined;
+    const source = normalizeWeaponSource(
+      collectible?.sourceString,
+      presentationNodes,
+      collectible?.parentNodeHashes,
+    );
+    const season = resolveWeaponSeason(item, collectible, defs);
 
     const perkNames: string[] = [];
     const perkHashes: number[] = [];
@@ -339,8 +349,9 @@ export function buildWeaponIndex(
       frame: columns.find((c) => c.kind === "Intrinsic")?.perks[0]?.name,
       craftable: item.inventory?.recipeItemHash != null,
       adept: /\((Adept|Timelost|Harrowed)\)/.test(name),
-      seasonNumber:
-        item.seasonHash != null ? seasons[item.seasonHash]?.seasonNumber : undefined,
+      seasonNumber: season?.seasonNumber,
+      seasonName: season?.seasonName,
+      source,
       releaseIndex: item.index,
       stats: weaponStats,
       investmentStats: investmentStats.length > 0 ? investmentStats : undefined,

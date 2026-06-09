@@ -13,6 +13,8 @@ export const MANIFEST_SLICES = [
   "DestinyStatGroupDefinition",
   "DestinyDamageTypeDefinition",
   "DestinySeasonDefinition",
+  "DestinyCollectibleDefinition",
+  "DestinyPresentationNodeDefinition",
   "DestinyEquipableItemSetDefinition",
   "DestinySandboxPerkDefinition",
 ] as const;

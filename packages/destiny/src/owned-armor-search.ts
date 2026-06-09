@@ -1,11 +1,15 @@
 import Fuse from "fuse.js";
 
 import { matchRank } from "@repo/search-rank";
+
+import { matchesWeaponSource } from "./weapon-provenance";
 import type { FacetOption } from "./search";
 
 export interface OwnedArmorSearchItem {
   name: string;
   classType: string;
+  /** Raid or activity source from the armor definition, e.g. "Root of Nightmares". */
+  source?: string;
   setName?: string;
   archetype?: string;
   tertiaryStat?: string;
@@ -15,6 +19,7 @@ export interface OwnedArmorSearchItem {
 
 export interface OwnedArmorFilters {
   classType?: string[];
+  source?: string[];
   setName?: string[];
   archetype?: string[];
   tertiaryStat?: string[];
@@ -36,6 +41,7 @@ export function filterOwnedArmor<T extends OwnedArmorSearchItem>(
 ): T[] {
   return armor.filter((a) => {
     if (!matchesFacet(a.classType, filters.classType)) return false;
+    if (!matchesWeaponSource(a.source, filters.source)) return false;
     if (!matchesFacet(a.setName, filters.setName)) return false;
     if (!matchesFacet(a.archetype, filters.archetype)) return false;
     if (!matchesFacet(a.tertiaryStat, filters.tertiaryStat)) return false;

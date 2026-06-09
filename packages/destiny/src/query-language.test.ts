@@ -41,6 +41,13 @@ describe("parseWeaponQuery", () => {
     expect(parseWeaponQuery("craftable:no").filters.craftable).toEqual(["No"]);
   });
 
+  test("source and season keywords map onto facets", () => {
+    const { filters, text } = parseWeaponQuery('source:"Root of Nightmares" season:23');
+    expect(filters.source).toEqual(["Root of Nightmares"]);
+    expect(filters.season).toEqual(["23"]);
+    expect(text).toBe("");
+  });
+
   test("repeated facet keys accumulate (OR within)", () => {
     const { filters } = parseWeaponQuery("element:solar element:arc");
     expect(filters.element).toEqual(["solar", "arc"]);
@@ -67,6 +74,14 @@ describe("parseWeaponQuery", () => {
     const { filters } = parseWeaponQuery("is:adept");
     const adeptOnly = filterWeapons(weapons, filters, index.perks);
     expect(adeptOnly.every((w) => w.adept)).toBe(true);
+  });
+
+  test("parsed source and season filters drive sample catalog filtering", () => {
+    const { index } = internWeaponCatalog(sampleWeapons, "sample");
+    const { filters } = parseWeaponQuery('source:"Root of Nightmares" season:23');
+    expect(filterWeapons(index.weapons, filters, index.perks).map((w) => w.name)).toEqual([
+      "Stormcharge",
+    ]);
   });
 });
 
@@ -103,8 +118,13 @@ describe("mergeWeaponFilters", () => {
   });
 
   test("OR-merges facet arrays case-insensitively without duplicates", () => {
-    const merged = mergeWeaponFilters({ element: ["Solar"] }, { element: ["solar", "arc"] });
+    const merged = mergeWeaponFilters(
+      { element: ["Solar"], source: ["Root of Nightmares"] },
+      { element: ["solar", "arc"], season: ["23"] },
+    );
     expect(merged.element).toEqual(["Solar", "arc"]);
+    expect(merged.source).toEqual(["Root of Nightmares"]);
+    expect(merged.season).toEqual(["23"]);
   });
 
   test("extra adept flag overrides; custom groups concatenate", () => {

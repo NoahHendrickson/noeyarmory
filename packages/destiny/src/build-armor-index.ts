@@ -2,6 +2,7 @@ import { buildColumnPerks } from "./build-index";
 import { isArmor30ItemDef } from "./armor-instance";
 import { PLUG_CATEGORY_ARMOR_ARCHETYPES } from "./armor30-constants";
 import type { ManifestDefs } from "./manifest";
+import { normalizeWeaponSource, resolveWeaponSeason } from "./weapon-provenance";
 import type {
   Armor30SetRef,
   ArmorArchetypeRef,
@@ -66,7 +67,8 @@ export function buildArmorIndex(defs: ManifestDefs, version: string): ArmorIndex
   const items = defs.DestinyInventoryItemDefinition;
   const plugSets = defs.DestinyPlugSetDefinition;
   const stats = defs.DestinyStatDefinition;
-  const seasons = defs.DestinySeasonDefinition;
+  const collectibles = defs.DestinyCollectibleDefinition;
+  const presentationNodes = defs.DestinyPresentationNodeDefinition;
   const equipableSets = defs.DestinyEquipableItemSetDefinition;
   const sandboxPerks = defs.DestinySandboxPerkDefinition;
 
@@ -167,6 +169,15 @@ export function buildArmorIndex(defs: ManifestDefs, version: string): ArmorIndex
       }
     }
 
+    const collectible =
+      item.collectibleHash != null ? collectibles[item.collectibleHash] : undefined;
+    const source = normalizeWeaponSource(
+      collectible?.sourceString,
+      presentationNodes,
+      collectible?.parentNodeHashes,
+    );
+    const season = resolveWeaponSeason(item, collectible, defs);
+
     armorPieces.push({
       hash: item.hash,
       name,
@@ -176,8 +187,8 @@ export function buildArmorIndex(defs: ManifestDefs, version: string): ArmorIndex
       classType,
       type: item.itemTypeDisplayName || slot,
       rarity: item.inventory?.tierTypeName ?? "Legendary",
-      seasonNumber:
-        item.seasonHash != null ? seasons[item.seasonHash]?.seasonNumber : undefined,
+      source,
+      seasonNumber: season?.seasonNumber,
       releaseIndex: item.index,
       stats: armorStats,
       columns,

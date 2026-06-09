@@ -30,6 +30,8 @@ export const sampleWeapons: WeaponDoc[] = [
     craftable: true,
     adept: false,
     seasonNumber: 14,
+    seasonName: "Season of the Splicer",
+    source: "Vault of Glass",
     releaseIndex: 100,
     statGroupHash: SAMPLE_STAT_GROUP_HASH,
     stats: [
@@ -108,6 +110,7 @@ export const sampleWeapons: WeaponDoc[] = [
     frame: "Adaptive Frame",
     craftable: false,
     adept: false,
+    source: "Solstice",
     releaseIndex: 50,
     stats: [{ hash: 3, name: "Charge Time", value: 660 }],
     columns: [
@@ -130,6 +133,8 @@ export const sampleWeapons: WeaponDoc[] = [
     craftable: true,
     adept: false,
     seasonNumber: 23,
+    seasonName: "Season of the Wish",
+    source: "Root of Nightmares",
     releaseIndex: 200,
     stats: [{ hash: 3, name: "Charge Time", value: 500 }],
     columns: [
@@ -150,6 +155,7 @@ export const sampleWeapons: WeaponDoc[] = [
     frame: "Lightweight Frame",
     craftable: false,
     adept: false,
+    source: "World Loot Pool",
     releaseIndex: 80,
     stats: [{ hash: 1, name: "Impact", value: 62 }],
     columns: [

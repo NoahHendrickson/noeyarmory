@@ -23,7 +23,11 @@ export function filterCategories(categories: PaletteCategory[], query: string): 
   const q = query.trim().toLowerCase();
   if (!q) return categories;
   return categories.filter(
-    (c) => c.label.toLowerCase().includes(q) || c.id.toLowerCase().includes(q),
+    (c) =>
+      c.label.toLowerCase().includes(q) ||
+      c.id.toLowerCase().includes(q) ||
+      (c.examples?.toLowerCase().includes(q) ?? false) ||
+      (c.matchCategoryListByValues === true && c.getValues(query).length > 0),
   );
 }
 
@@ -96,7 +100,8 @@ export function scanValueSuggestions(
       if (applied.has(`${category.id}:${option.id}`)) continue;
       const baseRank = resolveMatchRank(option.label, q, option.searchRank);
       if (baseRank == null) continue;
-      if (maxRank != null && baseRank > maxRank) continue;
+      const categoryMaxRank = category.inlineMaxRank ?? maxRank;
+      if (categoryMaxRank != null && baseRank > categoryMaxRank) continue;
       const ql = q.toLowerCase();
       if (category.omitWeakInlineMatches && !option.label.toLowerCase().startsWith(ql)) {
         continue;
