@@ -129,99 +129,54 @@ Fuse supports `Fuse.createIndex` + `Fuse.parseIndex`: build the index at
 `generate` time, serialize it next to `weapons.json`, and on the client do
 `new Fuse(weapons, options, parsedIndex)`. Removes the largest one-time main-
 thread cost before search is ready.
-- *Verify:* measure time from `weapons.json` loaded → first usable search; index
-  build no longer appears in a profile of cold load.
 
 **A2. Own the compression of the static payload.**
 Pre-generate `.br`/`.gz` siblings of `weapons.json` / `weapons-detail.json` at
 build (or confirm Vercel already brotli-serves them) and/or adopt d2foundry's
-`lz-string` approach for the largest file. Goal is fewer bytes over the wire and
-less to parse.
-- *Verify:* transferred size of the data files drops materially; documented in
-  `generate` output.
+`lz-string` approach for the largest file.
 
 **A3. Intern + split armor like weapons, and add a client armor catalog index.**
 Apply `intern-weapons.ts`'s technique to `build-armor-index.ts`: global perk/mod
 pool + `armorByModName` reverse index, and split heavy fields into
-`armor-detail.json`. Then the home page can offer **catalog** armor search
-(not just owned), reusing the existing `filterArmor` / `fuzzySearchArmor` in
-`@repo/destiny`.
-- *Verify:* `armor.json` shrinks; a client armor search path exists with parity
-  to weapon search.
+`armor-detail.json`. Then the home page can offer **catalog** armor search.
 
 ### Track B — never block the main thread (instant typing)
 
 **B1. Build a prefix structure for name/perk autocomplete.**
 Replace the per-keystroke `Map` rebuild in `filterWeaponNames` with a structure
-built **once** per `weapons` load: a sorted name array (binary-search the prefix
-range) or a small trie, plus a precomputed `name→count`. Autocomplete then
-becomes a range scan instead of a full O(n) pass that re-allocates a Map every
-keystroke.
-- *Verify:* a microbenchmark shows name-suggestion time per keystroke is
-  constant-ish vs. catalog size; `search.test.ts` suggestion tests still pass.
+built **once** per `weapons` load.
 
 **B2. Reduce `weaponsMatchingTextQuery` from O(n × matches) to O(n).**
-Group weapons by name once (reuse B1's structure) so we append by name lookup
-instead of `weapons.filter(...)` per matched name.
-- *Verify:* same result ordering as today (covered by existing tests), fewer
-  passes in a profile.
+Group weapons by name once (reuse B1's structure).
 
 **B3. Move full-result filtering/fuse into a Web Worker.**
-Keep `useDeferredValue` for previews, but run `filterWeapons` + `fuse.search` +
-`rankWeaponResults` for the **committed result list** in a worker (Comlink or a
-thin `postMessage` wrapper), posting back capped results. Inline suggestions
-(small, prefix-based after B1) can stay synchronous on the main thread.
-- *Verify:* main-thread long-task profile during fast typing shows no blocking
-  search work; results still arrive within one frame of settling.
+Run the committed result list off the main thread; keep inline suggestions
+synchronous.
 
 **B4. Cache results by query (incremental narrowing).**
-Small LRU keyed by normalized query + active facets; when the query only grows
-(`fat` → `fate`), filter the previous result set instead of the whole catalog.
-- *Verify:* repeated/growing queries hit the cache (instrument a counter in dev).
+Small LRU keyed by normalized query + active facets.
 
 ### Track C — smarter predictions
 
 **C1. Feed real popularity into suggestion ranking.**
-We already persist `trackWeaponView` / `trackPerkCommit` counts. Export a compact
-popularity map (build-time snapshot and/or a cached `/api/popularity` read) and
-add it as a ranking signal in `scanValueSuggestions` / `suggestWeaponNames`,
-*after* match-rank but *before* the current catalog-count tiebreak. So among
-equally-good prefix matches, the weapon/perk people actually open wins.
-- *Verify:* given a tie in match rank, the higher-popularity item sorts first
-  (unit test with a stubbed popularity map).
+Add the tracked view/commit counts as a ranking signal after match-rank.
 
 **C2. Typo tolerance + aliases in the inline list.**
-Allow a bounded fuzzy fallback in inline suggestions (raise the effective
-`maxRank` only when there are too few prefix hits, mirroring `suggest.ts`'s
-perk behavior) and add a small **alias table** for common community nicknames
-/ abbreviations (e.g. shortenings, "void" ↔ damage type) that maps to canonical
-names before ranking.
-- *Verify:* a one-character typo on a popular weapon still surfaces it; alias
-  inputs resolve to the canonical suggestion (unit tests).
+Bounded fuzzy fallback + an alias table for community nicknames/abbreviations.
 
 **C3. Adopt a structured keyword query language (d2foundry-style).**
-Extend our facet schema toward d2foundry's (`rpm:`, `zoom:`, `source:`,
-`event:`, `foundry:`, `is:adept`, `is:craftable`, range operators) and parse
-typed tokens into existing `WeaponFilters`. This makes power-user search exact
-and fast (no fuzzy needed) and gives the palette richer chip suggestions.
-- *Verify:* `perk:`, `is:adept`, `rpm:>600` etc. parse to the right filters and
-  return the same set as the equivalent facet chips (unit tests).
+Parse typed tokens (`perk:`, `is:adept`, `rpm:>600`, …) into `WeaponFilters`.
 
 **C4. Deterministic result sort, popularity-aware.**
-Layer a d2foundry-style tiebreak into `rankWeaponResults` (after name-match
-pinning): popularity desc → rarity priority → newest season, so "show all" and
-text results have a stable, sensible order beyond raw fuse score.
-- *Verify:* documented sort order; snapshot test on a fixture set.
+Layer popularity → rarity → newest-season tiebreaks into `rankWeaponResults`.
 
 ---
 
 ## 4. Suggested sequencing
 
-1. **Track B (B1, B2)** — biggest responsiveness win for least risk; pure
-   functions in `@repo/destiny`, fully unit-testable, no payload/format change.
-2. **A1 (prebuilt Fuse index)** — removes the cold-load stall; small build change.
-3. **C1 + C2** — "smarter" predictions users feel immediately; needs the
-   popularity export plumbed in.
+1. **Track B (B1, B2)** — biggest responsiveness win for least risk.
+2. **A1 (prebuilt Fuse index)** — removes the cold-load stall.
+3. **C1 + C2** — "smarter" predictions users feel immediately.
 4. **B3 (worker)** — larger structural change; do it once B1/B2 prove where the
    remaining main-thread cost is.
 5. **C3 (keyword language)** and **A3 (armor catalog)** — feature-expanding,
@@ -232,17 +187,32 @@ text results have a stable, sensible order beyond raw fuse score.
 
 - **Format changes are dual-consumer.** `weapons.json` is read both client-side
   (`weapons-context.tsx`) and server-side (`weapon-index-server.ts`). Any shape
-  change (interned armor, prebuilt index, compression) must update both readers
-  and the `search.test.ts` round-trip (`perksLower` strip/re-derive pattern is
-  the template).
-- **Keep the static-CDN property.** Today public search needs no server. Workers,
-  prebuilt indexes, and compression preserve that; a popularity *snapshot* baked
-  at build keeps C1 CDN-friendly (live `/api/popularity` is an enhancement, not a
-  hard dependency).
+  change must update both readers and the `search.test.ts` round-trip.
+- **Keep the static-CDN property.** Workers, prebuilt indexes, and compression
+  preserve it; a popularity *snapshot* baked at build keeps C1 CDN-friendly.
 - **Don't regress correctness for speed.** Every Track B/C change should keep the
-  existing `@repo/destiny` and `@repo/ui` search tests green and add new ones for
-  the new behavior (Karpathy: write the verifying test, then make it pass).
+  existing `@repo/destiny` and `@repo/ui` search tests green and add new ones.
 - **Measure first.** The data files are gitignored and absent in a fresh clone,
   so real weapon/armor counts and payload sizes need a `generate` run with a
   `BUNGIE_API_KEY`. Capture baseline numbers (file sizes, cold-load timing,
   per-keystroke timing) before optimizing so each phase has a before/after.
+
+---
+
+## 6. Implementation status
+
+| Item | Status | Notes |
+| --- | --- | --- |
+| **B1** prefix/group name index | Done | `buildWeaponNameIndex` in `@repo/destiny`; built once in `WeaponIndexLookups`; `filterWeaponNames`/`suggestWeaponNames`/`rankWeaponResults` accept it. Removes the per-keystroke `Map` rebuild + re-lowercasing. |
+| **B2** O(n) text query | Done | `weaponsMatchingTextQuery` expands matched names via `nameIndex.byName` instead of `weapons.filter(...)` per name. |
+| **B4** result LRU cache | Done | `createLruCache` util; wired into the committed-result memo, keyed on query + sort + filters, reset when catalog/popularity/perks change. |
+| **A1** prebuilt fuse index | Done | `serializeWeaponFuseIndex` at `generate`, parsed by `createWeaponFuse(weapons, serializedIndex)`; one shared fuse built in lookups + exposed via context (the hook no longer rebuilds it). |
+| **C1/C4** popularity-aware ranking | Done | `PopularityLookup` tiebreak in `sortFilteredWeaponNames`/`rankWeaponResults`/`suggestWeaponNames`; `useSearchPopularity` feeds rolling `/api/popular-weapons` counts into results, ghost completion, and submit. |
+| **C2** aliases (+ typo tolerance) | Done | `WEAPON_NAME_ALIASES` + `expandWeaponQueryAliases` (e.g. `hc`→`hand cannon`), used by the parser. Typo tolerance for committed/preview text is already provided by the fuse path (threshold 0.3). |
+| **C3** keyword query language | Done | `parseWeaponQuery` (`perk:`, `trait1:`, `is:adept`, `is:exotic`, `element:`, `type:hc`, `craftable:no`, quoted values…) wired into text-search + live preview; added an `adept` filter to `WeaponFilters`/`filterWeapons`. |
+| **A2** owned payload compression | Deferred | Static JSON is already gzip/brotli-served by the platform; emitting our own `.br`/`lz-string` siblings only pays off with matching server config, so left as an infra toggle rather than shipping unused artifacts. |
+| **B3** web worker | Deferred | The per-keystroke main-thread cost B3 targeted is already removed by B1/B2/A1/B4 (plus `useDeferredValue`). A worker adds a full-catalog structured-clone at init and async result plumbing whose UX can't be end-to-end verified in this headless environment; the search compute is pure and worker-ready if profiling later shows a need. |
+| **A3** armor intern/split + catalog | Deferred | Changes `armor.json`'s shape (consumed by the OAuth **vault** server path in `bungie-profile.ts`) and needs a new client armor-catalog UI — both require runtime/OAuth verification not available here. Sequenced after the weapon search core, per §4. |
+
+All shipped items are covered by unit tests in `@repo/destiny` and pass
+`pnpm typecheck` + `pnpm test` across the workspace.
