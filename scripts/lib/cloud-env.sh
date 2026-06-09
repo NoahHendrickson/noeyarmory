@@ -6,6 +6,7 @@ CANONICAL_REPO="noeyarmory"
 
 activate_node_from_nvmrc() {
   local root="$1"
+  local nvmrc_version resolved_version node_bin_dir
   export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
 
   if [ ! -s "$NVM_DIR/nvm.sh" ]; then
@@ -20,7 +21,24 @@ activate_node_from_nvmrc() {
   cd "$root"
   nvm install
   nvm use
-  export PATH="$NVM_DIR/versions/node/$(nvm version)/bin:$PATH"
+
+  # nvm version (no args) can stay "system" when /exec-daemon/node is on PATH.
+  nvmrc_version="$(tr -d '[:space:]' < .nvmrc)"
+  resolved_version="$(nvm version "$nvmrc_version")"
+  if [ "$resolved_version" = "N/A" ] || [ "$resolved_version" = "system" ]; then
+    echo "error: could not resolve Node from .nvmrc ($nvmrc_version)" >&2
+    cd "$prev"
+    return 1
+  fi
+
+  node_bin_dir="$NVM_DIR/versions/node/${resolved_version}/bin"
+  if [ ! -x "$node_bin_dir/node" ]; then
+    echo "error: Node binary not found at $node_bin_dir/node" >&2
+    cd "$prev"
+    return 1
+  fi
+
+  export PATH="$node_bin_dir:$PATH"
   cd "$prev"
 }
 
