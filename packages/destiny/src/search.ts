@@ -1,5 +1,3 @@
-import uFuzzy from "@leeoniya/ufuzzy";
-
 import { matchRank } from "@repo/search-rank";
 
 import type { InternedPerkColumn, PerkRef, WeaponSummary } from "./types";
@@ -14,6 +12,7 @@ import {
   matchesWeaponSourceLowered,
   RAID_SOURCE_LABELS,
 } from "./weapon-provenance";
+import { createWeaponSearcher, type WeaponSearcher } from "./weapon-searcher";
 import { isCatalogWeapon } from "./weapon-variants";
 
 export type { WeaponNameIndex } from "./weapon-name-index";
@@ -315,14 +314,6 @@ function rankNames(
   return matches;
 }
 
-// One keystroke ranks the same query against the same immutable index up to 3×
-// (text-query merge, result pinning, name-matched sort) — memoize the last
-// answer per index. Callers never mutate the returned array (rankers copy).
-const lastNameMatches = new WeakMap<
-  WeaponNameIndex,
-  { ql: string; matches: FilteredWeaponName[] }
->();
-
 /**
  * Flat weapon-name matches for palette ranking — no sort (caller ranks).
  *
@@ -338,13 +329,7 @@ export function filterWeaponNames(
   const ql = query.trim().toLowerCase();
   if (!ql) return [];
 
-  if (index) {
-    const cached = lastNameMatches.get(index);
-    if (cached?.ql === ql) return cached.matches;
-    const matches = rankNames(index.names, index.namesLower, index.countByName, ql);
-    lastNameMatches.set(index, { ql, matches });
-    return matches;
-  }
+  if (index) return rankNames(index.names, index.namesLower, index.countByName, ql);
 
   const counts = new Map<string, number>();
   for (const w of weapons) {
@@ -437,17 +422,14 @@ export function weaponsMatchingTextQuery(
 
 function sortNameMatchedWeapons(
   weapons: WeaponSummary[],
-  query: string,
+  matches: FilteredWeaponName[],
   sort: WeaponSort,
   dpsByName?: WeaponDpsLookup,
-  index?: WeaponNameIndex,
   popularity?: PopularityLookup,
 ): WeaponSummary[] {
   if (sort !== "name") return sortWeapons(weapons, sort, dpsByName);
 
-  const rankByName = new Map(
-    filterWeaponNames(weapons, query, index).map((match) => [match.value, match.searchRank]),
-  );
+  const rankByName = new Map(matches.map((match) => [match.value, match.searchRank]));
   return [...weapons].sort(
     (a, b) =>
       (rankByName.get(a.name) ?? Number.MAX_SAFE_INTEGER) -
@@ -474,7 +456,10 @@ export function rankWeaponResults(
     return sortWeapons(weapons, sort, dpsByName);
   }
 
-  const nameMatches = new Set(filterWeaponNames(weapons, q, index).map((match) => match.value));
+  // Compute the ranked name matches once and thread them through — the
+  // name-bucket sort below needs the same answer.
+  const matches = filterWeaponNames(weapons, q, index);
+  const nameMatches = new Set(matches.map((match) => match.value));
   const nameMatched: WeaponSummary[] = [];
   const rest: WeaponSummary[] = [];
   for (const weapon of weapons) {
@@ -482,7 +467,7 @@ export function rankWeaponResults(
   }
 
   return [
-    ...sortNameMatchedWeapons(nameMatched, q, sort, dpsByName, index, popularity),
+    ...sortNameMatchedWeapons(nameMatched, matches, sort, dpsByName, popularity),
     ...sortWeapons(rest, sort, dpsByName),
   ];
 }
@@ -506,70 +491,8 @@ export function suggestWeaponNames(
     .map(({ value, count }) => ({ value, count }));
 }
 
-/** Typo-tolerant fuzzy search over weapon name/type/perk text. */
-export interface WeaponSearcher {
-  /** Ranked matches for `query`, deduped across fields, capped at `limit`. */
-  search(query: string, limit: number): WeaponSummary[];
-}
-
-// intraMode 1 = one error per term, with every error kind enabled (they default
-// to 0): substitution, transposition, omission, insertion — comparable typo
-// tolerance to the old fuse.js threshold of 0.3.
-const weaponFuzzy = new uFuzzy({ intraMode: 1, intraIns: 1, intraSub: 1, intraTrn: 1, intraDel: 1 });
-
-/** Ranked haystack indices for a needle; empty when nothing matches. */
-function fuzzyMatchIndices(haystack: string[], needle: string): number[] {
-  // outOfOrder=1 lets multi-term queries match regardless of term order.
-  const [idxs, info, order] = weaponFuzzy.search(haystack, needle, 1);
-  if (!idxs) return [];
-  // Over the ranking threshold uFuzzy returns the (unranked) filter result.
-  if (order && info) return order.map((i) => info.idx[i]!);
-  return [...idxs];
-}
-
-/**
- * Build a reusable fuzzy searcher for weapon name/type/perk text.
- *
- * Fields are searched in priority order — name, then type, then perk text,
- * then all three combined (so multi-term queries can span fields) — mirroring
- * the old fuse.js key weights (name 3×) as tiered buckets. Superseded legacy
- * twins are excluded, matching the catalog-only index that used to be shipped.
- */
-export function createWeaponSearcher(weapons: WeaponSummary[]): WeaponSearcher {
-  const catalog = weapons.filter(isCatalogWeapon);
-  const names: string[] = [];
-  const types: string[] = [];
-  const perkText: string[] = [];
-  const combined: string[] = [];
-  for (const weapon of catalog) {
-    const perks = weapon.perks.join(" ");
-    names.push(weapon.name);
-    types.push(weapon.type);
-    perkText.push(perks);
-    combined.push(`${weapon.name} ${weapon.type} ${perks}`);
-  }
-  const fields = [names, types, perkText, combined];
-
-  return {
-    search(query, limit) {
-      const needle = query.trim();
-      if (!needle) return [];
-      const seen = new Set<number>();
-      const matches: WeaponSummary[] = [];
-      for (const haystack of fields) {
-        if (matches.length >= limit) break;
-        for (const index of fuzzyMatchIndices(haystack, needle)) {
-          const weapon = catalog[index];
-          if (!weapon || seen.has(weapon.hash)) continue;
-          seen.add(weapon.hash);
-          matches.push(weapon);
-          if (matches.length >= limit) break;
-        }
-      }
-      return matches;
-    },
-  };
-}
+/** Typo-tolerant fuzzy search over weapon name/type/perk text — see weapon-searcher.ts. */
+export { createWeaponSearcher, type WeaponSearcher } from "./weapon-searcher";
 
 /** Convenience fuzzy search (rebuilds the searcher each call — prefer createWeaponSearcher for UIs). */
 export function fuzzySearchWeapons(

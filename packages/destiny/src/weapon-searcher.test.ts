@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import { sampleWeapons } from "./fixtures/sample-weapons";
 import { internWeaponCatalog } from "./intern-weapons";
-import { createWeaponSearcher } from "./search";
+import { createWeaponSearcher } from "./weapon-searcher";
 
 const { index } = internWeaponCatalog(sampleWeapons, "sample");
 const weapons = index.weapons;
@@ -61,5 +61,23 @@ describe("createWeaponSearcher", () => {
 
   test("no match returns an empty list", () => {
     expect(names("zzzzqqqq")).toEqual([]);
+  });
+
+  test("refresh with unchanged searchable text rebinds to the new summaries", () => {
+    // Mirrors refreshWeaponSummaries after ammo-gen enrichment: spread-copied
+    // summaries, same name/type/perks identity.
+    const enriched = weapons.map((w) => ({ ...w, ammoGeneration: 42 }));
+    const refreshed = createWeaponSearcher(enriched, searcher);
+    const hit = refreshed.search("fatebringer", 5)[0];
+    expect(hit?.ammoGeneration).toBe(42);
+  });
+
+  test("refresh with a changed name rebuilds the haystacks", () => {
+    const renamed = weapons.map((w) =>
+      w.name === "Fatebringer" ? { ...w, name: "Doombringer" } : w,
+    );
+    const refreshed = createWeaponSearcher(renamed, searcher);
+    expect(refreshed.search("doombringer", 5).map((w) => w.name)).toContain("Doombringer");
+    expect(refreshed.search("fatebringer", 5)).toEqual([]);
   });
 });

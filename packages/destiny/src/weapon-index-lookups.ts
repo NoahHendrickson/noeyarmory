@@ -1,5 +1,5 @@
 import { buildPerkMapFromCatalog, normalizeWeaponIndex, summariesForPerkName } from "./intern-weapons";
-import { createWeaponSearcher, type WeaponSearcher } from "./search";
+import { createWeaponSearcher, type WeaponSearcher } from "./weapon-searcher";
 import type {
   AmmoTypeRef,
   DamageTypeRef,
@@ -85,7 +85,9 @@ export function refreshWeaponSummaries(
     byHash,
     weaponsByPerkName,
     nameIndex: buildWeaponNameIndex(weapons),
-    weaponSearcher: createWeaponSearcher(weapons),
+    // Enrichment only touches ammoGeneration (not name/type/perks), so the
+    // previous searcher's haystacks are reused — rebound, not rebuilt.
+    weaponSearcher: createWeaponSearcher(weapons, lookups.weaponSearcher),
   };
 }
 
