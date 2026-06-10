@@ -4,6 +4,7 @@ import { Button, ResultRow } from "@repo/ui";
 import type { OwnedArmorItem } from "../lib/armor-types";
 import { ArmorItemIcon } from "./armor-item-icon";
 import { ArmorStatsSubtitle } from "./armor-stats-subtitle";
+import { NewItemBadge } from "./new-item-badge";
 
 const CLASS_CHARACTERS = new Set(["Titan", "Hunter", "Warlock"]);
 
@@ -57,21 +58,32 @@ export const ArmorResultRow = memo(function ArmorResultRow({
   onEquip,
   onMoveToCharacter,
   actionState,
+  isNew = false,
 }: {
   armor: OwnedArmorItem;
   onSelect?: () => void;
   onEquip?: () => void;
   onMoveToCharacter?: () => void;
   actionState?: ArmorActionState;
+  isNew?: boolean;
 }) {
   const watermark = armor.watermark;
 
-  const subtitle =
+  const subtitleContent =
     armor.isArmor30 && armor.stats && armor.stats.length > 0 ? (
       <ArmorStatsSubtitle stats={armor.stats} tunableStat={armor.tunableStat} />
     ) : (
       legacyArmorSubtitle(armor)
     );
+
+  const subtitle = isNew ? (
+    <span className="inline-flex flex-wrap items-center gap-2">
+      <NewItemBadge className="px-1.5 py-0 text-[10px]" />
+      {subtitleContent}
+    </span>
+  ) : (
+    subtitleContent
+  );
 
   const isPending = actionState?.pendingInstanceId === armor.instanceId;
   const equipPending = isPending && actionState?.pendingAction === "equip";

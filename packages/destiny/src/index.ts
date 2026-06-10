@@ -9,6 +9,9 @@ export type {
   WeaponDetailFields,
   WeaponIndex,
   WeaponDetailIndex,
+  WeaponCatalogBaseline,
+  WeaponCatalogDiffSource,
+  NewWeaponIndex,
   SerializedWeaponFuseIndex,
   DamageTypeRef,
   WeaponTypeRef,
@@ -131,6 +134,7 @@ export {
   type GeneratedDataManifest,
   type GeneratedDataManifestFile,
 } from "./generated-data-manifest";
+export { buildNewWeaponIndex } from "./new-weapons";
 export { buildNewArmorIndex, groupNewArmorBySet } from "./new-armor";
 export {
   filterArmor,

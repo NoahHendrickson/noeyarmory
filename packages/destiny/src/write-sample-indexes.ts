@@ -8,6 +8,7 @@ import { sampleWeapons } from "./fixtures/sample-weapons";
 import { writeGeneratedDataFile, writeGeneratedDataManifest } from "./generated-data-files";
 import { internWeaponCatalog, stripPerksLowerReplacer } from "./intern-weapons";
 import { buildNewArmorIndex } from "./new-armor";
+import { buildNewWeaponIndex } from "./new-weapons";
 import type { ArmorIndex, WeaponIndex } from "./types";
 import { sampleStatGroup } from "./weapon-stats";
 
@@ -36,6 +37,7 @@ export function writeSampleIndexes(
   weaponsFile: string,
   weaponsDetailFile: string,
   armorFile: string,
+  newWeaponsFile: string,
   newArmorFile: string,
 ): void {
   const { index, detailIndex } = internWeaponCatalog(sampleWeapons, "sample");
@@ -63,6 +65,12 @@ export function writeSampleIndexes(
     basename: "weapons-detail",
     contents: JSON.stringify(detailWithStatGroups),
   });
+  const newWeaponIndex = buildNewWeaponIndex(weaponIndex);
+  const newWeaponsManifestFile = writeGeneratedDataFile({
+    dataDir,
+    basename: "new-weapons",
+    contents: JSON.stringify(newWeaponIndex),
+  });
   const armorManifestFile = writeGeneratedDataFile({
     dataDir,
     basename: "armor",
@@ -80,6 +88,7 @@ export function writeSampleIndexes(
     files: {
       weapons: weaponsManifestFile,
       weaponDetails: detailsManifestFile,
+      newWeapons: newWeaponsManifestFile,
       armor: armorManifestFile,
       newArmor: newArmorManifestFile,
     },
@@ -87,6 +96,7 @@ export function writeSampleIndexes(
 
   console.log(`✓ Wrote ${weaponIndex.weapons.length} sample weapons → ${weaponsFile}`);
   console.log(`✓ Wrote ${Object.keys(detailIndex.details).length} sample weapon details → ${weaponsDetailFile}`);
+  console.log(`✓ Wrote ${newWeaponIndex.weapons.length} sample new weapons → ${newWeaponsFile}`);
   console.log(`✓ Wrote ${armorIndex.armor.length} sample armor → ${armorFile}`);
   console.log(`✓ Wrote ${newArmorIndex.armor.length} sample new armor → ${newArmorFile}`);
 }

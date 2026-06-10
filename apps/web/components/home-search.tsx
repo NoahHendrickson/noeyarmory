@@ -51,6 +51,7 @@ import {
 import { useWeaponDps } from "../lib/use-weapon-dps";
 import { useWeaponIconMaps } from "../lib/use-weapon-icon-maps";
 import { useWeaponDetail, useWeapons } from "../lib/weapons-context";
+import { useNewItemMarkers } from "../lib/use-new-item-markers";
 import { getFilterChipAppearance } from "../lib/filter-chip-appearance";
 import { ArmorResultRow } from "./armor-result-row";
 import { PinnedFilterPills } from "./pinned-filter-pills";
@@ -97,6 +98,7 @@ export function HomeSearch({
   initialMode?: Mode;
 }) {
   const { weapons, perks, isSample, byHash } = useWeapons();
+  const { newWeaponHashes, newArmorHashes } = useNewItemMarkers();
   const { elementIconMap, typeIconMap, ammoIconMap } = useWeaponIconMaps();
   const { dpsByName } = useWeaponDps();
   const { filters: customFilters, createFilter } = useCustomWeaponFilters();
@@ -281,6 +283,7 @@ export function HomeSearch({
           dps={dpsByName.get(weapon.name)}
           pinned={pinnedWeaponHashSet.has(weapon.hash)}
           onTogglePin={() => toggleWeaponHash(weapon.hash)}
+          isNew={newWeaponHashes.has(weapon.hash)}
         />
       );
     },
@@ -291,6 +294,7 @@ export function HomeSearch({
       dpsByName,
       pinnedWeaponHashSet,
       toggleWeaponHash,
+      newWeaponHashes,
     ],
   );
 
@@ -306,10 +310,11 @@ export function HomeSearch({
           onMoveToCharacter={() =>
             void runArmorAction(armor.instanceId, "transfer", "/api/armor/transfer")
           }
+          isNew={newArmorHashes.has(armor.hash)}
         />
       );
     },
-    [armorById, armorPreviewById, armorAction, runArmorAction],
+    [armorById, armorPreviewById, armorAction, runArmorAction, newArmorHashes],
   );
 
   const addComposerPerk = useCallback((categoryId: string, option: PaletteValueOption) => {

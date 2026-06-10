@@ -174,6 +174,26 @@ export interface WeaponDetailIndex {
   statGroups?: Record<string, StatGroupRef>;
 }
 
+/** Committed hash snapshot used when no prior generated weapon index exists (e.g. CI builds). */
+export interface WeaponCatalogBaseline {
+  version: string;
+  generatedAt: string;
+  weaponHashes: number[];
+}
+
+export type WeaponCatalogDiffSource = WeaponIndex | WeaponCatalogBaseline;
+
+/** Weapons newly introduced between two generated weapon indexes. */
+export interface NewWeaponIndex {
+  version: string;
+  generatedAt: string;
+  hasBaseline: boolean;
+  baselineVersion?: string;
+  baselineGeneratedAt?: string;
+  newWeaponHashes: number[];
+  weapons: WeaponSummary[];
+}
+
 export type ArmorStat = WeaponStat;
 
 /** A flattened, searchable armor record. */
