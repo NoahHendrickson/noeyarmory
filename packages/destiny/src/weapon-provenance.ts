@@ -45,11 +45,15 @@ export const OPS_SOURCE_LABELS = [
   "Equilibrium",
 ] as const;
 
+/** Event and playlist activity labels shown in the Source filter. */
+export const EVENT_SOURCE_LABELS = ["Sparrow Racing League"] as const;
+
 /** Curated activity names shown in the Source filter (vendors/generic events excluded). */
 export const CURATED_SOURCE_LABELS = [
   ...RAID_SOURCE_LABELS,
   ...DUNGEON_SOURCE_LABELS,
   ...OPS_SOURCE_LABELS,
+  ...EVENT_SOURCE_LABELS,
 ] as const;
 
 /** Shorthand tokens players type when filtering by raid source. */
@@ -86,10 +90,15 @@ export const OPS_SOURCE_ALIASES: Readonly<Record<string, readonly string[]>> = {
   "Rite of the Nine": ["rite", "nine"],
 };
 
+export const EVENT_SOURCE_ALIASES: Readonly<Record<string, readonly string[]>> = {
+  "Sparrow Racing League": ["srl", "sparrow racing", "racing league"],
+};
+
 export const ACTIVITY_SOURCE_ALIASES: Readonly<Record<string, readonly string[]>> = {
   ...RAID_SOURCE_ALIASES,
   ...DUNGEON_SOURCE_ALIASES,
   ...OPS_SOURCE_ALIASES,
+  ...EVENT_SOURCE_ALIASES,
 };
 
 const RAID_SOURCE_LABEL_SET = new Set(RAID_SOURCE_LABELS.map((label) => label.toLowerCase()));
@@ -196,6 +205,7 @@ export const ACTIVITY_INTRO_SEASON: Readonly<Record<string, number>> = {
   "Sundered Doctrine": 26,
   "Equilibrium": 28,
   Encore: 28,
+  "Sparrow Racing League": 28,
 };
 
 export interface ResolvedWeaponSeason {

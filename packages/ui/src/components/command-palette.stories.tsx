@@ -182,6 +182,28 @@ export const PinsValueWithoutAddingChip: Story = {
   },
 };
 
+export const PinsChipSuggestionWithoutAddingChip: Story = {
+  render: () => <PinValueDemo />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole("combobox"));
+    await userEvent.type(canvas.getByRole("combobox"), "surrounded");
+    await waitFor(() =>
+      expect(canvas.getByRole("button", { name: "Pin Trait 2: Surrounded" })).toBeInTheDocument(),
+    );
+
+    await userEvent.click(canvas.getByRole("button", { name: "Pin Trait 2: Surrounded" }));
+
+    await waitFor(() =>
+      expect(canvas.getByRole("button", { name: "Unpin Trait 2: Surrounded" })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      ),
+    );
+    expect(canvas.queryByRole("button", { name: /remove trait 2/i })).toBeNull();
+  },
+};
+
 function ElementPlaceholder({ label }: { label: string }) {
   return (
     <svg viewBox="0 0 16 16" className="size-3.5" aria-hidden>

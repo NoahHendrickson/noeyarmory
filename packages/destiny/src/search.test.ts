@@ -247,6 +247,7 @@ describe("facets + perks", () => {
         { source: "Prophecy" },
         { source: "Source: Fireteam Ops" },
         { source: "Solo Ops" },
+        { source: "Source: Sparrow Racing League" },
         { source: "Solstice" },
       ]).map((facet) => [facet.value, facet.count]),
     );
@@ -257,6 +258,7 @@ describe("facets + perks", () => {
       Prophecy: 1,
       "Fireteam Ops": 1,
       "Solo Ops": 1,
+      "Sparrow Racing League": 1,
     });
     expect(sources).not.toHaveProperty("Solstice");
   });

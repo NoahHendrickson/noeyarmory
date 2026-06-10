@@ -90,37 +90,29 @@ function sortArmorGroups(groups: NewArmorSetGroup[], sort: SetSort): NewArmorSet
   });
 }
 
-function SetBonusTier({ perk, requiredSetCount }: { perk: SetBonus; requiredSetCount?: number }) {
-  return (
-    <div className="flex gap-3 sm:gap-4">
-      <div className="text-muted-foreground w-16 shrink-0 pt-0.5 text-xs font-medium uppercase tracking-wide tabular-nums sm:w-20">
-        {tierLabel(requiredSetCount)}
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="text-primary text-sm font-medium">{perk.name}</div>
-        {perk.description ? (
-          <p className="text-muted-foreground mt-1 text-sm leading-relaxed whitespace-pre-line">
-            {perk.description}
-          </p>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
-function SetBonusTiers({ perks }: { perks: SetBonus[] }) {
+function CompactSetBonuses({ perks }: { perks: SetBonus[] }) {
   const sorted = sortSetBonuses(perks);
 
   return (
-    <div className="space-y-4">
+    <ul className="space-y-2">
       {sorted.map((perk, index) => (
-        <SetBonusTier
+        <li
           key={`${perk.name}-${perk.requiredSetCount ?? index}`}
-          perk={perk}
-          requiredSetCount={perk.requiredSetCount}
-        />
+          className="min-w-0"
+        >
+          <div className="text-primary text-[11px] font-medium leading-snug">
+            {tierLabel(perk.requiredSetCount)}
+            <span aria-hidden> · </span>
+            {perk.name}
+          </div>
+          {perk.description ? (
+            <p className="text-muted-foreground mt-0.5 text-[10px] leading-snug whitespace-pre-line">
+              {perk.description}
+            </p>
+          ) : null}
+        </li>
       ))}
-    </div>
+    </ul>
   );
 }
 
@@ -183,14 +175,14 @@ function ArmorPieceGrid({ pieces }: { pieces: ArmorDoc[] }) {
   }, [pieces]);
 
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex justify-between gap-0.5">
       {ARMOR_SLOT_ORDER.map((slot) => {
         const piece = bySlot.get(slot);
         if (!piece) {
           return (
             <div
               key={slot}
-              className="border-border/60 size-10 rounded border border-dashed opacity-40"
+              className="border-border/60 size-8 rounded border border-dashed opacity-40"
               aria-hidden
             />
           );
@@ -202,7 +194,7 @@ function ArmorPieceGrid({ pieces }: { pieces: ArmorDoc[] }) {
               icon={piece.icon}
               watermark={piece.watermark}
               rarity={piece.rarity}
-              size={40}
+              size={32}
             />
           </span>
         );
@@ -222,24 +214,29 @@ function ArmorSetCard({ group }: { group: NewArmorSetGroup }) {
   return (
     <article
       id={armorSetElementId(group.key)}
-      className={cn("scroll-mt-24 space-y-4 rounded-2xl p-4 sm:p-5", frostedSurface("panel"))}
+      className={cn(
+        "scroll-mt-24 flex h-full flex-col gap-2 rounded-xl p-3",
+        frostedSurface("panel"),
+      )}
     >
-      <header className="space-y-2">
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <h2 className="text-lg font-semibold tracking-tight">{group.name}</h2>
+      <header className="min-w-0 space-y-1">
+        <div className="flex items-start justify-between gap-2">
+          <h2 className="min-w-0 truncate text-sm font-semibold leading-tight tracking-tight">
+            {group.name}
+          </h2>
           {group.source ? (
-            <Badge variant="outline" className="shrink-0 text-sm">
+            <Badge variant="outline" className="max-w-[45%] shrink-0 truncate px-1.5 py-0 text-[10px]">
               {group.source}
             </Badge>
           ) : null}
         </div>
-        <div className="text-muted-foreground flex flex-wrap items-center gap-2 text-sm">
+        <div className="text-muted-foreground flex flex-wrap items-center gap-1.5 text-[11px]">
           <span>{formatPieceCount(group.pieces.length)}</span>
           {isArmor30 ? (
             <>
               <span aria-hidden>·</span>
-              <Badge variant="secondary" className="text-xs">
-                Armor 3.0
+              <Badge variant="secondary" className="px-1 py-0 text-[9px]">
+                3.0
               </Badge>
             </>
           ) : null}
@@ -248,11 +245,11 @@ function ArmorSetCard({ group }: { group: NewArmorSetGroup }) {
 
       {setBonuses?.length ? (
         <section aria-label="Set bonuses">
-          <SetBonusTiers perks={setBonuses} />
+          <CompactSetBonuses perks={setBonuses} />
         </section>
       ) : null}
 
-      <section aria-label="New pieces">
+      <section aria-label="New pieces" className="mt-auto pt-0.5">
         <ArmorPieceGrid pieces={group.pieces} />
       </section>
     </article>
@@ -290,16 +287,10 @@ export function NewArmorPage({ index }: { index?: NewArmorIndex }) {
     () => buildNewArmorActivityNav(displayedGroups),
     [displayedGroups],
   );
-  const hasActivityNav = activityNav.raids.length > 0 || activityNav.dungeons.length > 0;
   const isFiltering = query.trim().length >= 2;
 
   return (
-    <main
-      className={cn(
-        "mx-auto space-y-4 p-4 md:p-6",
-        hasActivityNav ? "max-w-6xl" : "max-w-4xl",
-      )}
-    >
+    <main className="w-full space-y-4 p-4 md:p-6">
       <Link href="/" className="text-muted-foreground hover:text-foreground text-sm">
         ← Back to search
       </Link>
@@ -358,7 +349,7 @@ export function NewArmorPage({ index }: { index?: NewArmorIndex }) {
                 Try a different set name, activity source, perk, or piece name.
               </EmptyState>
             ) : (
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {displayedGroups.map((group) => (
                   <ArmorSetCard key={group.key} group={group} />
                 ))}

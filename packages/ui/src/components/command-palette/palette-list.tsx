@@ -573,6 +573,7 @@ function PaletteListRowContent({
           </span>
         </span>
         <span className="flex shrink-0 items-center gap-2">
+          {renderValueTrailing?.(item.category.id, item.option)}
           {item.option.hint != null && (
             <span className="text-xs text-muted-foreground">{item.option.hint}</span>
           )}

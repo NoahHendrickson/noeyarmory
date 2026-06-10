@@ -95,11 +95,13 @@ describe("curated activity source helpers", () => {
     expect(canonicalActivitySource("Prophecy dungeon")).toBe("Prophecy");
     expect(canonicalActivitySource("Source: Fireteam Ops")).toBe("Fireteam Ops");
     expect(canonicalActivitySource("Source: Raids and Dungeons")).toBe("Raids and Dungeons");
+    expect(canonicalActivitySource("Source: Sparrow Racing League")).toBe("Sparrow Racing League");
   });
 
   test("isCuratedActivitySource recognizes curated labels only", () => {
     expect(isCuratedActivitySource("Prophecy")).toBe(true);
     expect(isCuratedActivitySource("Solo Ops")).toBe(true);
+    expect(isCuratedActivitySource("Sparrow Racing League")).toBe(true);
     expect(isCuratedActivitySource("Solstice")).toBe(false);
   });
 
@@ -107,6 +109,7 @@ describe("curated activity source helpers", () => {
     expect(activitySourceMatchesQuery("Fireteam Ops", "fireteam")).toBe(true);
     expect(activitySourceMatchesQuery("Solo Ops", "solo")).toBe(true);
     expect(activitySourceMatchesQuery("Grasp of Avarice", "goa")).toBe(true);
+    expect(activitySourceMatchesQuery("Sparrow Racing League", "srl")).toBe(true);
   });
 });
 
