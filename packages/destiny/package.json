@@ -20,6 +20,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@leeoniya/ufuzzy": "^1.0.19",
     "@repo/search-rank": "workspace:*",
     "fuse.js": "^7.4.2"
   },

@@ -1,8 +1,3 @@
-import type Fuse from "fuse.js";
-
-/** Serialized fuse.js index payload — `Fuse.createIndex(...).toJSON()`, parsed by `Fuse.parseIndex`. */
-export type SerializedWeaponFuseIndex = Parameters<typeof Fuse.parseIndex>[0];
-
 /** Raw investment-stat delta from a plug (pre stat-group scaling). */
 export interface StatMod {
   hash: number;
@@ -162,8 +157,6 @@ export interface WeaponIndex {
   weaponTypes?: WeaponTypeRef[];
   /** Ammo type catalog from DestinyIconDefinition HUD icons (Primary / Special / Heavy). */
   ammoTypes?: AmmoTypeRef[];
-  /** Optional prebuilt fuse.js index (serialized) so clients skip the cold-load build. */
-  fuseIndex?: SerializedWeaponFuseIndex;
 }
 
 export interface WeaponDetailIndex {

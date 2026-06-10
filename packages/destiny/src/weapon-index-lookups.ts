@@ -1,12 +1,9 @@
-import type Fuse from "fuse.js";
-
 import { buildPerkMapFromCatalog, normalizeWeaponIndex, summariesForPerkName } from "./intern-weapons";
-import { createWeaponFuse, serializeWeaponFuseIndex } from "./search";
+import { createWeaponSearcher, type WeaponSearcher } from "./search";
 import type {
   AmmoTypeRef,
   DamageTypeRef,
   PerkRef,
-  SerializedWeaponFuseIndex,
   WeaponIndex,
   WeaponSummary,
   WeaponTypeRef,
@@ -27,10 +24,8 @@ export interface WeaponIndexLookups {
   weaponsByPerkNameRecord: Record<string, number[]>;
   /** Prebuilt name lookup for keystroke-rate autocomplete (built once). */
   nameIndex: WeaponNameIndex;
-  /** Shared fuzzy index, built once (from the serialized index when present). */
-  weaponFuse: Fuse<WeaponSummary>;
-  /** Serialized fuse index, kept so summary refreshes can re-wrap without re-tokenizing. */
-  fuseIndex: SerializedWeaponFuseIndex;
+  /** Shared fuzzy searcher, built once per catalog. */
+  weaponSearcher: WeaponSearcher;
   version?: string;
   generatedAt?: string;
 }
@@ -49,10 +44,6 @@ export function buildWeaponIndexLookups(raw: WeaponIndex): WeaponIndexLookups {
     );
   }
 
-  // Prefer the prebuilt (shipped) index; otherwise serialize once so summary
-  // refreshes (e.g. ammo-gen enrichment) can re-wrap without re-tokenizing.
-  const fuseIndex = raw.fuseIndex ?? serializeWeaponFuseIndex(index.weapons);
-
   return {
     weapons: index.weapons,
     perks: index.perks,
@@ -64,8 +55,7 @@ export function buildWeaponIndexLookups(raw: WeaponIndex): WeaponIndexLookups {
     weaponsByPerkName,
     weaponsByPerkNameRecord: index.weaponsByPerkName,
     nameIndex: buildWeaponNameIndex(index.weapons),
-    weaponFuse: createWeaponFuse(index.weapons, fuseIndex),
-    fuseIndex,
+    weaponSearcher: createWeaponSearcher(index.weapons),
     version: index.version,
     generatedAt: index.generatedAt,
   };
@@ -95,9 +85,7 @@ export function refreshWeaponSummaries(
     byHash,
     weaponsByPerkName,
     nameIndex: buildWeaponNameIndex(weapons),
-    // Enrichment only touches ammoGeneration (not name/type/perks), so the
-    // prebuilt index positions still line up — re-wrap, don't re-tokenize.
-    weaponFuse: createWeaponFuse(weapons, lookups.fuseIndex),
+    weaponSearcher: createWeaponSearcher(weapons),
   };
 }
 

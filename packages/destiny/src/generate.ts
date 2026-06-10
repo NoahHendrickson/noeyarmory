@@ -11,9 +11,7 @@ import { downloadDestinyIconDefinitions, downloadManifest } from "./manifest";
 import { readArmorCatalogDiffSource } from "./armor-catalog-baseline";
 import { buildNewArmorIndex } from "./new-armor";
 import { buildNewWeaponIndex } from "./new-weapons";
-import { serializeWeaponFuseIndex } from "./search";
 import { readWeaponCatalogDiffSource } from "./weapon-catalog-baseline";
-import { isCatalogWeapon } from "./weapon-variants";
 import type { NewArmorIndex, NewWeaponIndex } from "./types";
 import { writeSampleIndexes } from "./write-sample-indexes";
 
@@ -50,8 +48,6 @@ async function generateFromManifest(apiKey: string): Promise<void> {
       `Using committed weapon baseline (${previousWeaponCatalog.version}, ${"weaponHashes" in previousWeaponCatalog ? previousWeaponCatalog.weaponHashes.length : previousWeaponCatalog.weapons.length} hashes)`,
     );
   }
-  // Ship a prebuilt fuse.js index so the browser skips the cold-load tokenization pass.
-  index.fuseIndex = serializeWeaponFuseIndex(index.weapons.filter(isCatalogWeapon));
   // Drop `perksLower` from the on-disk index — it's a lowercased duplicate of
   // `perks`, re-derived at load by normalizeWeaponIndex. Saves payload + parse time.
   const weaponsContents = JSON.stringify(index, stripPerksLowerReplacer);

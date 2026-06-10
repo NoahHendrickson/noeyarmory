@@ -1,8 +1,8 @@
-import Fuse from "fuse.js";
+import uFuzzy from "@leeoniya/ufuzzy";
 
 import { matchRank } from "@repo/search-rank";
 
-import type { InternedPerkColumn, PerkRef, SerializedWeaponFuseIndex, WeaponSummary } from "./types";
+import type { InternedPerkColumn, PerkRef, WeaponSummary } from "./types";
 import type { WeaponDpsLookup } from "./weapon-dps";
 import type { WeaponNameIndex } from "./weapon-name-index";
 import {
@@ -407,10 +407,10 @@ function appendUniqueWeapons(
   }
 }
 
-/** Collect exact name hits plus fuse matches for a text query, deduped. */
+/** Collect exact name hits plus fuzzy matches for a text query, deduped. */
 export function weaponsMatchingTextQuery(
   weapons: WeaponSummary[],
-  fuse: Fuse<WeaponSummary>,
+  searcher: WeaponSearcher,
   query: string,
   limit: number,
   index?: WeaponNameIndex,
@@ -430,11 +430,7 @@ export function weaponsMatchingTextQuery(
     appendUniqueWeapons(seen, merged, named);
   }
 
-  appendUniqueWeapons(
-    seen,
-    merged,
-    fuse.search(q, { limit }).map((result) => result.item),
-  );
+  appendUniqueWeapons(seen, merged, searcher.search(q, limit));
 
   return merged;
 }
@@ -510,49 +506,79 @@ export function suggestWeaponNames(
     .map(({ value, count }) => ({ value, count }));
 }
 
-const WEAPON_FUSE_KEYS = [
-  { name: "name", weight: 3 },
-  { name: "type", weight: 1 },
-  { name: "perks", weight: 1 },
-];
+/** Typo-tolerant fuzzy search over weapon name/type/perk text. */
+export interface WeaponSearcher {
+  /** Ranked matches for `query`, deduped across fields, capped at `limit`. */
+  search(query: string, limit: number): WeaponSummary[];
+}
 
-const WEAPON_FUSE_OPTIONS = {
-  keys: WEAPON_FUSE_KEYS,
-  threshold: 0.3,
-  ignoreLocation: true,
-} as const;
+// intraMode 1 = one error per term, with every error kind enabled (they default
+// to 0): substitution, transposition, omission, insertion — comparable typo
+// tolerance to the old fuse.js threshold of 0.3.
+const weaponFuzzy = new uFuzzy({ intraMode: 1, intraIns: 1, intraSub: 1, intraTrn: 1, intraDel: 1 });
+
+/** Ranked haystack indices for a needle; empty when nothing matches. */
+function fuzzyMatchIndices(haystack: string[], needle: string): number[] {
+  // outOfOrder=1 lets multi-term queries match regardless of term order.
+  const [idxs, info, order] = weaponFuzzy.search(haystack, needle, 1);
+  if (!idxs) return [];
+  // Over the ranking threshold uFuzzy returns the (unranked) filter result.
+  if (order && info) return order.map((i) => info.idx[i]!);
+  return [...idxs];
+}
 
 /**
- * Build a reusable Fuse index for fuzzy name/type/perk search.
+ * Build a reusable fuzzy searcher for weapon name/type/perk text.
  *
- * Pass a `serializedIndex` (from {@link serializeWeaponFuseIndex}, e.g. emitted
- * at generate time) to skip the client-side tokenization pass on cold load.
+ * Fields are searched in priority order — name, then type, then perk text,
+ * then all three combined (so multi-term queries can span fields) — mirroring
+ * the old fuse.js key weights (name 3×) as tiered buckets. Superseded legacy
+ * twins are excluded, matching the catalog-only index that used to be shipped.
  */
-export function createWeaponFuse(
-  weapons: WeaponSummary[],
-  serializedIndex?: SerializedWeaponFuseIndex,
-): Fuse<WeaponSummary> {
-  if (serializedIndex) {
-    return new Fuse(weapons, WEAPON_FUSE_OPTIONS, Fuse.parseIndex<WeaponSummary>(serializedIndex));
+export function createWeaponSearcher(weapons: WeaponSummary[]): WeaponSearcher {
+  const catalog = weapons.filter(isCatalogWeapon);
+  const names: string[] = [];
+  const types: string[] = [];
+  const perkText: string[] = [];
+  const combined: string[] = [];
+  for (const weapon of catalog) {
+    const perks = weapon.perks.join(" ");
+    names.push(weapon.name);
+    types.push(weapon.type);
+    perkText.push(perks);
+    combined.push(`${weapon.name} ${weapon.type} ${perks}`);
   }
-  return new Fuse(weapons, WEAPON_FUSE_OPTIONS);
+  const fields = [names, types, perkText, combined];
+
+  return {
+    search(query, limit) {
+      const needle = query.trim();
+      if (!needle) return [];
+      const seen = new Set<number>();
+      const matches: WeaponSummary[] = [];
+      for (const haystack of fields) {
+        if (matches.length >= limit) break;
+        for (const index of fuzzyMatchIndices(haystack, needle)) {
+          const weapon = catalog[index];
+          if (!weapon || seen.has(weapon.hash)) continue;
+          seen.add(weapon.hash);
+          matches.push(weapon);
+          if (matches.length >= limit) break;
+        }
+      }
+      return matches;
+    },
+  };
 }
 
-/** Serialize a prebuilt weapon Fuse index (shipped so clients don't rebuild it). */
-export function serializeWeaponFuseIndex(weapons: WeaponSummary[]): SerializedWeaponFuseIndex {
-  return Fuse.createIndex(WEAPON_FUSE_KEYS, weapons).toJSON();
-}
-
-/** Convenience fuzzy search (rebuilds the index each call — prefer createWeaponFuse for UIs). */
+/** Convenience fuzzy search (rebuilds the searcher each call — prefer createWeaponSearcher for UIs). */
 export function fuzzySearchWeapons(
   weapons: WeaponSummary[],
   query: string,
   limit = 50,
 ): WeaponSummary[] {
   if (!query.trim()) return weapons;
-  return createWeaponFuse(weapons)
-    .search(query, { limit })
-    .map((r) => r.item);
+  return createWeaponSearcher(weapons).search(query, limit);
 }
 
 export interface FacetOption {

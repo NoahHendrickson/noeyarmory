@@ -104,7 +104,7 @@ function makeWeapon(i: number): WeaponDoc {
 const docs = Array.from({ length: CATALOG_SIZE }, (_, i) => makeWeapon(i));
 const { index } = internWeaponCatalog(docs, "bench");
 const lookups = buildWeaponIndexLookups(index);
-const { weapons, perks, weaponFuse, nameIndex } = lookups;
+const { weapons, perks, weaponSearcher, nameIndex } = lookups;
 
 const sink = (value: WeaponSummary[]) => {
   if (value.length < 0) throw new Error("unreachable");
@@ -152,11 +152,11 @@ const FILTERED_300 = weapons.slice(0, 300);
 
 describe("text search pipeline", () => {
   bench("weaponsMatchingTextQuery (short query)", () => {
-    sink(weaponsMatchingTextQuery(weapons, weaponFuse, "gilded", 200, nameIndex));
+    sink(weaponsMatchingTextQuery(weapons, weaponSearcher, "gilded", 200, nameIndex));
   });
 
   bench("weaponsMatchingTextQuery (typo query)", () => {
-    sink(weaponsMatchingTextQuery(weapons, weaponFuse, "gilded promse", 200, nameIndex));
+    sink(weaponsMatchingTextQuery(weapons, weaponSearcher, "gilded promse", 200, nameIndex));
   });
 
   bench("rankWeaponResults (300 results, name sort)", () => {
@@ -164,7 +164,7 @@ describe("text search pipeline", () => {
   });
 
   bench("full keystroke (text -> filter -> rank)", () => {
-    const base = weaponsMatchingTextQuery(weapons, weaponFuse, "gilded", 200, nameIndex);
+    const base = weaponsMatchingTextQuery(weapons, weaponSearcher, "gilded", 200, nameIndex);
     const filtered = filterWeapons(base, { element: ["Solar"] }, perks);
     sink(rankWeaponResults(filtered, "gilded", "name", undefined, nameIndex));
   });
