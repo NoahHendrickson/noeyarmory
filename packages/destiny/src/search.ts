@@ -11,7 +11,7 @@ import {
   CURATED_SOURCE_LABELS,
   isCuratedActivitySource,
   isRaidSource,
-  matchesWeaponSource,
+  matchesWeaponSourceLowered,
   RAID_SOURCE_LABELS,
 } from "./weapon-provenance";
 import { isCatalogWeapon } from "./weapon-variants";
@@ -21,6 +21,10 @@ export { buildWeaponNameIndex } from "./weapon-name-index";
 
 /** Optional name→popularity score (higher = more sought-after) used as a ranking tiebreak. */
 export type PopularityLookup = ReadonlyMap<string, number>;
+
+/** Shared default-locale collator — far cheaper than String#localeCompare in hot sorts. */
+const collator = new Intl.Collator();
+const compareStrings = (a: string, b: string): number => collator.compare(a, b);
 
 function popularityOf(name: string, popularity?: PopularityLookup): number {
   return popularity?.get(name.toLowerCase()) ?? 0;
@@ -46,17 +50,17 @@ export function sortWeapons(
 ): WeaponSummary[] {
   const sorted = [...weapons];
   if (order === "name") {
-    sorted.sort((a, b) => a.name.localeCompare(b.name));
+    sorted.sort((a, b) => compareStrings(a.name, b.name));
     return sorted;
   }
   if (order === "dps-desc") {
     sorted.sort((a, b) => {
       const aDps = dpsByName?.get(a.name)?.dps;
       const bDps = dpsByName?.get(b.name)?.dps;
-      if (aDps == null && bDps == null) return a.name.localeCompare(b.name);
+      if (aDps == null && bDps == null) return compareStrings(a.name, b.name);
       if (aDps == null) return 1;
       if (bDps == null) return -1;
-      return bDps - aDps || a.name.localeCompare(b.name);
+      return bDps - aDps || compareStrings(a.name, b.name);
     });
     return sorted;
   }
@@ -64,18 +68,18 @@ export function sortWeapons(
     sorted.sort((a, b) => {
       const aAmmoGen = a.ammoGeneration;
       const bAmmoGen = b.ammoGeneration;
-      if (aAmmoGen == null && bAmmoGen == null) return a.name.localeCompare(b.name);
+      if (aAmmoGen == null && bAmmoGen == null) return compareStrings(a.name, b.name);
       if (aAmmoGen == null) return 1;
       if (bAmmoGen == null) return -1;
-      return bAmmoGen - aAmmoGen || a.name.localeCompare(b.name);
+      return bAmmoGen - aAmmoGen || compareStrings(a.name, b.name);
     });
     return sorted;
   }
   if (order === "season-desc") {
-    sorted.sort((a, b) => seasonSortKey(b) - seasonSortKey(a) || a.name.localeCompare(b.name));
+    sorted.sort((a, b) => seasonSortKey(b) - seasonSortKey(a) || compareStrings(a.name, b.name));
     return sorted;
   }
-  sorted.sort((a, b) => seasonSortKey(a) - seasonSortKey(b) || a.name.localeCompare(b.name));
+  sorted.sort((a, b) => seasonSortKey(a) - seasonSortKey(b) || compareStrings(a.name, b.name));
   return sorted;
 }
 
@@ -112,28 +116,20 @@ export interface WeaponFilters {
 
 const lower = (s: string) => s.toLowerCase();
 
-function matchesFacet(value: string, selected?: string[]): boolean {
-  if (!selected || selected.length === 0) return true;
-  return selected.some((s) => lower(s) === lower(value));
+/** Lowered selected-facet values; an empty set means "no constraint". */
+function loweredSet(values?: string[]): Set<string> {
+  const set = new Set<string>();
+  for (const value of values ?? []) set.add(lower(value));
+  return set;
+}
+
+function facetMatches(value: string, wanted: Set<string>): boolean {
+  return wanted.size === 0 || wanted.has(lower(value));
 }
 
 function seasonFacetValue(weapon: WeaponSummary): string | undefined {
   if (weapon.seasonName) return weapon.seasonName;
   return weapon.seasonNumber != null ? `Season ${weapon.seasonNumber}` : undefined;
-}
-
-function matchesOptionalFacet(
-  value: string | undefined,
-  selected?: string[],
-  aliases: readonly string[] = [],
-): boolean {
-  if (!selected || selected.length === 0) return true;
-  if (!value) return false;
-  const accepted = new Set([value, ...aliases].map(lower));
-  return selected.some((s) => {
-    const wanted = lower(s.trim());
-    return wanted.length > 0 && accepted.has(wanted);
-  });
 }
 
 function seasonAliases(weapon: WeaponSummary): string[] {
@@ -142,14 +138,21 @@ function seasonAliases(weapon: WeaponSummary): string[] {
     : [];
 }
 
-function matchesCraftable(craftable: boolean, selected?: string[]): boolean {
-  if (!selected || selected.length === 0) return true;
-  return selected.some((s) => {
-    const v = lower(s);
-    if (v === "yes") return craftable;
-    if (v === "no") return !craftable;
-    return false;
-  });
+/**
+ * Per-weapon rollable-perk set, memoized for the session — `filterWeapons` runs
+ * per keystroke (and ~20× per keystroke for palette previews), so don't rebuild
+ * the Set per weapon per call. Refreshed summaries are new objects, so stale
+ * entries simply fall out of the WeakMap.
+ */
+const perksLowerSets = new WeakMap<WeaponSummary, Set<string>>();
+
+function perksLowerSet(weapon: WeaponSummary): Set<string> {
+  let set = perksLowerSets.get(weapon);
+  if (!set) {
+    set = new Set(weapon.perksLower);
+    perksLowerSets.set(weapon, set);
+  }
+  return set;
 }
 
 function traitColumns(columns: InternedPerkColumn[]): InternedPerkColumn[] {
@@ -191,23 +194,50 @@ export function filterWeapons(
   const customPerkGroups = (filters.customPerkGroups ?? [])
     .map((group) => group.map(lower).filter(Boolean))
     .filter((group) => group.length > 0);
-  // Lowercase the (tiny) filter name lists once, not per weapon×column.
-  const trait1Wanted = new Set((filters.trait1 ?? []).map(lower));
-  const trait2Wanted = new Set((filters.trait2 ?? []).map(lower));
-  const originWanted = new Set((filters.originTrait ?? []).map(lower));
+  // Lowercase the (tiny) filter value lists once, not per weapon×facet.
+  const nameWanted = loweredSet(filters.name);
+  const elementWanted = loweredSet(filters.element);
+  const typeWanted = loweredSet(filters.type);
+  const ammoWanted = loweredSet(filters.ammo);
+  const rarityWanted = loweredSet(filters.rarity);
+  const slotWanted = loweredSet(filters.slot);
+  const frameWanted = loweredSet(filters.frame);
+  const seasonWanted = new Set((filters.season ?? []).map((s) => lower(s.trim())));
+  const sourceActive = (filters.source?.length ?? 0) > 0;
+  const sourceWanted = (filters.source ?? []).map((s) => lower(s.trim()));
+  const trait1Wanted = loweredSet(filters.trait1);
+  const trait2Wanted = loweredSet(filters.trait2);
+  const originWanted = loweredSet(filters.originTrait);
+  const craftableActive = (filters.craftable?.length ?? 0) > 0;
+  let craftableYes = false;
+  let craftableNo = false;
+  for (const value of filters.craftable ?? []) {
+    const v = lower(value);
+    if (v === "yes") craftableYes = true;
+    else if (v === "no") craftableNo = true;
+  }
   const needsOwned = requiredPerks.length > 0 || customPerkGroups.length > 0;
   return weapons.filter((w) => {
     if (!isCatalogWeapon(w)) return false;
-    if (!matchesFacet(w.name, filters.name)) return false;
-    if (!matchesFacet(w.element, filters.element)) return false;
-    if (!matchesFacet(w.type, filters.type)) return false;
-    if (!matchesFacet(w.ammo, filters.ammo)) return false;
-    if (!matchesFacet(w.rarity, filters.rarity)) return false;
-    if (!matchesFacet(w.slot, filters.slot)) return false;
-    if (filters.frame?.length && !matchesFacet(w.frame ?? "", filters.frame)) return false;
-    if (!matchesWeaponSource(w.source, filters.source)) return false;
-    if (!matchesOptionalFacet(seasonFacetValue(w), filters.season, seasonAliases(w))) return false;
-    if (!matchesCraftable(w.craftable, filters.craftable)) return false;
+    if (!facetMatches(w.name, nameWanted)) return false;
+    if (!facetMatches(w.element, elementWanted)) return false;
+    if (!facetMatches(w.type, typeWanted)) return false;
+    if (!facetMatches(w.ammo, ammoWanted)) return false;
+    if (!facetMatches(w.rarity, rarityWanted)) return false;
+    if (!facetMatches(w.slot, slotWanted)) return false;
+    if (frameWanted.size && !frameWanted.has(lower(w.frame ?? ""))) return false;
+    if (sourceActive && !matchesWeaponSourceLowered(w.source, sourceWanted)) return false;
+    if (seasonWanted.size) {
+      const season = seasonFacetValue(w);
+      if (!season) return false;
+      if (
+        !seasonWanted.has(lower(season)) &&
+        !seasonAliases(w).some((alias) => seasonWanted.has(lower(alias)))
+      ) {
+        return false;
+      }
+    }
+    if (craftableActive && !(w.craftable ? craftableYes : craftableNo)) return false;
     if (filters.adept != null && w.adept !== filters.adept) return false;
     if (trait1Wanted.size || trait2Wanted.size) {
       const traits = traitColumns(w.columns);
@@ -221,7 +251,7 @@ export function filterWeapons(
       return false;
     }
     if (needsOwned) {
-      const owned = new Set(w.perksLower);
+      const owned = perksLowerSet(w);
       if (!requiredPerks.every((p) => owned.has(p))) return false;
       if (!customPerkGroups.every((group) => group.some((p) => owned.has(p)))) return false;
     }
@@ -285,6 +315,14 @@ function rankNames(
   return matches;
 }
 
+// One keystroke ranks the same query against the same immutable index up to 3×
+// (text-query merge, result pinning, name-matched sort) — memoize the last
+// answer per index. Callers never mutate the returned array (rankers copy).
+const lastNameMatches = new WeakMap<
+  WeaponNameIndex,
+  { ql: string; matches: FilteredWeaponName[] }
+>();
+
 /**
  * Flat weapon-name matches for palette ranking — no sort (caller ranks).
  *
@@ -300,7 +338,13 @@ export function filterWeaponNames(
   const ql = query.trim().toLowerCase();
   if (!ql) return [];
 
-  if (index) return rankNames(index.names, index.namesLower, index.countByName, ql);
+  if (index) {
+    const cached = lastNameMatches.get(index);
+    if (cached?.ql === ql) return cached.matches;
+    const matches = rankNames(index.names, index.namesLower, index.countByName, ql);
+    lastNameMatches.set(index, { ql, matches });
+    return matches;
+  }
 
   const counts = new Map<string, number>();
   for (const w of weapons) {
@@ -346,7 +390,7 @@ export function sortFilteredWeaponNames(
       a.searchRank - b.searchRank ||
       popularityOf(b.value, popularity) - popularityOf(a.value, popularity) ||
       b.count - a.count ||
-      a.value.localeCompare(b.value),
+      compareStrings(a.value, b.value),
   );
 }
 
@@ -413,7 +457,7 @@ function sortNameMatchedWeapons(
       (rankByName.get(a.name) ?? Number.MAX_SAFE_INTEGER) -
         (rankByName.get(b.name) ?? Number.MAX_SAFE_INTEGER) ||
       popularityOf(b.name, popularity) - popularityOf(a.name, popularity) ||
-      a.name.localeCompare(b.name),
+      compareStrings(a.name, b.name),
   );
 }
 
@@ -519,7 +563,7 @@ export interface FacetOption {
 function sortFacetCounts(counts: Map<string, number>): FacetOption[] {
   return [...counts.entries()]
     .map(([value, count]) => ({ value, count }))
-    .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value));
+    .sort((a, b) => b.count - a.count || compareStrings(a.value, b.value));
 }
 
 export interface CollectRaidSourceFacetsOptions {
@@ -639,7 +683,7 @@ export function collectPerks(weapons: WeaponSummary[], perks: PerkRef[]): PerkOp
       }
     }
   }
-  return [...byName.values()].sort((a, b) => a.name.localeCompare(b.name));
+  return [...byName.values()].sort((a, b) => compareStrings(a.name, b.name));
 }
 
 export interface ColumnPerkOptions {
@@ -687,7 +731,7 @@ export function collectColumnPerks(
   }
 
   const sort = (m: Map<string, PerkOption>) =>
-    [...m.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+    [...m.values()].sort((a, b) => b.count - a.count || compareStrings(a.name, b.name));
   return { trait1: sort(trait1), trait2: sort(trait2), originTrait: sort(originTrait) };
 }
 
