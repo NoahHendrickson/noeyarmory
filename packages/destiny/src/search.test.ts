@@ -25,7 +25,7 @@ import {
   sortFilteredWeaponNames,
   weaponsMatchingTextQuery,
   weaponsWithPerk,
-  createWeaponFuse,
+  createWeaponSearcher,
 } from "./search";
 import { AMMO_GENERATION_STAT_HASH } from "./weapon-stats";
 import { buildWeaponIndexLookups, refreshWeaponSummaries } from "./weapon-index-lookups";
@@ -367,15 +367,15 @@ describe("hasStrongWeaponNameMatch", () => {
 });
 
 describe("weaponsMatchingTextQuery", () => {
-  test("includes exact name matches before fuse-only matches", () => {
-    const fuse = createWeaponFuse(sampleSummaries);
-    const matches = weaponsMatchingTextQuery(sampleSummaries, fuse, "fate", 20);
+  test("includes exact name matches before fuzzy-only matches", () => {
+    const searcher = createWeaponSearcher(sampleSummaries);
+    const matches = weaponsMatchingTextQuery(sampleSummaries, searcher, "fate", 20);
     expect(matches[0]?.name).toBe("Fatebringer");
   });
 
   test("respects the same chip filters as full results", () => {
-    const fuse = createWeaponFuse(sampleSummaries);
-    const candidates = weaponsMatchingTextQuery(sampleSummaries, fuse, "fate", 20);
+    const searcher = createWeaponSearcher(sampleSummaries);
+    const candidates = weaponsMatchingTextQuery(sampleSummaries, searcher, "fate", 20);
 
     expect(
       filterWeapons(candidates, { element: ["Solar"] }, samplePerks).map((weapon) => weapon.name),
@@ -393,8 +393,8 @@ describe("rankWeaponResults", () => {
       if (weapon.name === "Sunshot Scout") return { ...weapon, ammoGeneration: 99 };
       return weapon;
     });
-    const fuse = createWeaponFuse(summaries);
-    const candidates = weaponsMatchingTextQuery(summaries, fuse, "sun", 20);
+    const searcher = createWeaponSearcher(summaries);
+    const candidates = weaponsMatchingTextQuery(summaries, searcher, "sun", 20);
 
     expect(
       rankWeaponResults(candidates, "sun", "ammo-gen-desc").map((weapon) => weapon.name),
@@ -408,8 +408,8 @@ describe("rankWeaponResults", () => {
   });
 
   test("preserves search relevance within the name-matched bucket when sorting by name", () => {
-    const fuse = createWeaponFuse(sampleSummaries);
-    const candidates = weaponsMatchingTextQuery(sampleSummaries, fuse, "sun", 20);
+    const searcher = createWeaponSearcher(sampleSummaries);
+    const candidates = weaponsMatchingTextQuery(sampleSummaries, searcher, "sun", 20);
     const expectedNameOrder = sortFilteredWeaponNames(filterWeaponNames(sampleSummaries, "sun"))
       .map((match) => match.value)
       .filter((name) => candidates.some((weapon) => weapon.name === name));

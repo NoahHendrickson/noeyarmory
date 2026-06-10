@@ -3,7 +3,7 @@
 import {
   buildDetailIndexFromDocs,
   buildWeaponIndexLookups,
-  createWeaponFuse,
+  createWeaponSearcher,
   enrichAmmoGenerationFromDetails,
   expandWeapon,
   internWeaponCatalog,
@@ -46,7 +46,7 @@ export interface WeaponsState {
   perkMap: WeaponIndexLookups["perkMap"];
   weaponsByPerkName: WeaponIndexLookups["weaponsByPerkName"];
   nameIndex: WeaponIndexLookups["nameIndex"];
-  weaponFuse: WeaponIndexLookups["weaponFuse"];
+  weaponSearcher: WeaponIndexLookups["weaponSearcher"];
   loading: boolean;
   isSample: boolean;
   version?: string;
@@ -72,7 +72,7 @@ const defaultState: WeaponsState = {
   perkMap: new Map(),
   weaponsByPerkName: new Map(),
   nameIndex: emptyLookups.nameIndex,
-  weaponFuse: createWeaponFuse([]),
+  weaponSearcher: createWeaponSearcher([]),
   loading: true,
   isSample: false,
   getWeaponDoc: async () => undefined,
@@ -162,7 +162,7 @@ function lookupsToState(
     perkMap: lookups.perkMap,
     weaponsByPerkName: lookups.weaponsByPerkName,
     nameIndex: lookups.nameIndex,
-    weaponFuse: lookups.weaponFuse,
+    weaponSearcher: lookups.weaponSearcher,
     loading: false,
     isSample,
     version: lookups.version,

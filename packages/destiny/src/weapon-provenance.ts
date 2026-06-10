@@ -162,20 +162,36 @@ function canonicalSourceFromLabels(
   return best;
 }
 
+// Canonicalization runs regex cleanup + a label scan; it's called per weapon in
+// filter hot loops, so memoize by the raw manifest string (distinct sources are
+// bounded — low hundreds across the catalog).
+const raidCanonicalCache = new Map<string, string | undefined>();
+const activityCanonicalCache = new Map<string, string | undefined>();
+
 /** Map Bungie source strings onto canonical raid labels when possible. */
 export function canonicalRaidSource(source: string | undefined): string | undefined {
-  const value = cleanActivitySourceLabel(source);
-  if (!value) return undefined;
+  if (source == null) return undefined;
+  if (raidCanonicalCache.has(source)) return raidCanonicalCache.get(source);
 
-  return canonicalSourceFromLabels(value, RAID_SOURCE_LABELS) ?? value;
+  const value = cleanActivitySourceLabel(source);
+  const canonical = value
+    ? (canonicalSourceFromLabels(value, RAID_SOURCE_LABELS) ?? value)
+    : undefined;
+  raidCanonicalCache.set(source, canonical);
+  return canonical;
 }
 
 /** Map Bungie source strings onto curated activity labels when possible. */
 export function canonicalActivitySource(source: string | undefined): string | undefined {
-  const value = cleanActivitySourceLabel(source);
-  if (!value) return undefined;
+  if (source == null) return undefined;
+  if (activityCanonicalCache.has(source)) return activityCanonicalCache.get(source);
 
-  return canonicalSourceFromLabels(value, CURATED_SOURCE_LABELS) ?? value;
+  const value = cleanActivitySourceLabel(source);
+  const canonical = value
+    ? (canonicalSourceFromLabels(value, CURATED_SOURCE_LABELS) ?? value)
+    : undefined;
+  activityCanonicalCache.set(source, canonical);
+  return canonical;
 }
 
 /** Destiny season number when an activity first introduced its loot pool (D2 reprisal seasons). */
@@ -442,17 +458,28 @@ export function activitySourceMatchesQuery(source: string, query: string): boole
   return aliases.some((alias) => alias.includes(ql) || ql.includes(alias));
 }
 
+/**
+ * {@link matchesWeaponSource} for callers that pre-lower/trim the needles once
+ * per filter pass instead of per weapon.
+ */
+export function matchesWeaponSourceLowered(
+  source: string | undefined,
+  loweredNeedles: readonly string[],
+): boolean {
+  const canonical = canonicalActivitySource(source);
+  if (!canonical) return false;
+  const haystack = lower(canonical);
+  return loweredNeedles.some((needle) => needle.length > 0 && haystack.includes(needle));
+}
+
 /** True when a weapon source matches any selected activity fragment (substring, case-insensitive). */
 export function matchesWeaponSource(
   source: string | undefined,
   selected: string[] | undefined,
 ): boolean {
   if (!selected?.length) return true;
-  const canonical = canonicalActivitySource(source);
-  if (!canonical) return false;
-  const haystack = lower(canonical);
-  return selected.some((entry) => {
-    const needle = lower(entry.trim());
-    return needle.length > 0 && haystack.includes(needle);
-  });
+  return matchesWeaponSourceLowered(
+    source,
+    selected.map((entry) => lower(entry.trim())),
+  );
 }
