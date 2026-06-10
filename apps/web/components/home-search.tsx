@@ -554,7 +554,7 @@ export function HomeSearch({
             )}
             style={{ "--chip-count": paletteChips.length } as CSSProperties}
           >
-            <div className="mb-4 flex flex-wrap items-center justify-end gap-2 sm:justify-between">
+            <div className="mb-4 flex flex-wrap items-center gap-2">
               {mode === "weapon" && pinnedFilters.length > 0 ? (
                 <PinnedFilterPills
                   filters={pinnedFilters}
@@ -564,7 +564,7 @@ export function HomeSearch({
               ) : null}
               <div
                 data-palette-ignore-close
-                className="shrink-0"
+                className="ml-auto shrink-0"
                 onClick={(e) => e.stopPropagation()}
                 onPointerDown={(e) => e.stopPropagation()}
               >
