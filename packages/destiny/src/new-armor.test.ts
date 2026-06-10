@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
-import { buildNewArmorIndex, groupNewArmorBySet } from "./new-armor";
+import { buildNewArmorIndex, filterNewArmorSets, groupNewArmorBySet } from "./new-armor";
+import type { NewArmorSetGroup } from "./types";
 import type { Armor30SetRef, ArmorDoc, ArmorIndex } from "./types";
 
 const rootSet: Armor30SetRef = {
@@ -199,5 +200,72 @@ describe("groupNewArmorBySet", () => {
 
     expect(groups).toHaveLength(1);
     expect(groups[0]?.pieces.map((piece) => piece.hash)).toEqual([2, 3]);
+  });
+});
+
+function rootGroup(pieces: ArmorDoc[]): NewArmorSetGroup {
+  return {
+    key: `set-${rootSet.hash}`,
+    name: rootSet.name,
+    source: "Root of Nightmares",
+    set: rootSet,
+    pieces,
+  };
+}
+
+describe("filterNewArmorSets", () => {
+  const hood = armor({
+    hash: 2,
+    name: "Root Hood",
+    slot: "Helmet",
+    isArmor30: true,
+    setHash: rootSet.hash,
+    setName: rootSet.name,
+    source: "Root of Nightmares",
+  });
+  const gloves = armor({
+    hash: 3,
+    name: "Root Gloves",
+    slot: "Gauntlets",
+    isArmor30: true,
+    setHash: rootSet.hash,
+    setName: rootSet.name,
+    source: "Root of Nightmares",
+  });
+  const standalone = armor({ hash: 4, name: "Zeta Helm", source: "Vex Network" });
+  const groups: NewArmorSetGroup[] = [
+    rootGroup([hood, gloves]),
+    {
+      key: `item-${standalone.hash}`,
+      name: standalone.name,
+      source: standalone.source,
+      pieces: [standalone],
+    },
+  ];
+
+  test("returns all groups for empty or short queries", () => {
+    expect(filterNewArmorSets(groups, "")).toEqual(groups);
+    expect(filterNewArmorSets(groups, " ")).toEqual(groups);
+    expect(filterNewArmorSets(groups, "r")).toEqual(groups);
+  });
+
+  test("matches by set name", () => {
+    expect(filterNewArmorSets(groups, "root").map((group) => group.name)).toEqual([
+      "Root of Nightmares",
+    ]);
+  });
+
+  test("matches by perk name", () => {
+    expect(filterNewArmorSets(groups, "resonant").map((group) => group.name)).toEqual([
+      "Root of Nightmares",
+    ]);
+  });
+
+  test("matches by piece name", () => {
+    expect(filterNewArmorSets(groups, "zeta").map((group) => group.name)).toEqual(["Zeta Helm"]);
+  });
+
+  test("returns no groups when nothing matches", () => {
+    expect(filterNewArmorSets(groups, "xyz")).toEqual([]);
   });
 });

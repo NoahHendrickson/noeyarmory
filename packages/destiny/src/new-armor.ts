@@ -1,3 +1,5 @@
+import { matchRank } from "@repo/search-rank";
+
 import type {
   ArmorCatalogDiffSource,
   ArmorDoc,
@@ -5,6 +7,8 @@ import type {
   NewArmorIndex,
   NewArmorSetGroup,
 } from "./types";
+
+const MIN_SEARCH_LENGTH = 2;
 
 function armorHashesFromDiffSource(previous: ArmorCatalogDiffSource): Set<number> {
   if ("armorHashes" in previous) return new Set(previous.armorHashes);
@@ -51,6 +55,41 @@ export function groupNewArmorBySet(index: NewArmorIndex): NewArmorSetGroup[] {
   return [...groups.values()]
     .map((group) => ({ ...group, pieces: [...group.pieces].sort(sortNewArmorPieces) }))
     .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function newArmorSetSearchFields(group: NewArmorSetGroup): string[] {
+  const fields = [group.name, group.source ?? ""];
+  for (const perkName of group.set?.perkNames ?? []) {
+    fields.push(perkName);
+  }
+  for (const perk of group.set?.perks ?? []) {
+    fields.push(perk.name);
+    if (perk.description) fields.push(perk.description);
+  }
+  for (const piece of group.pieces) {
+    fields.push(piece.name, piece.classType, piece.slot);
+  }
+  return fields.filter(Boolean);
+}
+
+function newArmorSetMatchScore(group: NewArmorSetGroup, query: string): number | null {
+  let best: number | null = null;
+  for (const field of newArmorSetSearchFields(group)) {
+    const rank = matchRank(field, query);
+    if (rank != null && (best == null || rank < best)) best = rank;
+  }
+  return best;
+}
+
+/** Filter grouped new-armor sets by name, source, perk text, or piece fields. */
+export function filterNewArmorSets(
+  groups: NewArmorSetGroup[],
+  query: string,
+): NewArmorSetGroup[] {
+  const trimmed = query.trim();
+  if (trimmed.length < MIN_SEARCH_LENGTH) return groups;
+
+  return groups.filter((group) => newArmorSetMatchScore(group, trimmed) != null);
 }
 
 export function buildNewArmorIndex(

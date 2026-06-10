@@ -135,7 +135,7 @@ export {
   type GeneratedDataManifestFile,
 } from "./generated-data-manifest";
 export { buildNewWeaponIndex } from "./new-weapons";
-export { buildNewArmorIndex, groupNewArmorBySet } from "./new-armor";
+export { buildNewArmorIndex, filterNewArmorSets, groupNewArmorBySet } from "./new-armor";
 export {
   filterArmor,
   sortArmor,

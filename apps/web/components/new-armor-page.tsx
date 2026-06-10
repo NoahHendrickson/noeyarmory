@@ -1,8 +1,10 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Badge } from "@repo/ui";
+import { Input } from "@repo/ui";
 import {
+  filterNewArmorSets,
   groupNewArmorBySet,
   type Armor30SetRef,
   type ArmorDoc,
@@ -13,6 +15,14 @@ import {
 import { ArmorItemIcon } from "./armor-item-icon";
 
 type SetBonus = NonNullable<Armor30SetRef["perks"]>[number];
+
+const SLOT_ABBREV: Record<ArmorDoc["slot"], string> = {
+  Helmet: "Helm",
+  Gauntlets: "Arms",
+  Chest: "Chest",
+  Legs: "Legs",
+  Class: "Class",
+};
 
 function formatDate(value?: string): string | undefined {
   if (!value) return undefined;
@@ -27,71 +37,83 @@ function formatDate(value?: string): string | undefined {
   });
 }
 
-function SetBonusFrame({ perk }: { perk: SetBonus }) {
+function formatMetadataLine(index: NewArmorIndex): string {
+  const parts = [`Manifest ${index.version}`];
+  const generatedAt = formatDate(index.generatedAt);
+  if (generatedAt) parts.push(`Generated ${generatedAt}`);
+  if (index.baselineVersion) parts.push(`Baseline ${index.baselineVersion}`);
+  const baselineAt = formatDate(index.baselineGeneratedAt);
+  if (baselineAt) parts.push(`Baseline generated ${baselineAt}`);
+  return parts.join(" · ");
+}
+
+function formatSetMeta(group: NewArmorSetGroup): string {
+  const parts: string[] = [];
+  if (group.source) parts.push(group.source);
+  parts.push(`${group.pieces.length} pc`);
+  if (group.pieces.some((piece) => piece.isArmor30)) parts.push("Armor 3.0");
+  if (group.set) parts.push("Set bonus");
+  return parts.join(" · ");
+}
+
+function SetBonusDetails({ perks }: { perks: SetBonus[] }) {
+  const perksWithDescriptions = perks.filter((perk) => perk.description);
+  if (perksWithDescriptions.length === 0) return null;
+
   return (
-    <li className="rounded-lg border border-primary/25 bg-primary/8 px-2.5 py-2">
-      <div className="text-xs font-medium leading-none text-primary">{perk.name}</div>
-      {perk.description && (
-        <p className="mt-1.5 text-[11px] leading-snug whitespace-pre-line text-foreground/75">
-          {perk.description}
-        </p>
-      )}
-    </li>
+    <details className="mt-1">
+      <summary className="text-muted-foreground cursor-pointer text-[11px] hover:text-foreground">
+        Set bonus details
+      </summary>
+      <ul className="text-muted-foreground mt-1.5 space-y-2 text-[11px] leading-snug">
+        {perksWithDescriptions.map((perk) => (
+          <li key={perk.name}>
+            <span className="text-primary font-medium">{perk.name}</span>
+            <p className="mt-0.5 whitespace-pre-line text-foreground/75">{perk.description}</p>
+          </li>
+        ))}
+      </ul>
+    </details>
   );
 }
 
-function ArmorPiece({ armor }: { armor: ArmorDoc }) {
+function ArmorPieceStrip({ armor }: { armor: ArmorDoc }) {
   return (
-    <li className="bg-card/70 flex items-center gap-2 rounded-md border border-white/10 p-2">
-      <ArmorItemIcon icon={armor.icon} watermark={armor.watermark} rarity={armor.rarity} />
+    <li className="flex min-w-0 items-center gap-1.5">
+      <ArmorItemIcon
+        icon={armor.icon}
+        watermark={armor.watermark}
+        rarity={armor.rarity}
+        size={28}
+      />
       <div className="min-w-0">
-        <div className="truncate text-xs font-medium">{armor.name}</div>
-        <div className="text-muted-foreground text-[11px] leading-tight">
-          {armor.classType} · {armor.slot}
+        <div className="truncate text-[11px] font-medium">{armor.name}</div>
+        <div className="text-muted-foreground text-[10px] leading-tight">
+          {SLOT_ABBREV[armor.slot]} · {armor.classType}
         </div>
       </div>
     </li>
   );
 }
 
-function NewArmorSetCard({ group }: { group: NewArmorSetGroup }) {
+function NewArmorSetRow({ group }: { group: NewArmorSetGroup }) {
   const setBonuses: SetBonus[] | undefined =
     group.set?.perks ?? group.set?.perkNames.map((name) => ({ name }));
 
   return (
-    <section className="bg-background/70 rounded-xl border border-white/12 p-3 shadow-lg shadow-black/20 backdrop-blur">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0 space-y-1">
-          <div className="text-muted-foreground text-xs tracking-wide uppercase">
-            {group.source ?? "New armor"}
-          </div>
-          <h2 className="text-base font-semibold tracking-tight">{group.name}</h2>
-          <p className="text-muted-foreground text-xs">
-            {group.pieces.length} new piece{group.pieces.length === 1 ? "" : "s"}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          {group.pieces.some((piece) => piece.isArmor30) && <Badge variant="secondary">Armor 3.0</Badge>}
-          {group.set && <Badge variant="outline">Set bonus</Badge>}
-        </div>
-      </div>
+    <section className="py-3 first:pt-0">
+      <h2 className="truncate text-sm font-semibold tracking-tight">{group.name}</h2>
+      <p className="text-muted-foreground mt-0.5 truncate text-[11px]">{formatSetMeta(group)}</p>
 
       {setBonuses?.length ? (
-        <div className="mt-3 rounded-lg border border-white/10 bg-white/[0.03] p-2.5">
-          <h3 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-            Set bonuses
-          </h3>
-          <ul className="mt-2 grid gap-2 lg:grid-cols-2">
-            {setBonuses.map((perk) => (
-              <SetBonusFrame key={perk.name} perk={perk} />
-            ))}
-          </ul>
-        </div>
+        <p className="text-primary mt-1 text-[11px]">{setBonuses.map((perk) => perk.name).join(" · ")}</p>
       ) : null}
 
-      <ul className="mt-3 grid gap-1.5 sm:grid-cols-3 lg:grid-cols-5">
+      {setBonuses?.length ? <SetBonusDetails perks={setBonuses} /> : null}
+
+      <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-1.5">
         {group.pieces.map((piece) => (
-          <ArmorPiece key={piece.hash} armor={piece} />
+          <ArmorPieceStrip key={piece.hash} armor={piece} />
         ))}
       </ul>
     </section>
@@ -106,44 +128,35 @@ function EmptyState({
   children: React.ReactNode;
 }) {
   return (
-    <div className="bg-background/70 rounded-2xl border border-white/12 p-6 text-center backdrop-blur">
-      <h2 className="text-lg font-semibold">{title}</h2>
-      <div className="text-muted-foreground mx-auto mt-2 max-w-xl text-sm leading-relaxed">
-        {children}
-      </div>
+    <div className="py-8 text-center">
+      <h2 className="text-base font-semibold">{title}</h2>
+      <p className="text-muted-foreground mx-auto mt-2 max-w-xl text-sm leading-relaxed">{children}</p>
     </div>
   );
 }
 
 export function NewArmorPage({ index }: { index?: NewArmorIndex }) {
-  const groups = index ? groupNewArmorBySet(index) : [];
-  const generatedAt = formatDate(index?.generatedAt);
-  const baselineAt = formatDate(index?.baselineGeneratedAt);
+  const [query, setQuery] = useState("");
+  const groups = useMemo(() => (index ? groupNewArmorBySet(index) : []), [index]);
+  const filteredGroups = useMemo(
+    () => filterNewArmorSets(groups, query),
+    [groups, query],
+  );
+  const isFiltering = query.trim().length >= 2;
 
   return (
-    <main className="mx-auto max-w-7xl space-y-6 p-4 md:p-6">
+    <main className="mx-auto max-w-4xl space-y-4 p-4 md:p-6">
       <Link href="/" className="text-muted-foreground hover:text-foreground text-sm">
         ← Back to search
       </Link>
 
-      <header className="space-y-3">
-        <div>
-          <div className="text-muted-foreground text-xs tracking-wide uppercase">
-            Newly introduced catalog armor
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">New armor</h1>
-        </div>
-        <p className="text-muted-foreground max-w-3xl text-sm leading-relaxed">
-          Exact additions from the latest generated armor index, grouped by Armor 3.0 set so new
-          set bonuses are easy to scan after a Destiny manifest refresh.
+      <header className="space-y-1">
+        <h1 className="text-xl font-bold tracking-tight">New armor</h1>
+        <p className="text-muted-foreground text-sm">
+          New catalog armor grouped by set after the latest manifest refresh.
         </p>
         {index && (
-          <div className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 text-xs">
-            <span>Manifest: {index.version}</span>
-            {generatedAt && <span>Generated: {generatedAt}</span>}
-            {index.baselineVersion && <span>Baseline: {index.baselineVersion}</span>}
-            {baselineAt && <span>Baseline generated: {baselineAt}</span>}
-          </div>
+          <p className="text-muted-foreground text-xs">{formatMetadataLine(index)}</p>
         )}
       </header>
 
@@ -162,9 +175,31 @@ export function NewArmorPage({ index }: { index?: NewArmorIndex }) {
         </EmptyState>
       ) : (
         <div className="space-y-3">
-          {groups.map((group) => (
-            <NewArmorSetCard key={group.key} group={group} />
-          ))}
+          <Input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search sets by name, source, or perk…"
+            aria-label="Search armor sets"
+            className="h-8 rounded-none border-0 border-b border-white/15 bg-transparent px-0 shadow-none focus-visible:ring-0"
+          />
+
+          {isFiltering && (
+            <p className="text-muted-foreground text-xs">
+              Showing {filteredGroups.length} of {groups.length} sets
+            </p>
+          )}
+
+          {filteredGroups.length === 0 ? (
+            <EmptyState title={`No sets match "${query.trim()}"`}>
+              Try a different set name, activity source, perk, or piece name.
+            </EmptyState>
+          ) : (
+            <div className="divide-y divide-white/10">
+              {filteredGroups.map((group) => (
+                <NewArmorSetRow key={group.key} group={group} />
+              ))}
+            </div>
+          )}
         </div>
       )}
     </main>
