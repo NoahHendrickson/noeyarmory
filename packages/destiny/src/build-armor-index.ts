@@ -1,4 +1,4 @@
-import { buildColumnPerks } from "./build-index";
+import { buildColumnPerks, collectSocketPlugCandidates } from "./build-index";
 import { isArmor30ItemDef } from "./armor-instance";
 import { PLUG_CATEGORY_ARMOR_ARCHETYPES } from "./armor30-constants";
 import type { ManifestDefs } from "./manifest";
@@ -103,24 +103,10 @@ export function buildArmorIndex(defs: ManifestDefs, version: string): ArmorIndex
         const entry = item.sockets.socketEntries[idx];
         if (!entry) continue;
 
-        const candidates: { hash: number; canRoll: boolean }[] = [];
-        const plugSetHash = entry.randomizedPlugSetHash ?? entry.reusablePlugSetHash;
-        if (plugSetHash != null) {
-          for (const p of plugSets[plugSetHash]?.reusablePlugItems ?? []) {
-            candidates.push({ hash: p.plugItemHash, canRoll: p.currentlyCanRoll ?? false });
-          }
-        } else if (entry.singleInitialItemHash) {
-          candidates.push({ hash: entry.singleInitialItemHash, canRoll: false });
-        }
+        const candidates = collectSocketPlugCandidates(entry, plugSets);
         if (!candidates.length) continue;
 
-        const seen = new Set<number>();
-        const unique = candidates.filter(({ hash }) => {
-          if (seen.has(hash)) return false;
-          seen.add(hash);
-          return true;
-        });
-        const { perks, identifier } = buildColumnPerks(unique, items);
+        const { perks, identifier } = buildColumnPerks(candidates, items);
         if (!perks.length) continue;
         columns.push({
           kind: armorColumnKind(cat.socketCategoryHash, identifier),
@@ -159,7 +145,10 @@ export function buildArmorIndex(defs: ManifestDefs, version: string): ArmorIndex
             const perkName = display?.name;
             if (!perkName) return undefined;
             const description = display.description?.trim() || undefined;
-            return description ? { name: perkName, description } : { name: perkName };
+            const requiredSetCount =
+              typeof p.requiredSetCount === "number" ? p.requiredSetCount : undefined;
+            const base = description ? { name: perkName, description } : { name: perkName };
+            return requiredSetCount != null ? { ...base, requiredSetCount } : base;
           })
           .filter((p) => p != null) ?? [];
       const perkNames = setPerks.map((p) => p.name);

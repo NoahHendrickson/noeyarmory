@@ -2,7 +2,11 @@ import { describe, expect, test } from "vitest";
 
 import type { ManifestDefs } from "./manifest";
 import {
+  activitySourceMatchesQuery,
+  canonicalActivitySource,
   canonicalRaidSource,
+  isCuratedActivitySource,
+  isDungeonSource,
   isRaidSource,
   matchesWeaponSource,
   normalizeWeaponSource,
@@ -73,10 +77,36 @@ describe("raid source helpers", () => {
     expect(isRaidSource("Complete Crucible matches")).toBe(false);
   });
 
+  test("isDungeonSource recognizes canonical dungeon labels only", () => {
+    expect(isDungeonSource("Prophecy")).toBe(true);
+    expect(isDungeonSource("Prophecy dungeon")).toBe(true);
+    expect(isDungeonSource("Root of Nightmares")).toBe(false);
+  });
+
   test("raidSourceMatchesQuery supports shorthand raid tokens", () => {
     expect(raidSourceMatchesQuery("Root of Nightmares", "root")).toBe(true);
     expect(raidSourceMatchesQuery("Root of Nightmares", "ron")).toBe(true);
     expect(raidSourceMatchesQuery("Vault of Glass", "vog")).toBe(true);
+  });
+});
+
+describe("curated activity source helpers", () => {
+  test("canonicalActivitySource normalizes dungeon and Ops strings", () => {
+    expect(canonicalActivitySource("Prophecy dungeon")).toBe("Prophecy");
+    expect(canonicalActivitySource("Source: Fireteam Ops")).toBe("Fireteam Ops");
+    expect(canonicalActivitySource("Source: Raids and Dungeons")).toBe("Raids and Dungeons");
+  });
+
+  test("isCuratedActivitySource recognizes curated labels only", () => {
+    expect(isCuratedActivitySource("Prophecy")).toBe(true);
+    expect(isCuratedActivitySource("Solo Ops")).toBe(true);
+    expect(isCuratedActivitySource("Solstice")).toBe(false);
+  });
+
+  test("activitySourceMatchesQuery supports shorthand activity tokens", () => {
+    expect(activitySourceMatchesQuery("Fireteam Ops", "fireteam")).toBe(true);
+    expect(activitySourceMatchesQuery("Solo Ops", "solo")).toBe(true);
+    expect(activitySourceMatchesQuery("Grasp of Avarice", "goa")).toBe(true);
   });
 });
 

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { buildNewArmorIndex, filterNewArmorSets, groupNewArmorBySet } from "./new-armor";
+import { buildNewArmorIndex, buildNewArmorActivityNav, filterNewArmorSets, groupNewArmorBySet } from "./new-armor";
 import type { NewArmorSetGroup } from "./types";
 import type { Armor30SetRef, ArmorDoc, ArmorIndex } from "./types";
 
@@ -267,5 +267,52 @@ describe("filterNewArmorSets", () => {
 
   test("returns no groups when nothing matches", () => {
     expect(filterNewArmorSets(groups, "xyz")).toEqual([]);
+  });
+});
+
+describe("buildNewArmorActivityNav", () => {
+  const hood = armor({
+    hash: 2,
+    name: "Root Hood",
+    slot: "Helmet",
+    isArmor30: true,
+    setHash: rootSet.hash,
+    setName: rootSet.name,
+    source: "Root of Nightmares",
+  });
+  const prophecy = armor({
+    hash: 5,
+    name: "Prophecy Helm",
+    source: "Prophecy dungeon",
+  });
+
+  test("lists raids and dungeons in canonical order with scroll targets", () => {
+    const nav = buildNewArmorActivityNav([
+      rootGroup([hood]),
+      {
+        key: "item-5",
+        name: "Prophecy Helm",
+        source: "Prophecy dungeon",
+        pieces: [prophecy],
+      },
+    ]);
+
+    expect(nav.raids).toEqual([
+      { label: "Root of Nightmares", targetId: "armor-set-set-7001" },
+    ]);
+    expect(nav.dungeons).toEqual([{ label: "Prophecy", targetId: "armor-set-item-5" }]);
+  });
+
+  test("ignores non-activity sources", () => {
+    const nav = buildNewArmorActivityNav([
+      {
+        key: "item-4",
+        name: "Zeta Helm",
+        source: "Vex Network",
+        pieces: [armor({ hash: 4, name: "Zeta Helm", source: "Vex Network" })],
+      },
+    ]);
+
+    expect(nav).toEqual({ raids: [], dungeons: [] });
   });
 });

@@ -39,7 +39,10 @@ describe("buildArmorIndex", () => {
           700: {
             hash: 700,
             displayProperties: { name: "Nezarec's Nightmare" },
-            setPerks: [{ sandboxPerkHash: 800 }, { sandboxPerkHash: 801 }],
+            setPerks: [
+              { sandboxPerkHash: 800, requiredSetCount: 2 },
+              { sandboxPerkHash: 801, requiredSetCount: 4 },
+            ],
           },
         },
         DestinySandboxPerkDefinition: {
@@ -71,10 +74,12 @@ describe("buildArmorIndex", () => {
           {
             name: "Bad Dreams",
             description: "Damaging Tormentors grants bonus ability energy.",
+            requiredSetCount: 2,
           },
           {
             name: "Dream-Devourer",
             description: "Final blows against Nightmares grant armor charge.",
+            requiredSetCount: 4,
           },
         ],
       },

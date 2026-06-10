@@ -78,7 +78,7 @@ export const ArmorResultRow = memo(function ArmorResultRow({
 
   const subtitle = isNew ? (
     <span className="inline-flex flex-wrap items-center gap-2">
-      <NewItemBadge className="px-1.5 py-0 text-[10px]" />
+      <NewItemBadge />
       {subtitleContent}
     </span>
   ) : (

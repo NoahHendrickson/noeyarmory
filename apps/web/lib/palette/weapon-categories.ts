@@ -1,12 +1,12 @@
 import type { PaletteCategory } from "@repo/ui";
 import {
+  activitySourceMatchesQuery,
+  collectActivitySourceFacets,
   collectColumnPerks,
   collectFacets,
-  collectRaidSourceFacets,
   createPerkNameFuse,
   filterPerkNames,
   filterWeaponNames,
-  raidSourceMatchesQuery,
   type FacetOption,
   type ModOption,
   type PerkOption,
@@ -36,13 +36,13 @@ function filterFacetOptions(options: FacetOption[], q: string): FacetOption[] {
   return options.filter((o) => o.value.toLowerCase().includes(ql));
 }
 
-function filterRaidSourceOptions(options: FacetOption[], q: string): FacetOption[] {
+function filterActivitySourceOptions(options: FacetOption[], q: string): FacetOption[] {
   const ql = q.trim();
   if (!ql) return options;
-  return options.filter((option) => raidSourceMatchesQuery(option.value, ql));
+  return options.filter((option) => activitySourceMatchesQuery(option.value, ql));
 }
 
-export function raidSourceCategory(options: FacetOption[]): PaletteCategory {
+export function activitySourceCategory(options: FacetOption[]): PaletteCategory {
   return {
     id: "source",
     label: "Source",
@@ -51,7 +51,7 @@ export function raidSourceCategory(options: FacetOption[]): PaletteCategory {
     examples: formatExamples(options.map((option) => option.value)),
     getValues: (q) => {
       const ql = q.trim().toLowerCase();
-      return filterRaidSourceOptions(options, q).map((option) => {
+      return filterActivitySourceOptions(options, q).map((option) => {
         const labelMatches = ql.length > 0 && option.value.toLowerCase().includes(ql);
         return {
           id: option.value.toLowerCase(),
@@ -208,7 +208,7 @@ export function buildWeaponCategories(
     facetCategory("element", "Element", facets.element ?? []),
     facetCategory("slot", "Slot", facets.slot ?? []),
     facetCategory("ammo", "Ammo type", facets.ammo ?? []),
-    raidSourceCategory(collectRaidSourceFacets(weapons)),
+    activitySourceCategory(collectActivitySourceFacets(weapons)),
     facetCategory("season", "Season", facets.season ?? []),
     facetCategory("frame", "Frame", facets.frame ?? [], { omitWeakInlineMatches: true }),
     facetCategory("craftable", "Craftable", facets.craftable ?? []),

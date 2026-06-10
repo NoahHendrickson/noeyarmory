@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Badge, cn } from "@repo/ui";
-import type { WeaponSummary } from "@repo/destiny";
+import { abbreviateWeaponType, type WeaponSummary } from "@repo/destiny";
 
 import { CraftableBadge } from "./craftable-badge";
 import { bungieIcon, ELEMENT_COLOR, RARITY_RING } from "../lib/bungie";
@@ -55,7 +55,7 @@ export function WeaponCard({ weapon }: { weapon: WeaponCardData }) {
           <div className="text-muted-foreground text-sm">
             <span className={ELEMENT_COLOR[weapon.element] ?? ""}>{weapon.element}</span>
             {" · "}
-            {weapon.type}
+            {abbreviateWeaponType(weapon.type)}
           </div>
           <div className="mt-1.5 flex flex-wrap gap-1">
             <Badge variant="outline">{weapon.ammo}</Badge>

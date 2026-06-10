@@ -1,5 +1,5 @@
 import { PinOff } from "lucide-react";
-import type { WeaponSummary } from "@repo/destiny";
+import { abbreviateWeaponType, type WeaponSummary } from "@repo/destiny";
 import { cn, frostedSurface } from "@repo/ui";
 
 import { bungieIcon } from "../lib/bungie";
@@ -68,7 +68,7 @@ export function PinnedWeaponsRail({
                     {weapon.name}
                   </span>
                   <span className="block truncate text-[11px] tracking-body text-muted-foreground">
-                    {weapon.frame ?? weapon.type}
+                    {weapon.frame ?? abbreviateWeaponType(weapon.type)}
                   </span>
                 </span>
               </button>

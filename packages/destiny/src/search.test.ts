@@ -10,6 +10,7 @@ import {
 } from "./intern-weapons";
 import type { PerkRef, WeaponDetailFields, WeaponDoc } from "./types";
 import {
+  collectActivitySourceFacets,
   collectColumnPerks,
   collectFacets,
   collectRaidSourceFacets,
@@ -237,6 +238,35 @@ describe("facets + perks", () => {
     );
     expect(raids).toEqual({ "Root of Nightmares": 1, "Vault of Glass": 1 });
     expect(raids).not.toHaveProperty("Solstice");
+  });
+
+  test("collectActivitySourceFacets includes curated dungeons and Ops sources", () => {
+    const sources = Object.fromEntries(
+      collectActivitySourceFacets([
+        ...sampleSummaries,
+        { source: "Prophecy" },
+        { source: "Source: Fireteam Ops" },
+        { source: "Solo Ops" },
+        { source: "Solstice" },
+      ]).map((facet) => [facet.value, facet.count]),
+    );
+
+    expect(sources).toMatchObject({
+      "Root of Nightmares": 1,
+      "Vault of Glass": 1,
+      Prophecy: 1,
+      "Fireteam Ops": 1,
+      "Solo Ops": 1,
+    });
+    expect(sources).not.toHaveProperty("Solstice");
+  });
+
+  test("collectActivitySourceFacets can list every known curated source label", () => {
+    const sources = collectActivitySourceFacets([], { includeAllKnownLabels: true });
+    expect(sources.length).toBeGreaterThan(20);
+    expect(sources.every((facet) => facet.count === 0)).toBe(true);
+    expect(sources.some((facet) => facet.value === "Prophecy")).toBe(true);
+    expect(sources.some((facet) => facet.value === "Fireteam Ops")).toBe(true);
   });
 
   test("collectRaidSourceFacets can list every raid label for armor browse", () => {

@@ -3,7 +3,7 @@ import type { DestinyInventoryItemDefinition } from "bungie-api-ts/destiny2";
 
 import type { ManifestDefs } from "./manifest";
 
-/** Canonical raid names shown in the Source filter (dungeons/vendors excluded). */
+/** Canonical raid names shown in the Source filter. */
 export const RAID_SOURCE_LABELS = [
   "Last Wish",
   "Scourge of the Past",
@@ -17,6 +17,39 @@ export const RAID_SOURCE_LABELS = [
   "Crota's End",
   "Salvation's Edge",
   "The Desert Perpetual",
+] as const;
+
+/** Canonical dungeon names shown in the Source filter. */
+export const DUNGEON_SOURCE_LABELS = [
+  "The Shattered Throne",
+  "Pit of Heresy",
+  "Prophecy",
+  "Grasp of Avarice",
+  "Duality",
+  "Spire of the Watcher",
+  "Ghosts of the Deep",
+  "Warlord's Ruin",
+  "Vesper's Host",
+  "Sundered Doctrine",
+] as const;
+
+/** Portal/Ops hub labels shown in the Source filter. */
+export const OPS_SOURCE_LABELS = [
+  "Fireteam Ops",
+  "Solo Ops",
+  "Arena Ops",
+  "Pinnacle Ops",
+  "Raids and Dungeons",
+  "Rite of the Nine",
+  "Encore",
+  "Equilibrium",
+] as const;
+
+/** Curated activity names shown in the Source filter (vendors/generic events excluded). */
+export const CURATED_SOURCE_LABELS = [
+  ...RAID_SOURCE_LABELS,
+  ...DUNGEON_SOURCE_LABELS,
+  ...OPS_SOURCE_LABELS,
 ] as const;
 
 /** Shorthand tokens players type when filtering by raid source. */
@@ -33,36 +66,107 @@ export const RAID_SOURCE_ALIASES: Readonly<Record<string, readonly string[]>> = 
   "The Desert Perpetual": ["desert", "perpetual", "tdp"],
 };
 
-const RAID_SOURCE_LABEL_SET = new Set(RAID_SOURCE_LABELS.map((label) => label.toLowerCase()));
+export const DUNGEON_SOURCE_ALIASES: Readonly<Record<string, readonly string[]>> = {
+  "The Shattered Throne": ["shattered", "throne"],
+  "Pit of Heresy": ["pit", "heresy"],
+  "Grasp of Avarice": ["grasp", "goa"],
+  "Spire of the Watcher": ["spire", "watcher"],
+  "Ghosts of the Deep": ["ghosts", "gotd"],
+  "Warlord's Ruin": ["warlord", "wr"],
+  "Vesper's Host": ["vesper", "vh"],
+  "Sundered Doctrine": ["sundered", "doctrine"],
+};
 
-function exactRaidLabel(value: string): string | undefined {
-  return RAID_SOURCE_LABELS.find((raid) => raid.toLowerCase() === value.toLowerCase());
+export const OPS_SOURCE_ALIASES: Readonly<Record<string, readonly string[]>> = {
+  "Fireteam Ops": ["fireteam", "vanguard ops"],
+  "Solo Ops": ["solo"],
+  "Arena Ops": ["arena"],
+  "Pinnacle Ops": ["pinnacle", "exotic missions"],
+  "Raids and Dungeons": ["raid dungeon", "raids dungeons"],
+  "Rite of the Nine": ["rite", "nine"],
+};
+
+export const ACTIVITY_SOURCE_ALIASES: Readonly<Record<string, readonly string[]>> = {
+  ...RAID_SOURCE_ALIASES,
+  ...DUNGEON_SOURCE_ALIASES,
+  ...OPS_SOURCE_ALIASES,
+};
+
+const RAID_SOURCE_LABEL_SET = new Set(RAID_SOURCE_LABELS.map((label) => label.toLowerCase()));
+const DUNGEON_SOURCE_LABEL_SET = new Set(
+  DUNGEON_SOURCE_LABELS.map((label) => label.toLowerCase()),
+);
+const CURATED_SOURCE_LABEL_SET = new Set(
+  CURATED_SOURCE_LABELS.map((label) => label.toLowerCase()),
+);
+
+function withoutLeadingArticle(value: string): string {
+  return value.replace(/^the\s+/i, "");
 }
 
-/** Map Bungie source strings onto canonical raid labels when possible. */
-export function canonicalRaidSource(source: string | undefined): string | undefined {
-  if (!source) return undefined;
-  let value = trimActivityLabel(
+function exactSourceLabel(labels: readonly string[], value: string): string | undefined {
+  const lowerValue = value.toLowerCase();
+  const lowerNoArticle = withoutLeadingArticle(value).toLowerCase();
+  return labels.find((label) => {
+    const lowerLabel = label.toLowerCase();
+    return (
+      lowerLabel === lowerValue ||
+      withoutLeadingArticle(label).toLowerCase() === lowerNoArticle
+    );
+  });
+}
+
+function cleanActivitySourceLabel(source: string | undefined): string | undefined {
+  const value = trimActivityLabel(
     source
-      .replace(/\s+/g, " ")
+      ?.replace(/\s+/g, " ")
       .replace(/^Source:\s*/i, "")
+      .replace(/^(Raid|Dungeon):\s*/i, "")
       .replace(/"([^"]+)"/g, "$1")
       .replace(/\s*,\s*Eater of Worlds.*$/i, "")
       .replace(/\s*,\s*Spire of Stars.*$/i, "")
       .replace(/\s+(raid(\s+lair)?|dungeon)\.?$/i, "")
-      .trim(),
+      .trim() ?? "",
   );
+  return value || undefined;
+}
+
+function canonicalSourceFromLabels(
+  source: string | undefined,
+  labels: readonly string[],
+): string | undefined {
+  const value = cleanActivitySourceLabel(source);
   if (!value) return undefined;
 
-  const exact = exactRaidLabel(value);
+  const exact = exactSourceLabel(labels, value);
   if (exact) return exact;
 
-  let best: (typeof RAID_SOURCE_LABELS)[number] | undefined;
-  for (const raid of RAID_SOURCE_LABELS) {
-    if (!value.toLowerCase().includes(raid.toLowerCase())) continue;
-    if (!best || raid.length > best.length) best = raid;
+  const valueLower = value.toLowerCase();
+  const valueNoArticle = withoutLeadingArticle(value).toLowerCase();
+  let best: string | undefined;
+  for (const label of labels) {
+    const labelLower = label.toLowerCase();
+    const labelNoArticle = withoutLeadingArticle(label).toLowerCase();
+    if (!valueLower.includes(labelLower) && !valueNoArticle.includes(labelNoArticle)) continue;
+    if (!best || label.length > best.length) best = label;
   }
-  return best ?? value;
+  return best;
+}
+
+/** Map Bungie source strings onto canonical raid labels when possible. */
+export function canonicalRaidSource(source: string | undefined): string | undefined {
+  const value = cleanActivitySourceLabel(source);
+  if (!value) return undefined;
+
+  return canonicalSourceFromLabels(value, RAID_SOURCE_LABELS) ?? value;
+}
+
+/** Map Bungie source strings onto curated activity labels when possible. */
+export function canonicalActivitySource(source: string | undefined): string | undefined {
+  const value = cleanActivitySourceLabel(source);
+  if (!value) return undefined;
+
+  return canonicalSourceFromLabels(value, CURATED_SOURCE_LABELS) ?? value;
 }
 
 /** Destiny season number when an activity first introduced its loot pool (D2 reprisal seasons). */
@@ -295,6 +399,18 @@ export function isRaidSource(source: string | undefined): boolean {
   return RAID_SOURCE_LABEL_SET.has(canonical.toLowerCase());
 }
 
+export function isDungeonSource(source: string | undefined): boolean {
+  const canonical = canonicalActivitySource(source);
+  if (!canonical) return false;
+  return DUNGEON_SOURCE_LABEL_SET.has(canonical.toLowerCase());
+}
+
+export function isCuratedActivitySource(source: string | undefined): boolean {
+  const canonical = canonicalActivitySource(source);
+  if (!canonical) return false;
+  return CURATED_SOURCE_LABEL_SET.has(canonical.toLowerCase());
+}
+
 /** True when a raid label or shorthand alias matches the typed query. */
 export function raidSourceMatchesQuery(source: string, query: string): boolean {
   const ql = query.trim().toLowerCase();
@@ -305,13 +421,24 @@ export function raidSourceMatchesQuery(source: string, query: string): boolean {
   return aliases.some((alias) => alias.includes(ql) || ql.includes(alias));
 }
 
+/** True when a curated activity label or shorthand alias matches the typed query. */
+export function activitySourceMatchesQuery(source: string, query: string): boolean {
+  const ql = query.trim().toLowerCase();
+  if (!ql) return true;
+  const label = trimActivityLabel(source).toLowerCase();
+  if (label.includes(ql)) return true;
+  const aliases =
+    ACTIVITY_SOURCE_ALIASES[source] ?? ACTIVITY_SOURCE_ALIASES[trimActivityLabel(source)] ?? [];
+  return aliases.some((alias) => alias.includes(ql) || ql.includes(alias));
+}
+
 /** True when a weapon source matches any selected activity fragment (substring, case-insensitive). */
 export function matchesWeaponSource(
   source: string | undefined,
   selected: string[] | undefined,
 ): boolean {
   if (!selected?.length) return true;
-  const canonical = canonicalRaidSource(source);
+  const canonical = canonicalActivitySource(source);
   if (!canonical) return false;
   const haystack = lower(canonical);
   return selected.some((entry) => {

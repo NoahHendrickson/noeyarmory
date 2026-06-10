@@ -87,6 +87,8 @@ export {
   serializeWeaponFuseIndex,
   fuzzySearchWeapons,
   collectFacets,
+  collectActivitySourceFacets,
+  type CollectActivitySourceFacetsOptions,
   collectRaidSourceFacets,
   type CollectRaidSourceFacetsOptions,
   collectPerks,
@@ -135,7 +137,17 @@ export {
   type GeneratedDataManifestFile,
 } from "./generated-data-manifest";
 export { buildNewWeaponIndex } from "./new-weapons";
-export { buildNewArmorIndex, filterNewArmorSets, groupNewArmorBySet } from "./new-armor";
+export {
+  ARMOR_CLASS_ORDER,
+  ARMOR_SLOT_ORDER,
+  armorSetElementId,
+  buildNewArmorActivityNav,
+  buildNewArmorIndex,
+  filterNewArmorSets,
+  groupNewArmorBySet,
+  type NewArmorActivityNav,
+  type NewArmorActivityNavLink,
+} from "./new-armor";
 export {
   filterArmor,
   sortArmor,
@@ -160,9 +172,19 @@ export {
 } from "./owned-armor-search";
 export {
   ACTIVITY_INTRO_SEASON,
+  ACTIVITY_SOURCE_ALIASES,
+  CURATED_SOURCE_LABELS,
+  DUNGEON_SOURCE_ALIASES,
+  DUNGEON_SOURCE_LABELS,
+  OPS_SOURCE_ALIASES,
+  OPS_SOURCE_LABELS,
   RAID_SOURCE_ALIASES,
   RAID_SOURCE_LABELS,
+  activitySourceMatchesQuery,
+  canonicalActivitySource,
   canonicalRaidSource,
+  isCuratedActivitySource,
+  isDungeonSource,
   isRaidSource,
   matchesWeaponSource,
   normalizeWeaponSource,
@@ -170,6 +192,7 @@ export {
   resolveWeaponSeason,
   type ResolvedWeaponSeason,
 } from "./weapon-provenance";
+export { abbreviateWeaponType } from "./weapon-type-abbrev";
 export { isCatalogWeapon, reconcileCraftableTwins } from "./weapon-variants";
 export { sampleWeapons } from "./fixtures/sample-weapons";
 export { sampleDamageTypes } from "./fixtures/sample-damage-types";

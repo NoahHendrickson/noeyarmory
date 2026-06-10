@@ -238,6 +238,8 @@ export interface Armor30SetRef {
   perks?: {
     name: string;
     description?: string;
+    /** Pieces equipped to activate this tier (typically 2 or 4). */
+    requiredSetCount?: number;
   }[];
 }
 

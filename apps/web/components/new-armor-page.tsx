@@ -2,12 +2,16 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Input } from "@repo/ui";
+import { Badge, cn, frostedSurface, Input, PillSelect, type PillSelectOption } from "@repo/ui";
 import {
+  ARMOR_SLOT_ORDER,
+  armorSetElementId,
+  buildNewArmorActivityNav,
   filterNewArmorSets,
   groupNewArmorBySet,
   type Armor30SetRef,
   type ArmorDoc,
+  type NewArmorActivityNav,
   type NewArmorIndex,
   type NewArmorSetGroup,
 } from "@repo/destiny";
@@ -15,14 +19,12 @@ import {
 import { ArmorItemIcon } from "./armor-item-icon";
 
 type SetBonus = NonNullable<Armor30SetRef["perks"]>[number];
+type SetSort = "name" | "source";
 
-const SLOT_ABBREV: Record<ArmorDoc["slot"], string> = {
-  Helmet: "Helm",
-  Gauntlets: "Arms",
-  Chest: "Chest",
-  Legs: "Legs",
-  Class: "Class",
-};
+const SORT_OPTIONS: PillSelectOption<SetSort>[] = [
+  { value: "name", label: "Name" },
+  { value: "source", label: "Source" },
+];
 
 function formatDate(value?: string): string | undefined {
   if (!value) return undefined;
@@ -47,76 +49,213 @@ function formatMetadataLine(index: NewArmorIndex): string {
   return parts.join(" · ");
 }
 
-function formatSetMeta(group: NewArmorSetGroup): string {
-  const parts: string[] = [];
-  if (group.source) parts.push(group.source);
-  parts.push(`${group.pieces.length} pc`);
-  if (group.pieces.some((piece) => piece.isArmor30)) parts.push("Armor 3.0");
-  if (group.set) parts.push("Set bonus");
-  return parts.join(" · ");
+function resolveRequiredSetCount(perk: SetBonus, index: number, total: number): number | undefined {
+  if (perk.requiredSetCount != null) return perk.requiredSetCount;
+  if (total === 2) return index === 0 ? 2 : 4;
+  return undefined;
 }
 
-function SetBonusDetails({ perks }: { perks: SetBonus[] }) {
-  const perksWithDescriptions = perks.filter((perk) => perk.description);
-  if (perksWithDescriptions.length === 0) return null;
-
-  return (
-    <details className="mt-1">
-      <summary className="text-muted-foreground cursor-pointer text-[11px] hover:text-foreground">
-        Set bonus details
-      </summary>
-      <ul className="text-muted-foreground mt-1.5 space-y-2 text-[11px] leading-snug">
-        {perksWithDescriptions.map((perk) => (
-          <li key={perk.name}>
-            <span className="text-primary font-medium">{perk.name}</span>
-            <p className="mt-0.5 whitespace-pre-line text-foreground/75">{perk.description}</p>
-          </li>
-        ))}
-      </ul>
-    </details>
-  );
+function tierLabel(requiredSetCount: number | undefined): string {
+  if (requiredSetCount != null) return `${requiredSetCount} pieces`;
+  return "Set bonus";
 }
 
-function ArmorPieceStrip({ armor }: { armor: ArmorDoc }) {
+function sortSetBonuses(perks: SetBonus[]): SetBonus[] {
+  return [...perks].sort((a, b) => {
+    const aCount = a.requiredSetCount ?? Number.MAX_SAFE_INTEGER;
+    const bCount = b.requiredSetCount ?? Number.MAX_SAFE_INTEGER;
+    return aCount - bCount;
+  });
+}
+
+function normalizeSetBonuses(group: NewArmorSetGroup): SetBonus[] | undefined {
+  const raw = group.set?.perks ?? group.set?.perkNames.map((name) => ({ name }));
+  if (!raw?.length) return undefined;
+
+  return raw.map((perk, index) => ({
+    ...perk,
+    requiredSetCount: resolveRequiredSetCount(perk, index, raw.length),
+  }));
+}
+
+function sortArmorGroups(groups: NewArmorSetGroup[], sort: SetSort): NewArmorSetGroup[] {
+  if (sort === "name") return groups;
+
+  return [...groups].sort((a, b) => {
+    const sourceA = a.source ?? "";
+    const sourceB = b.source ?? "";
+    const sourceDelta = sourceA.localeCompare(sourceB);
+    if (sourceDelta !== 0) return sourceDelta;
+    return a.name.localeCompare(b.name);
+  });
+}
+
+function SetBonusTier({ perk, requiredSetCount }: { perk: SetBonus; requiredSetCount?: number }) {
   return (
-    <li className="flex min-w-0 items-center gap-1.5">
-      <ArmorItemIcon
-        icon={armor.icon}
-        watermark={armor.watermark}
-        rarity={armor.rarity}
-        size={28}
-      />
-      <div className="min-w-0">
-        <div className="truncate text-[11px] font-medium">{armor.name}</div>
-        <div className="text-muted-foreground text-[10px] leading-tight">
-          {SLOT_ABBREV[armor.slot]} · {armor.classType}
-        </div>
+    <div className="flex gap-3 sm:gap-4">
+      <div className="text-muted-foreground w-16 shrink-0 pt-0.5 text-xs font-medium uppercase tracking-wide tabular-nums sm:w-20">
+        {tierLabel(requiredSetCount)}
       </div>
-    </li>
+      <div className="min-w-0 flex-1">
+        <div className="text-primary text-sm font-medium">{perk.name}</div>
+        {perk.description ? (
+          <p className="text-muted-foreground mt-1 text-sm leading-relaxed whitespace-pre-line">
+            {perk.description}
+          </p>
+        ) : null}
+      </div>
+    </div>
   );
 }
 
-function NewArmorSetRow({ group }: { group: NewArmorSetGroup }) {
-  const setBonuses: SetBonus[] | undefined =
-    group.set?.perks ?? group.set?.perkNames.map((name) => ({ name }));
+function SetBonusTiers({ perks }: { perks: SetBonus[] }) {
+  const sorted = sortSetBonuses(perks);
 
   return (
-    <section className="py-3 first:pt-0">
-      <h2 className="truncate text-sm font-semibold tracking-tight">{group.name}</h2>
-      <p className="text-muted-foreground mt-0.5 truncate text-[11px]">{formatSetMeta(group)}</p>
+    <div className="space-y-4">
+      {sorted.map((perk, index) => (
+        <SetBonusTier
+          key={`${perk.name}-${perk.requiredSetCount ?? index}`}
+          perk={perk}
+          requiredSetCount={perk.requiredSetCount}
+        />
+      ))}
+    </div>
+  );
+}
+
+function ActivitySourceNav({ nav }: { nav: NewArmorActivityNav }) {
+  if (nav.raids.length === 0 && nav.dungeons.length === 0) return null;
+
+  return (
+    <nav
+      aria-label="Jump to raid and dungeon armor"
+      className="sticky top-24 hidden w-36 shrink-0 self-start md:block lg:w-40"
+    >
+      <div className="space-y-4">
+        {nav.raids.length > 0 ? (
+          <div>
+            <div className="text-muted-foreground mb-1.5 text-[11px] font-medium uppercase tracking-wide">
+              Raids
+            </div>
+            <ul className="space-y-1">
+              {nav.raids.map((item) => (
+                <li key={item.label}>
+                  <a
+                    href={`#${item.targetId}`}
+                    className="text-muted-foreground hover:text-foreground block truncate text-sm transition-colors"
+                  >
+                    {item.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+        {nav.dungeons.length > 0 ? (
+          <div>
+            <div className="text-muted-foreground mb-1.5 text-[11px] font-medium uppercase tracking-wide">
+              Dungeons
+            </div>
+            <ul className="space-y-1">
+              {nav.dungeons.map((item) => (
+                <li key={item.label}>
+                  <a
+                    href={`#${item.targetId}`}
+                    className="text-muted-foreground hover:text-foreground block truncate text-sm transition-colors"
+                  >
+                    {item.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+      </div>
+    </nav>
+  );
+}
+
+function ArmorPieceGrid({ pieces }: { pieces: ArmorDoc[] }) {
+  const bySlot = useMemo(() => {
+    const warlockPieces = pieces.filter((piece) => piece.classType === "Warlock");
+    return new Map(warlockPieces.map((piece) => [piece.slot, piece]));
+  }, [pieces]);
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {ARMOR_SLOT_ORDER.map((slot) => {
+        const piece = bySlot.get(slot);
+        if (!piece) {
+          return (
+            <div
+              key={slot}
+              className="border-border/60 size-10 rounded border border-dashed opacity-40"
+              aria-hidden
+            />
+          );
+        }
+
+        return (
+          <span key={slot} title={piece.name}>
+            <ArmorItemIcon
+              icon={piece.icon}
+              watermark={piece.watermark}
+              rarity={piece.rarity}
+              size={40}
+            />
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+function formatPieceCount(count: number): string {
+  return `${count} new piece${count === 1 ? "" : "s"}`;
+}
+
+function ArmorSetCard({ group }: { group: NewArmorSetGroup }) {
+  const setBonuses = normalizeSetBonuses(group);
+  const isArmor30 = group.pieces.some((piece) => piece.isArmor30);
+
+  return (
+    <article
+      id={armorSetElementId(group.key)}
+      className={cn("scroll-mt-24 space-y-4 rounded-2xl p-4 sm:p-5", frostedSurface("panel"))}
+    >
+      <header className="space-y-2">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <h2 className="text-lg font-semibold tracking-tight">{group.name}</h2>
+          {group.source ? (
+            <Badge variant="outline" className="shrink-0 text-sm">
+              {group.source}
+            </Badge>
+          ) : null}
+        </div>
+        <div className="text-muted-foreground flex flex-wrap items-center gap-2 text-sm">
+          <span>{formatPieceCount(group.pieces.length)}</span>
+          {isArmor30 ? (
+            <>
+              <span aria-hidden>·</span>
+              <Badge variant="secondary" className="text-xs">
+                Armor 3.0
+              </Badge>
+            </>
+          ) : null}
+        </div>
+      </header>
 
       {setBonuses?.length ? (
-        <p className="text-primary mt-1 text-[11px]">{setBonuses.map((perk) => perk.name).join(" · ")}</p>
+        <section aria-label="Set bonuses">
+          <SetBonusTiers perks={setBonuses} />
+        </section>
       ) : null}
 
-      {setBonuses?.length ? <SetBonusDetails perks={setBonuses} /> : null}
-
-      <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-1.5">
-        {group.pieces.map((piece) => (
-          <ArmorPieceStrip key={piece.hash} armor={piece} />
-        ))}
-      </ul>
-    </section>
+      <section aria-label="New pieces">
+        <ArmorPieceGrid pieces={group.pieces} />
+      </section>
+    </article>
   );
 }
 
@@ -137,15 +276,30 @@ function EmptyState({
 
 export function NewArmorPage({ index }: { index?: NewArmorIndex }) {
   const [query, setQuery] = useState("");
+  const [sort, setSort] = useState<SetSort>("name");
   const groups = useMemo(() => (index ? groupNewArmorBySet(index) : []), [index]);
   const filteredGroups = useMemo(
     () => filterNewArmorSets(groups, query),
     [groups, query],
   );
+  const displayedGroups = useMemo(
+    () => sortArmorGroups(filteredGroups, sort),
+    [filteredGroups, sort],
+  );
+  const activityNav = useMemo(
+    () => buildNewArmorActivityNav(displayedGroups),
+    [displayedGroups],
+  );
+  const hasActivityNav = activityNav.raids.length > 0 || activityNav.dungeons.length > 0;
   const isFiltering = query.trim().length >= 2;
 
   return (
-    <main className="mx-auto max-w-4xl space-y-4 p-4 md:p-6">
+    <main
+      className={cn(
+        "mx-auto space-y-4 p-4 md:p-6",
+        hasActivityNav ? "max-w-6xl" : "max-w-4xl",
+      )}
+    >
       <Link href="/" className="text-muted-foreground hover:text-foreground text-sm">
         ← Back to search
       </Link>
@@ -174,32 +328,43 @@ export function NewArmorPage({ index }: { index?: NewArmorIndex }) {
           The latest generated armor index did not contain armor hashes missing from the baseline.
         </EmptyState>
       ) : (
-        <div className="space-y-3">
-          <Input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search sets by name, source, or perk…"
-            aria-label="Search armor sets"
-            className="h-8 rounded-none border-0 border-b border-white/15 bg-transparent px-0 shadow-none focus-visible:ring-0"
-          />
-
-          {isFiltering && (
-            <p className="text-muted-foreground text-xs">
-              Showing {filteredGroups.length} of {groups.length} sets
-            </p>
-          )}
-
-          {filteredGroups.length === 0 ? (
-            <EmptyState title={`No sets match "${query.trim()}"`}>
-              Try a different set name, activity source, perk, or piece name.
-            </EmptyState>
-          ) : (
-            <div className="divide-y divide-white/10">
-              {filteredGroups.map((group) => (
-                <NewArmorSetRow key={group.key} group={group} />
-              ))}
+        <div className="flex items-start gap-6 lg:gap-8">
+          <ActivitySourceNav nav={activityNav} />
+          <div className="min-w-0 flex-1 space-y-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <Input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search sets by name, source, or perk…"
+                aria-label="Search armor sets"
+                className="h-8 flex-1 rounded-none border-0 border-b border-white/15 bg-transparent px-0 shadow-none focus-visible:ring-0"
+              />
+              <PillSelect
+                aria-label="Sort armor sets"
+                options={SORT_OPTIONS}
+                value={sort}
+                onValueChange={setSort}
+              />
             </div>
-          )}
+
+            {isFiltering && (
+              <p className="text-muted-foreground text-xs">
+                Showing {displayedGroups.length} of {groups.length} sets
+              </p>
+            )}
+
+            {displayedGroups.length === 0 ? (
+              <EmptyState title={`No sets match "${query.trim()}"`}>
+                Try a different set name, activity source, perk, or piece name.
+              </EmptyState>
+            ) : (
+              <div className="space-y-4">
+                {displayedGroups.map((group) => (
+                  <ArmorSetCard key={group.key} group={group} />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </main>

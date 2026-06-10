@@ -6,7 +6,10 @@ import type { InternedPerkColumn, PerkRef, SerializedWeaponFuseIndex, WeaponSumm
 import type { WeaponDpsLookup } from "./weapon-dps";
 import type { WeaponNameIndex } from "./weapon-name-index";
 import {
+  canonicalActivitySource,
   canonicalRaidSource,
+  CURATED_SOURCE_LABELS,
+  isCuratedActivitySource,
   isRaidSource,
   matchesWeaponSource,
   RAID_SOURCE_LABELS,
@@ -522,6 +525,29 @@ function sortFacetCounts(counts: Map<string, number>): FacetOption[] {
 export interface CollectRaidSourceFacetsOptions {
   /** List every known raid even when the count is zero (armor vault browse). */
   includeAllRaidLabels?: boolean;
+}
+
+export interface CollectActivitySourceFacetsOptions {
+  /** List every known curated activity even when the count is zero (armor vault browse). */
+  includeAllKnownLabels?: boolean;
+}
+
+/** Curated source facets for the Source filter palette category. */
+export function collectActivitySourceFacets(
+  items: ReadonlyArray<{ source?: string }>,
+  options?: CollectActivitySourceFacetsOptions,
+): FacetOption[] {
+  const source = new Map<string, number>();
+  if (options?.includeAllKnownLabels) {
+    for (const label of CURATED_SOURCE_LABELS) source.set(label, 0);
+  }
+  for (const item of items) {
+    if (!item.source || !isCuratedActivitySource(item.source)) continue;
+    const canonical = canonicalActivitySource(item.source);
+    if (!canonical) continue;
+    source.set(canonical, (source.get(canonical) ?? 0) + 1);
+  }
+  return sortFacetCounts(source);
 }
 
 /** Raid-only source facets for the Source filter palette category. */

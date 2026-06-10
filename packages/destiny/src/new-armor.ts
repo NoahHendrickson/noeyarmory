@@ -7,6 +7,13 @@ import type {
   NewArmorIndex,
   NewArmorSetGroup,
 } from "./types";
+import {
+  canonicalActivitySource,
+  DUNGEON_SOURCE_LABELS,
+  isDungeonSource,
+  isRaidSource,
+  RAID_SOURCE_LABELS,
+} from "./weapon-provenance";
 
 const MIN_SEARCH_LENGTH = 2;
 
@@ -15,8 +22,54 @@ function armorHashesFromDiffSource(previous: ArmorCatalogDiffSource): Set<number
   return new Set(previous.armor.map((item) => item.hash));
 }
 
-const CLASS_ORDER = ["Titan", "Hunter", "Warlock", "Any"];
-const SLOT_ORDER = ["Helmet", "Gauntlets", "Chest", "Legs", "Class"];
+export const ARMOR_CLASS_ORDER = ["Titan", "Hunter", "Warlock", "Any"];
+export const ARMOR_SLOT_ORDER = ["Helmet", "Gauntlets", "Chest", "Legs", "Class"];
+
+export type NewArmorActivityNavLink = {
+  label: string;
+  targetId: string;
+};
+
+export type NewArmorActivityNav = {
+  raids: NewArmorActivityNavLink[];
+  dungeons: NewArmorActivityNavLink[];
+};
+
+export function armorSetElementId(key: string): string {
+  return `armor-set-${key}`;
+}
+
+function activityNavLinks(
+  labels: readonly string[],
+  firstTargetBySource: ReadonlyMap<string, string>,
+): NewArmorActivityNavLink[] {
+  const links: NewArmorActivityNavLink[] = [];
+  for (const label of labels) {
+    const targetId = firstTargetBySource.get(label);
+    if (targetId) links.push({ label, targetId });
+  }
+  return links;
+}
+
+/** Raid and dungeon jump links for the new-armor page sidebar. */
+export function buildNewArmorActivityNav(groups: NewArmorSetGroup[]): NewArmorActivityNav {
+  const firstTargetBySource = new Map<string, string>();
+
+  for (const group of groups) {
+    const canonical = canonicalActivitySource(group.source);
+    if (!canonical || firstTargetBySource.has(canonical)) continue;
+    if (!isRaidSource(canonical) && !isDungeonSource(canonical)) continue;
+    firstTargetBySource.set(canonical, armorSetElementId(group.key));
+  }
+
+  return {
+    raids: activityNavLinks(RAID_SOURCE_LABELS, firstTargetBySource),
+    dungeons: activityNavLinks(DUNGEON_SOURCE_LABELS, firstTargetBySource),
+  };
+}
+
+const CLASS_ORDER = ARMOR_CLASS_ORDER;
+const SLOT_ORDER = ARMOR_SLOT_ORDER;
 
 function sortNewArmorPieces(a: ArmorDoc, b: ArmorDoc): number {
   const classDelta = CLASS_ORDER.indexOf(a.classType) - CLASS_ORDER.indexOf(b.classType);
