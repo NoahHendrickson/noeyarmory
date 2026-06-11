@@ -18,6 +18,7 @@ import {
 } from "@repo/ui";
 import {
   collectColumnPerks,
+  collectDamagePerkNames,
   collectFacets,
   createPerkNameFuse,
   type WeaponSort,
@@ -134,10 +135,19 @@ export function HomeSearch({
     () => createPerkNameFuse(allPerkNames(weaponColumnPerks)),
     [weaponColumnPerks],
   );
+  const damagePerkNames = useMemo(() => collectDamagePerkNames(perks), [perks]);
 
   const weaponCategories = useMemo(
-    () => buildWeaponCategories(weapons, weaponColumnPerks, customFilters, facets, perkFuse),
-    [weapons, weaponColumnPerks, customFilters, facets, perkFuse],
+    () =>
+      buildWeaponCategories(
+        weapons,
+        weaponColumnPerks,
+        customFilters,
+        facets,
+        perkFuse,
+        damagePerkNames,
+      ),
+    [weapons, weaponColumnPerks, customFilters, facets, perkFuse, damagePerkNames],
   );
 
   const armorCategories = useMemo(() => buildArmorCategories(owned), [owned]);

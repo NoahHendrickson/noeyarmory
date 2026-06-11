@@ -14,7 +14,11 @@ import {
 } from "@repo/destiny";
 
 import type { CustomWeaponFilter } from "../use-custom-weapon-filters";
-import { CUSTOM_FILTER_CATEGORY_ID } from "./constants";
+import {
+  CUSTOM_FILTER_CATEGORY_ID,
+  DAMAGE_PERKS_LABEL,
+  DAMAGE_PERKS_VALUE_ID,
+} from "./constants";
 
 /** Palette category IDs whose option values are weapon perks (trait + origin columns). */
 export const WEAPON_PERK_FILTER_CATEGORY_IDS = ["trait1", "trait2", "originTrait"] as const;
@@ -107,8 +111,21 @@ export function perkCategory(
   label: string,
   options: PerkOption[] | ModOption[],
   perkFuse: ReturnType<typeof createPerkNameFuse> | null = null,
+  damagePerkNames?: ReadonlySet<string>,
 ): PaletteCategory {
   const names = options.map((o) => o.name);
+  // Pseudo-option matching ANY damage perk in this column (not a real perk name).
+  const damagePerkCount = damagePerkNames
+    ? options.filter((o) => damagePerkNames.has(o.name.toLowerCase())).length
+    : 0;
+  const damageOption =
+    damagePerkCount > 0
+      ? {
+          id: DAMAGE_PERKS_VALUE_ID,
+          label: DAMAGE_PERKS_LABEL,
+          hint: `${damagePerkCount} perks`,
+        }
+      : null;
   return {
     id,
     label,
@@ -120,14 +137,15 @@ export function perkCategory(
     getValues: (q) => {
       const ql = q.trim();
       if (!ql) {
-        return options.map((o) => ({
+        const base = options.map((o) => ({
           id: o.name.toLowerCase(),
           label: o.name,
           hint: String(o.count),
           dimmed: "currentlyCanRoll" in o && o.currentlyCanRoll === false,
         }));
+        return damageOption ? [damageOption, ...base] : base;
       }
-      return filterPerkNames(names, ql, perkFuse, options.length).flatMap((entry) => {
+      const matches = filterPerkNames(names, ql, perkFuse, options.length).flatMap((entry) => {
         const source = options.find((o) => o.name === entry.name);
         if (!source) return [];
         return [
@@ -140,6 +158,10 @@ export function perkCategory(
           },
         ];
       });
+      if (damageOption && DAMAGE_PERKS_LABEL.toLowerCase().includes(ql.toLowerCase())) {
+        return [damageOption, ...matches];
+      }
+      return matches;
     },
   };
 }
@@ -198,11 +220,12 @@ export function buildWeaponCategories(
   perkFuse: ReturnType<typeof createPerkNameFuse> = createPerkNameFuse(
     allPerkNames(weaponColumnPerks),
   ),
+  damagePerkNames?: ReadonlySet<string>,
 ): PaletteCategory[] {
   const [trait1Id, trait2Id, originTraitId] = WEAPON_PERK_FILTER_CATEGORY_IDS;
   return [
-    perkCategory(trait1Id, "Trait 1", weaponColumnPerks.trait1, perkFuse),
-    perkCategory(trait2Id, "Trait 2", weaponColumnPerks.trait2, perkFuse),
+    perkCategory(trait1Id, "Trait 1", weaponColumnPerks.trait1, perkFuse, damagePerkNames),
+    perkCategory(trait2Id, "Trait 2", weaponColumnPerks.trait2, perkFuse, damagePerkNames),
     ...(customFilters.length > 0 ? [customFilterCategory(customFilters)] : []),
     facetCategory("type", "Weapon type", facets.type ?? []),
     facetCategory("element", "Element", facets.element ?? []),

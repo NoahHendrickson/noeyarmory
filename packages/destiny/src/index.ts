@@ -110,6 +110,7 @@ export {
   type WeaponNameIndex,
   type PopularityLookup,
 } from "./search";
+export { isDamagePerk, damagePerkIndexSet, collectDamagePerkNames } from "./damage-perks";
 export {
   parseWeaponQuery,
   planWeaponTextSearch,

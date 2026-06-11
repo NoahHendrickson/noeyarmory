@@ -14,7 +14,10 @@ import type { PerkRef, WeaponDpsEntry, WeaponSort, WeaponSummary } from "@repo/d
 import type { PaletteResultsMode } from "../lib/palette/results-mode";
 import type { OwnedArmorItem } from "../lib/armor-types";
 import type { CustomWeaponFilter } from "../lib/use-custom-weapon-filters";
-import { CUSTOM_FILTER_DRAFT_CATEGORY_ID } from "../lib/palette/constants";
+import {
+  CUSTOM_FILTER_DRAFT_CATEGORY_ID,
+  DAMAGE_PERKS_VALUE_ID,
+} from "../lib/palette/constants";
 import { isWeaponPerkFilterCategory } from "../lib/palette/weapon-categories";
 import { trackPerkCommit } from "../lib/track-perk-commit";
 import { useArmorSearchResults } from "./use-armor-search-results";
@@ -114,7 +117,8 @@ export function useHomeSearchPaletteState({
         ];
       });
       if (added) {
-        if (isWeaponPerkFilterCategory(categoryId)) {
+        // The "Damage perks" pseudo-option is not a real perk name — skip popularity tracking.
+        if (isWeaponPerkFilterCategory(categoryId) && option.id !== DAMAGE_PERKS_VALUE_ID) {
           trackPerkCommit(option.label, "filter");
         }
         recordSearch(mode, "", [

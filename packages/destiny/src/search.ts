@@ -1,6 +1,7 @@
 import { matchRank } from "@repo/search-rank";
 
 import type { InternedPerkColumn, PerkRef, WeaponSummary } from "./types";
+import { damagePerkIndexSet } from "./damage-perks";
 import type { WeaponDpsLookup } from "./weapon-dps";
 import type { WeaponNameIndex } from "./weapon-name-index";
 import {
@@ -99,6 +100,10 @@ export interface WeaponFilters {
   trait1?: string[];
   /** Perk rollable in the SECOND trait column (OR within). */
   trait2?: string[];
+  /** When true, the FIRST trait column must roll at least one damage perk. */
+  trait1DamagePerks?: boolean;
+  /** When true, the SECOND trait column must roll at least one damage perk. */
+  trait2DamagePerks?: boolean;
   /** Perk rollable in the origin-trait column (OR within). */
   originTrait?: string[];
   /** Weapon must be able to roll ALL of these perks in ANY column (case-insensitive). */
@@ -183,6 +188,15 @@ function columnRollsAny(
   });
 }
 
+/** True if `column` can roll any perk whose catalog index is in `indices`. */
+function columnRollsAnyIndex(
+  column: InternedPerkColumn | undefined,
+  indices: ReadonlySet<number>,
+): boolean {
+  if (!column) return false;
+  return column.perkIndices.some((index) => indices.has(index));
+}
+
 /** Filter weapons by attribute facets, position-aware trait columns, and required perks. */
 export function filterWeapons(
   weapons: WeaponSummary[],
@@ -207,6 +221,8 @@ export function filterWeapons(
   const trait1Wanted = loweredSet(filters.trait1);
   const trait2Wanted = loweredSet(filters.trait2);
   const originWanted = loweredSet(filters.originTrait);
+  const damageIndices =
+    filters.trait1DamagePerks || filters.trait2DamagePerks ? damagePerkIndexSet(perks) : null;
   const craftableActive = (filters.craftable?.length ?? 0) > 0;
   let craftableYes = false;
   let craftableNo = false;
@@ -238,10 +254,18 @@ export function filterWeapons(
     }
     if (craftableActive && !(w.craftable ? craftableYes : craftableNo)) return false;
     if (filters.adept != null && w.adept !== filters.adept) return false;
-    if (trait1Wanted.size || trait2Wanted.size) {
+    if (trait1Wanted.size || trait2Wanted.size || damageIndices) {
       const traits = traitColumns(w.columns);
       if (!columnRollsAny(traits[0], trait1Wanted, perks)) return false;
       if (!columnRollsAny(traits[1], trait2Wanted, perks)) return false;
+      if (damageIndices) {
+        if (filters.trait1DamagePerks && !columnRollsAnyIndex(traits[0], damageIndices)) {
+          return false;
+        }
+        if (filters.trait2DamagePerks && !columnRollsAnyIndex(traits[1], damageIndices)) {
+          return false;
+        }
+      }
     }
     if (
       originWanted.size &&

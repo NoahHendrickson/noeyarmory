@@ -339,6 +339,65 @@ describe("position-aware trait, slot + origin filters", () => {
   });
 });
 
+describe("damage perk trait filters", () => {
+  const dp = (hash: number, name: string, description: string): PerkRef => ({
+    hash,
+    name,
+    currentlyCanRoll: true,
+    description,
+  });
+  // 0: damage perk, 1: not, 2: damage perk
+  const damageCatalog: PerkRef[] = [
+    dp(1, "Frenzy", "Being in combat for an extended time increases damage, handling, and reload speed."),
+    dp(2, "Outlaw", "Precision kills greatly decrease reload time."),
+    dp(3, "Bait and Switch", "Deal damage with all equipped weapons within a short time to give this weapon a damage boost."),
+  ];
+  const base = sampleSummaries[0]!;
+  const weapon = (hash: number, name: string, trait1: number[], trait2: number[]) => ({
+    ...base,
+    hash,
+    name,
+    columns: [
+      { kind: "Trait", perkIndices: trait1 },
+      { kind: "Trait", perkIndices: trait2 },
+    ],
+  });
+  const weapons = [
+    weapon(9101, "Alpha", [0, 1], [1]),
+    weapon(9102, "Beta", [1], [1, 2]),
+    weapon(9103, "Gamma", [1], [1]),
+  ];
+
+  test("trait1DamagePerks keeps only weapons with a damage perk in the FIRST trait column", () => {
+    expect(names(filterWeapons(weapons, { trait1DamagePerks: true }, damageCatalog))).toEqual([
+      "Alpha",
+    ]);
+  });
+
+  test("trait2DamagePerks keeps only weapons with a damage perk in the SECOND trait column", () => {
+    expect(names(filterWeapons(weapons, { trait2DamagePerks: true }, damageCatalog))).toEqual([
+      "Beta",
+    ]);
+  });
+
+  test("both flags AND together", () => {
+    expect(
+      filterWeapons(weapons, { trait1DamagePerks: true, trait2DamagePerks: true }, damageCatalog),
+    ).toEqual([]);
+  });
+
+  test("composes with a named trait filter on the other column", () => {
+    expect(
+      names(
+        filterWeapons(weapons, { trait1: ["Outlaw"], trait2DamagePerks: true }, damageCatalog),
+      ),
+    ).toEqual(["Beta"]);
+    expect(
+      filterWeapons(weapons, { trait1: ["Frenzy"], trait2DamagePerks: true }, damageCatalog),
+    ).toEqual([]);
+  });
+});
+
 describe("filterWeaponNames", () => {
   test("returns flat matches with weapon-specific searchRank", () => {
     const matches = filterWeaponNames(sampleSummaries, "fate");
