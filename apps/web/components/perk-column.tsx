@@ -3,9 +3,14 @@
 import Image from "next/image";
 import Link from "next/link";
 import { memo, useCallback } from "react";
-import type { ReactNode } from "react";
 import {
   cn,
+  frostedSurface,
+  Popover,
+  PopoverPortal,
+  PopoverPopup,
+  PopoverPositioner,
+  PopoverTrigger,
   Tooltip,
   TooltipPortal,
   TooltipPopup,
@@ -15,6 +20,7 @@ import {
 import type { PerkRef, PerkColumn } from "@repo/destiny";
 
 import { ClarityAttribution, ClarityDescription } from "./clarity-description";
+import { useHasHover } from "../hooks/use-has-hover";
 import { bungieIcon } from "../lib/bungie";
 import type { ClarityDescriptionMap, ClarityLine } from "../lib/clarity-types";
 import type { ClarityPerkTiers } from "../lib/clarity-provider";
@@ -46,6 +52,25 @@ function dedupePerksByName(perks: PerkRef[]): PerkRef[] {
   }
   return [...byName.values()];
 }
+
+function perkInfoPopupClassName(clarityLines: ClarityLine[] | undefined): string {
+  return cn(
+    frostedSurface("panel"),
+    "relative overflow-hidden rounded-md p-0",
+    perkTooltipMaxWidth(clarityLines),
+  );
+}
+
+const PERK_INFO_POSITIONER_PROPS = {
+  side: "right" as const,
+  align: "center" as const,
+  sideOffset: 2,
+  collisionAvoidance: {
+    side: "none" as const,
+    align: "none" as const,
+    fallbackAxisSide: "none" as const,
+  },
+};
 
 function PerkTooltipContent({
   perk,
@@ -129,6 +154,7 @@ const PerkTile = memo(function PerkTile({
   onHoverEnd?: () => void;
   clarityDescriptions: ClarityDescriptionMap | null;
 }) {
+  const hasHover = useHasHover();
   const tiers = getClarityPerkTiers(clarityDescriptions, perk);
   const clarityLines = getClarityDisplayLines(tiers);
   const icon = bungieIcon(perk.icon);
@@ -144,6 +170,25 @@ const PerkTile = memo(function PerkTile({
           onMouseLeave: () => onHoverEnd?.(),
         }
       : undefined;
+
+  const selectButton = onSelect ? (
+    <button
+      type="button"
+      aria-label={perk.name}
+      aria-pressed={selected}
+      onClick={() => onSelect(perk)}
+      {...hoverHandlers}
+      className="group inline-flex rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    />
+  ) : null;
+
+  const perkLink = linkPerks ? (
+    <Link href={`/perk/${perk.hash}`} className="group inline-flex rounded-full" />
+  ) : null;
+
+  const staticTrigger = <span className="inline-flex" />;
+
+  const triggerRender = selectButton ?? perkLink ?? staticTrigger;
 
   const tile = (
     <span
@@ -182,87 +227,59 @@ const PerkTile = memo(function PerkTile({
     </span>
   );
 
-  const wrapInteractive = (content: ReactNode) => {
-    if (onSelect) {
-      return (
-        <button
-          type="button"
-          aria-label={perk.name}
-          aria-pressed={selected}
-          onClick={() => onSelect(perk)}
-          {...hoverHandlers}
-          className="group inline-flex rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          {content}
-        </button>
-      );
-    }
-    if (linkPerks) {
-      return (
-        <Link
-          href={`/perk/${perk.hash}`}
-          className="group inline-flex rounded-full"
-        >
-          {content}
-        </Link>
-      );
-    }
-    return content;
-  };
-
   if (!hasClarityOrBungieTooltip(perk, tiers)) {
     return (
       <span title={onSelect ? undefined : perk.name} className="inline-flex">
-        {wrapInteractive(tile)}
+        {selectButton ? (
+          <button
+            type="button"
+            aria-label={perk.name}
+            aria-pressed={selected}
+            onClick={() => onSelect?.(perk)}
+            {...hoverHandlers}
+            className="group inline-flex rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {tile}
+          </button>
+        ) : perkLink ? (
+          <Link href={`/perk/${perk.hash}`} className="group inline-flex rounded-full">
+            {tile}
+          </Link>
+        ) : (
+          tile
+        )}
       </span>
+    );
+  }
+
+  const infoPopup = (
+    <PerkTooltipContent perk={perk} tiers={tiers} clarityLines={clarityLines} />
+  );
+
+  if (!hasHover) {
+    return (
+      <Popover modal={false}>
+        <PopoverTrigger render={triggerRender}>{tile}</PopoverTrigger>
+        <PopoverPortal>
+          <PopoverPositioner {...PERK_INFO_POSITIONER_PROPS}>
+            <PopoverPopup className={perkInfoPopupClassName(clarityLines)}>
+              {infoPopup}
+            </PopoverPopup>
+          </PopoverPositioner>
+        </PopoverPortal>
+      </Popover>
     );
   }
 
   return (
     <Tooltip disableHoverablePopup>
-      <TooltipTrigger
-        delay={0}
-        render={
-          onSelect ? (
-            <button
-              type="button"
-              aria-label={perk.name}
-              aria-pressed={selected}
-              onClick={() => onSelect(perk)}
-              {...hoverHandlers}
-              className="group inline-flex rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            />
-          ) : linkPerks ? (
-            <Link
-              href={`/perk/${perk.hash}`}
-              className="group inline-flex rounded-full"
-            />
-          ) : (
-            <span className="inline-flex" />
-          )
-        }
-      >
+      <TooltipTrigger delay={0} render={triggerRender}>
         {tile}
       </TooltipTrigger>
       <TooltipPortal>
-        <TooltipPositioner
-          side="right"
-          align="center"
-          sideOffset={2}
-          collisionAvoidance={{
-            side: "none",
-            align: "none",
-            fallbackAxisSide: "none",
-          }}
-        >
-          <TooltipPopup
-            className={cn(
-              "relative overflow-hidden p-0",
-              perkTooltipMaxWidth(clarityLines),
-              "pointer-events-none",
-            )}
-          >
-            <PerkTooltipContent perk={perk} tiers={tiers} clarityLines={clarityLines} />
+        <TooltipPositioner {...PERK_INFO_POSITIONER_PROPS}>
+          <TooltipPopup className={cn(perkInfoPopupClassName(clarityLines), "pointer-events-none")}>
+            {infoPopup}
           </TooltipPopup>
         </TooltipPositioner>
       </TooltipPortal>
