@@ -152,18 +152,15 @@ export interface OwnedArmor {
   ownerCharacterId?: string;
 }
 
-let armorIndexCache: {
+interface ArmorIndexLookups {
   byHash: Map<number, ArmorDoc>;
   modMap: Map<number, PerkRef>;
   archetypeMap: Map<number, string>;
   armor30SetsByHash: Map<number, Armor30SetBonus[]>;
-} | null = null;
-function loadArmorIndex(): {
-  byHash: Map<number, ArmorDoc>;
-  modMap: Map<number, PerkRef>;
-  archetypeMap: Map<number, string>;
-  armor30SetsByHash: Map<number, Armor30SetBonus[]>;
-} {
+}
+
+let armorIndexCache: ArmorIndexLookups | null = null;
+function loadArmorIndex(): ArmorIndexLookups {
   if (armorIndexCache) return armorIndexCache;
   const file = generatedDataFilePath("armor");
   const index = JSON.parse(readFileSync(file, "utf8")) as ArmorIndex;
@@ -286,14 +283,11 @@ function profileReusablePlugsToRecord(
 function buildOwnedArmor(
   located: LocatedProfileItem,
   components: ProfileItemComponents,
-  byHash: Map<number, ArmorDoc>,
-  modMap: Map<number, PerkRef>,
-  archetypeMap: Map<number, string>,
-  armor30SetsByHash: Map<number, Armor30SetBonus[]>,
+  lookups: ArmorIndexLookups,
 ): OwnedArmor | undefined {
   const item = located.item;
   if (!item.itemInstanceId) return undefined;
-  const armorDoc = byHash.get(item.itemHash);
+  const armorDoc = lookups.byHash.get(item.itemHash);
   if (!armorDoc) return undefined;
 
   const instanceId = item.itemInstanceId;
@@ -304,15 +298,15 @@ function buildOwnedArmor(
   return {
     armor: armorDoc,
     instanceId,
-    rolledMods: resolveRolledPlugs(instanceId, modMap, components.socketData),
+    rolledMods: resolveRolledPlugs(instanceId, lookups.modMap, components.socketData),
     isArmor30,
     setName: isArmor30 ? armorDoc.setName : undefined,
     setBonuses:
       isArmor30 && armorDoc.setHash != null
-        ? armor30SetsByHash.get(armorDoc.setHash)
+        ? lookups.armor30SetsByHash.get(armorDoc.setHash)
         : undefined,
     archetype: isArmor30
-      ? resolveArchetypeFromPlugMap(sockets, archetypeMap)
+      ? resolveArchetypeFromPlugMap(sockets, lookups.archetypeMap)
       : undefined,
     tertiaryStat: isArmor30 ? resolveTertiaryStat(profileStats) : undefined,
     tunableStat: isArmor30
@@ -330,21 +324,14 @@ function buildOwnedArmor(
 /** Fetch the user's profile and return every owned armor piece with Armor 3.0 roll data. */
 export async function getOwnedArmor(session: IronSession<SessionData>): Promise<OwnedArmor[]> {
   const { locatedItems, components } = await fetchProfile(session);
-  const { byHash, modMap, archetypeMap, armor30SetsByHash } = loadArmorIndex();
+  const lookups = loadArmorIndex();
 
   const owned: OwnedArmor[] = [];
   const seen = new Set<string>();
   for (const located of locatedItems) {
     const instanceId = located.item.itemInstanceId;
     if (!instanceId || seen.has(instanceId)) continue;
-    const built = buildOwnedArmor(
-      located,
-      components,
-      byHash,
-      modMap,
-      archetypeMap,
-      armor30SetsByHash,
-    );
+    const built = buildOwnedArmor(located, components, lookups);
     if (!built) continue;
     seen.add(instanceId);
     owned.push(built);
@@ -360,19 +347,12 @@ export async function findOwnedArmorForAction(
   instanceId: string,
 ): Promise<{ armor: OwnedArmor; characters: CharacterRef[] } | undefined> {
   const { locatedItems, characters, components } = await fetchProfile(session);
-  const { byHash, modMap, archetypeMap, armor30SetsByHash } = loadArmorIndex();
+  const lookups = loadArmorIndex();
 
   const located = locatedItems.find((entry) => entry.item.itemInstanceId === instanceId);
   if (!located?.item.itemInstanceId) return undefined;
 
-  const armor = buildOwnedArmor(
-    located,
-    components,
-    byHash,
-    modMap,
-    archetypeMap,
-    armor30SetsByHash,
-  );
+  const armor = buildOwnedArmor(located, components, lookups);
   if (!armor) return undefined;
 
   return { characters, armor };
