@@ -4,6 +4,7 @@ import { PLUG_CATEGORY_ARMOR_ARCHETYPES } from "./armor30-constants";
 import type { ManifestDefs } from "./manifest";
 import { normalizeWeaponSource, resolveWeaponSeason } from "./weapon-provenance";
 import type {
+  Armor30SetBonus,
   Armor30SetRef,
   ArmorArchetypeRef,
   ArmorDoc,
@@ -138,29 +139,27 @@ export function buildArmorIndex(defs: ManifestDefs, version: string): ArmorIndex
     const equipableSetHash = item.equippingBlock?.equipableItemSetHash;
     if (equipableSetHash != null) {
       const setDef = equipableSets[equipableSetHash];
-      const setPerks =
-        setDef?.setPerks
-          ?.map((p) => {
-            const display = sandboxPerks[p.sandboxPerkHash]?.displayProperties;
-            const perkName = display?.name;
-            if (!perkName) return undefined;
-            const description = display.description?.trim() || undefined;
-            const requiredSetCount =
-              typeof p.requiredSetCount === "number" ? p.requiredSetCount : undefined;
-            const base = description ? { name: perkName, description } : { name: perkName };
-            return requiredSetCount != null ? { ...base, requiredSetCount } : base;
-          })
-          .filter((p) => p != null) ?? [];
-      const perkNames = setPerks.map((p) => p.name);
-      if (setDef?.displayProperties?.name && perkNames.length > 0) {
+      const bonuses: Armor30SetBonus[] = [];
+      for (const p of setDef?.setPerks ?? []) {
+        const perk = sandboxPerks[p.sandboxPerkHash];
+        const name = perk?.displayProperties?.name;
+        if (!name) continue;
+        const description = perk.displayProperties?.description?.trim();
+        bonuses.push({
+          requiredSetCount: p.requiredSetCount,
+          name,
+          description: description || undefined,
+        });
+      }
+      bonuses.sort((a, b) => a.requiredSetCount - b.requiredSetCount);
+      if (setDef?.displayProperties?.name && bonuses.length > 0) {
         setHash = equipableSetHash;
         setName = setDef.displayProperties.name;
         if (isArmor30 && !armor30SetCandidates.has(equipableSetHash)) {
           armor30SetCandidates.set(equipableSetHash, {
             hash: equipableSetHash,
             name: setDef.displayProperties.name,
-            perkNames,
-            perks: setPerks,
+            bonuses,
           });
         }
       }

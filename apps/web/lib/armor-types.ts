@@ -1,6 +1,8 @@
 /** Where an owned armor instance lives in the player's profile. */
 export type ArmorLocation = "vault" | "inventory" | "equipped";
 
+import type { Armor30SetBonus } from "@repo/destiny";
+
 /** Client-safe owned armor shape from GET /api/armor. */
 export interface OwnedArmorStat {
   hash: number;
@@ -29,6 +31,7 @@ export interface OwnedArmorItem {
   rolledMods: OwnedArmorMod[];
   isArmor30?: boolean;
   setName?: string;
+  setBonuses?: Armor30SetBonus[];
   archetype?: string;
   tertiaryStat?: string;
   tunableStat?: string;

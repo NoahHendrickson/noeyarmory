@@ -112,12 +112,9 @@ export function groupNewArmorBySet(index: NewArmorIndex): NewArmorSetGroup[] {
 
 function newArmorSetSearchFields(group: NewArmorSetGroup): string[] {
   const fields = [group.name, group.source ?? ""];
-  for (const perkName of group.set?.perkNames ?? []) {
-    fields.push(perkName);
-  }
-  for (const perk of group.set?.perks ?? []) {
-    fields.push(perk.name);
-    if (perk.description) fields.push(perk.description);
+  for (const bonus of group.set?.bonuses ?? []) {
+    fields.push(bonus.name);
+    if (bonus.description) fields.push(bonus.description);
   }
   for (const piece of group.pieces) {
     fields.push(piece.name, piece.classType, piece.slot);

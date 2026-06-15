@@ -224,16 +224,16 @@ export interface ArmorArchetypeRef {
   name: string;
 }
 
+export interface Armor30SetBonus {
+  requiredSetCount: number;
+  name: string;
+  description?: string;
+}
+
 export interface Armor30SetRef {
   hash: number;
   name: string;
-  perkNames: string[];
-  perks?: {
-    name: string;
-    description?: string;
-    /** Pieces equipped to activate this tier (typically 2 or 4). */
-    requiredSetCount?: number;
-  }[];
+  bonuses: Armor30SetBonus[];
 }
 
 export interface ArmorIndex {

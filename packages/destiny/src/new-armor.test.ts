@@ -7,13 +7,14 @@ import type { Armor30SetRef, ArmorDoc, ArmorIndex } from "./types";
 const rootSet: Armor30SetRef = {
   hash: 7001,
   name: "Root of Nightmares",
-  perkNames: ["Nightmare Synergy", "Resonant Fury"],
-  perks: [
+  bonuses: [
     {
+      requiredSetCount: 2,
       name: "Nightmare Synergy",
       description: "Increases weapon damage against Tormentors.",
     },
     {
+      requiredSetCount: 4,
       name: "Resonant Fury",
       description: "Final blows grant bonus armor charge.",
     },
@@ -111,7 +112,7 @@ describe("buildNewArmorIndex", () => {
 
     expect(result.newSetHashes).toEqual([rootSet.hash]);
     expect(result.armor30Sets).toEqual([rootSet]);
-    expect(result.armor30Sets[0]?.perks).toEqual(rootSet.perks);
+    expect(result.armor30Sets[0]?.bonuses).toEqual(rootSet.bonuses);
   });
 
   test("includes an existing Armor 3.0 set when one new piece is added to it", () => {

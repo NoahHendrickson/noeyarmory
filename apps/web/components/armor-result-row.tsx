@@ -3,14 +3,10 @@ import { Button, ResultRow } from "@repo/ui";
 
 import type { OwnedArmorItem } from "../lib/armor-types";
 import { ArmorItemIcon } from "./armor-item-icon";
-import { ArmorStatsSubtitle } from "./armor-stats-subtitle";
+import { ArmorResultSubtitle } from "./armor-result-subtitle";
 import { NewItemBadge } from "./new-item-badge";
 
 const CLASS_CHARACTERS = new Set(["Titan", "Hunter", "Warlock"]);
-
-function legacyArmorSubtitle(armor: OwnedArmorItem): string {
-  return `${armor.slot} · ${armor.classType}`;
-}
 
 function canTargetClass(classType: string): boolean {
   return CLASS_CHARACTERS.has(classType);
@@ -69,12 +65,7 @@ export const ArmorResultRow = memo(function ArmorResultRow({
 }) {
   const watermark = armor.watermark;
 
-  const subtitleContent =
-    armor.isArmor30 && armor.stats && armor.stats.length > 0 ? (
-      <ArmorStatsSubtitle stats={armor.stats} tunableStat={armor.tunableStat} />
-    ) : (
-      legacyArmorSubtitle(armor)
-    );
+  const subtitleContent = <ArmorResultSubtitle armor={armor} />;
 
   const subtitle = isNew ? (
     <span className="inline-flex flex-wrap items-center gap-2">

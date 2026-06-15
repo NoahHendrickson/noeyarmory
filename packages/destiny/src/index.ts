@@ -20,6 +20,7 @@ export type {
   NewArmorIndex,
   NewArmorSetGroup,
   ArmorArchetypeRef,
+  Armor30SetBonus,
   Armor30SetRef,
   StatMod,
   StatGroupRef,

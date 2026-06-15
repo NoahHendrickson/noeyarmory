@@ -9,7 +9,7 @@ import {
   buildNewArmorActivityNav,
   filterNewArmorSets,
   groupNewArmorBySet,
-  type Armor30SetRef,
+  type Armor30SetBonus,
   type ArmorDoc,
   type NewArmorActivityNav,
   type NewArmorIndex,
@@ -18,7 +18,7 @@ import {
 
 import { ArmorItemIcon } from "./armor-item-icon";
 
-type SetBonus = NonNullable<Armor30SetRef["perks"]>[number];
+type SetBonus = Armor30SetBonus;
 type SetSort = "name" | "source";
 
 const SORT_OPTIONS: PillSelectOption<SetSort>[] = [
@@ -49,33 +49,8 @@ function formatMetadataLine(index: NewArmorIndex): string {
   return parts.join(" · ");
 }
 
-function resolveRequiredSetCount(perk: SetBonus, index: number, total: number): number | undefined {
-  if (perk.requiredSetCount != null) return perk.requiredSetCount;
-  if (total === 2) return index === 0 ? 2 : 4;
-  return undefined;
-}
-
-function tierLabel(requiredSetCount: number | undefined): string {
-  if (requiredSetCount != null) return `${requiredSetCount} pieces`;
-  return "Set bonus";
-}
-
-function sortSetBonuses(perks: SetBonus[]): SetBonus[] {
-  return [...perks].sort((a, b) => {
-    const aCount = a.requiredSetCount ?? Number.MAX_SAFE_INTEGER;
-    const bCount = b.requiredSetCount ?? Number.MAX_SAFE_INTEGER;
-    return aCount - bCount;
-  });
-}
-
-function normalizeSetBonuses(group: NewArmorSetGroup): SetBonus[] | undefined {
-  const raw = group.set?.perks ?? group.set?.perkNames.map((name) => ({ name }));
-  if (!raw?.length) return undefined;
-
-  return raw.map((perk, index) => ({
-    ...perk,
-    requiredSetCount: resolveRequiredSetCount(perk, index, raw.length),
-  }));
+function tierLabel(requiredSetCount: number): string {
+  return `${requiredSetCount} pieces`;
 }
 
 function sortArmorGroups(groups: NewArmorSetGroup[], sort: SetSort): NewArmorSetGroup[] {
@@ -90,24 +65,22 @@ function sortArmorGroups(groups: NewArmorSetGroup[], sort: SetSort): NewArmorSet
   });
 }
 
-function CompactSetBonuses({ perks }: { perks: SetBonus[] }) {
-  const sorted = sortSetBonuses(perks);
-
+function CompactSetBonuses({ bonuses }: { bonuses: SetBonus[] }) {
   return (
     <ul className="space-y-2">
-      {sorted.map((perk, index) => (
+      {bonuses.map((bonus) => (
         <li
-          key={`${perk.name}-${perk.requiredSetCount ?? index}`}
+          key={`${bonus.name}-${bonus.requiredSetCount}`}
           className="min-w-0"
         >
           <div className="text-primary text-[11px] font-medium leading-snug">
-            {tierLabel(perk.requiredSetCount)}
+            {tierLabel(bonus.requiredSetCount)}
             <span aria-hidden> · </span>
-            {perk.name}
+            {bonus.name}
           </div>
-          {perk.description ? (
+          {bonus.description ? (
             <p className="text-muted-foreground mt-0.5 text-[10px] leading-snug whitespace-pre-line">
-              {perk.description}
+              {bonus.description}
             </p>
           ) : null}
         </li>
@@ -208,7 +181,7 @@ function formatPieceCount(count: number): string {
 }
 
 function ArmorSetCard({ group }: { group: NewArmorSetGroup }) {
-  const setBonuses = normalizeSetBonuses(group);
+  const setBonuses = group.set?.bonuses;
   const isArmor30 = group.pieces.some((piece) => piece.isArmor30);
 
   return (
@@ -245,7 +218,7 @@ function ArmorSetCard({ group }: { group: NewArmorSetGroup }) {
 
       {setBonuses?.length ? (
         <section aria-label="Set bonuses">
-          <CompactSetBonuses perks={setBonuses} />
+          <CompactSetBonuses bonuses={setBonuses} />
         </section>
       ) : null}
 
