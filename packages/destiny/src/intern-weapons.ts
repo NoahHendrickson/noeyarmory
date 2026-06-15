@@ -1,3 +1,4 @@
+import { isCatalogWeapon } from "./weapon-variants";
 import type {
   InternedPerkColumn,
   PerkColumn,
@@ -103,6 +104,7 @@ export function buildPerkMapFromCatalog(perks: PerkRef[]): Map<number, PerkRef> 
 function buildWeaponsByPerkNameRecord(summaries: WeaponSummary[]): Record<string, number[]> {
   const record: Record<string, number[]> = {};
   for (const weapon of summaries) {
+    if (!isCatalogWeapon(weapon)) continue;
     for (const name of weapon.perks) {
       const key = lower(name);
       (record[key] ??= []).push(weapon.hash);
@@ -184,6 +186,7 @@ export function internWeaponCatalog(
       seasonName: weapon.seasonName,
       source: weapon.source,
       releaseIndex: weapon.releaseIndex,
+      ...(weapon.superseded ? { superseded: true } : {}),
       ...(ammoGeneration != null ? { ammoGeneration } : {}),
       columns,
       perks: perkNames,

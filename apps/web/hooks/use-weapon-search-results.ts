@@ -4,10 +4,10 @@ import { useDeferredValue, useMemo } from "react";
 import type { PaletteCategory, PaletteChip, PalettePanelState, ValueSuggestion } from "@repo/ui";
 import {
   createLruCache,
-  createWeaponFuse,
   filterWeaponNames,
   filterWeapons,
   hasStrongWeaponNameMatch,
+  isCatalogWeapon,
   mergeWeaponFilters,
   MIN_WEAPON_TEXT_QUERY_LENGTH,
   planWeaponTextSearch,
@@ -15,6 +15,7 @@ import {
   sortFilteredWeaponNames,
   weaponsMatchingTextQuery,
   type PerkRef,
+  type WeaponSearcher,
   type PopularityLookup,
   type WeaponDpsEntry,
   type WeaponFilters,
@@ -55,7 +56,7 @@ export interface UseWeaponSearchResultsParams {
 
 function weaponsForPreviewQuery(
   weapons: WeaponSummary[],
-  weaponFuse: ReturnType<typeof createWeaponFuse>,
+  weaponSearcher: WeaponSearcher,
   query: string,
   limit: number,
   nameIndex: WeaponNameIndex,
@@ -67,10 +68,12 @@ function weaponsForPreviewQuery(
     (match) => match.searchRank === 0 && match.value.toLowerCase() === q.toLowerCase(),
   );
   if (exact) {
-    return nameIndex.byName.get(exact.value) ?? weapons.filter((weapon) => weapon.name === exact.value);
+    return (
+      nameIndex.byName.get(exact.value) ?? weapons.filter((weapon) => weapon.name === exact.value)
+    ).filter(isCatalogWeapon);
   }
 
-  return weaponsMatchingTextQuery(weapons, weaponFuse, q, limit, nameIndex);
+  return weaponsMatchingTextQuery(weapons, weaponSearcher, q, limit, nameIndex);
 }
 
 export function useWeaponSearchResults({
@@ -96,8 +99,8 @@ export function useWeaponSearchResults({
     [chips, customFilters],
   );
 
-  // Shared, build-once fuse + name index (B1/A1) — never rebuilt per hook/keystroke.
-  const { weaponFuse, nameIndex } = useWeapons();
+  // Shared, build-once searcher + name index (B1/A1) — never rebuilt per hook/keystroke.
+  const { weaponSearcher, nameIndex } = useWeapons();
   const popularity: PopularityLookup = useSearchPopularity();
   const deferredQuery = useDeferredValue(query);
   const { previewQuery, previewPanelState, previewInlineSuggestions, previewResultLimit } =
@@ -123,14 +126,14 @@ export function useWeaponSearchResults({
     if (cached) return cached;
 
     const base = searchText
-      ? weaponsMatchingTextQuery(weapons, weaponFuse, searchText, MAX_SHOW_ALL, nameIndex)
+      ? weaponsMatchingTextQuery(weapons, weaponSearcher, searchText, MAX_SHOW_ALL, nameIndex)
       : weapons;
     const filtered = filterWeapons(base, mergedFilters, perks);
     const ranked = rankWeaponResults(filtered, searchText, sort, dpsByName, nameIndex, popularity);
     resultCache.set(cacheKey, ranked);
     return ranked;
   }, [
-    weaponFuse,
+    weaponSearcher,
     weapons,
     perks,
     deferredQuery,
@@ -202,7 +205,7 @@ export function useWeaponSearchResults({
       // Empty searchText means "filters only" → start from the whole catalog.
       const previewFilters = mergeWeaponFilters(base, plan.filters);
       const textBase = plan.searchText
-        ? weaponsForPreviewQuery(weapons, weaponFuse, plan.searchText, previewResultLimit, nameIndex)
+        ? weaponsForPreviewQuery(weapons, weaponSearcher, plan.searchText, previewResultLimit, nameIndex)
         : weapons;
       appendWeapons(filterWeapons(textBase, previewFilters, perks));
     }
@@ -228,7 +231,7 @@ export function useWeaponSearchResults({
     perks,
     sort,
     dpsByName,
-    weaponFuse,
+    weaponSearcher,
     nameIndex,
     popularity,
     previewInlineSuggestions,

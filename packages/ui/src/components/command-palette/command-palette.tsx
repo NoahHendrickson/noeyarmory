@@ -111,6 +111,7 @@ export function CommandPalette({
   chipSuggestions,
   onPanelStateChange,
   onPreviewsReadyChange,
+  renderValueTrailing,
   instantPreviewExpand = false,
   instantInputSizing = false,
   className,
@@ -177,9 +178,7 @@ export function CommandPalette({
     }
   }, [suspendResults, saveResultsScroll, restoreResultsScroll]);
 
-  const panelOpen = isControlled
-    ? openProp || state.panel !== "closed"
-    : state.panel !== "closed";
+  const panelOpen = isControlled ? openProp || state.panel !== "closed" : state.panel !== "closed";
   const open = !disabled && !renderBarOverlay && panelOpen;
   const mode = listMode(state.panel, showResults, query, browseFilters, resultsWhileFiltering);
 
@@ -207,10 +206,7 @@ export function CommandPalette({
     if (chips.length === 0) setBrowseFilters(false);
   }, [chips.length]);
 
-  const openCategories = useMemo(
-    () => availableCategories(categories, chips),
-    [categories, chips],
-  );
+  const openCategories = useMemo(() => availableCategories(categories, chips), [categories, chips]);
 
   const visibleCategories = useMemo(
     () => (mode === "categories" ? filterCategories(openCategories, query) : openCategories),
@@ -225,8 +221,7 @@ export function CommandPalette({
   const valueSuggestions = useMemo(
     () =>
       mode === "categories"
-        ? (chipSuggestions ??
-          searchValueSuggestions(openCategories, query, chips, recentValues))
+        ? (chipSuggestions ?? searchValueSuggestions(openCategories, query, chips, recentValues))
         : [],
     [openCategories, query, chips, mode, recentValues, chipSuggestions],
   );
@@ -307,12 +302,8 @@ export function CommandPalette({
     }
   }, [open, openingSnapshot, items, clearOpeningSnapshot]);
 
-  const renderMode = open
-    ? (openingSnapshot?.mode ?? mode)
-    : (closingSnapshot?.mode ?? null);
-  const renderItems = open
-    ? (openingSnapshot?.items ?? items)
-    : (closingSnapshot?.items ?? []);
+  const renderMode = open ? (openingSnapshot?.mode ?? mode) : (closingSnapshot?.mode ?? null);
+  const renderItems = open ? (openingSnapshot?.items ?? items) : (closingSnapshot?.items ?? []);
   const latestRenderSnapshotRef = useRef<{ mode: ListMode | null; items: PaletteItem[] }>({
     mode: null,
     items: [],
@@ -564,19 +555,9 @@ export function CommandPalette({
   const showAddMore = chips.length > 0 && state.panel !== "values" && !hideCategoryList;
   const drilling = state.panel === "values" && activeCategory != null;
   const isIdleBar =
-    !open &&
-    !disabled &&
-    !drilling &&
-    chips.length === 0 &&
-    !query.trim() &&
-    !renderBarOverlay;
-  const effectivePlaceholder = showAddMore
-    ? "Search…"
-    : isIdleBar
-      ? idlePlaceholder
-      : placeholder;
-  const inputCharCount =
-    inputValue.length > 0 ? inputValue.length : effectivePlaceholder.length;
+    !open && !disabled && !drilling && chips.length === 0 && !query.trim() && !renderBarOverlay;
+  const effectivePlaceholder = showAddMore ? "Search…" : isIdleBar ? idlePlaceholder : placeholder;
+  const inputCharCount = inputValue.length > 0 ? inputValue.length : effectivePlaceholder.length;
   const inputSize =
     inputValue.length > 0
       ? Math.max(12, Math.min(24, inputCharCount + 1))
@@ -608,18 +589,22 @@ export function CommandPalette({
     "aria-expanded": open,
     "aria-controls": open ? listId : undefined,
     "aria-autocomplete": "list" as const,
-    "aria-activedescendant": open && displayIndex >= 0 && items[displayIndex]
-      ? optionId(displayIndex)
-      : undefined,
+    "aria-activedescendant":
+      open && displayIndex >= 0 && items[displayIndex] ? optionId(displayIndex) : undefined,
   };
+
+  const paletteWidthStyle = {
+    "--chip-count": chips.length,
+  } as React.CSSProperties;
 
   return (
     <div
       ref={rootRef}
       data-palette-root
       data-palette-typing={inputValue.trim().length > 0 ? "" : undefined}
+      style={paletteWidthStyle}
       className={cn(
-        "mx-auto w-full min-w-0 max-w-[calc(100vw-2rem)] sm:w-[600px]",
+        "mx-auto w-full min-w-0 max-w-[calc(100vw-2rem)] sm:w-[min(calc(100vw-2rem),calc(640px+var(--chip-count)*96px))] sm:transition-[width] sm:duration-200 sm:ease-out motion-reduce:sm:transition-none",
         className,
       )}
     >
@@ -682,6 +667,8 @@ export function CommandPalette({
             onSetActive={(index) => dispatch({ type: "setActive", index })}
             onSelectItem={selectItem}
             renderResult={renderResult}
+            activeCategory={activeCategory}
+            renderValueTrailing={renderValueTrailing}
             instantPreviewExpand={instantPreviewExpand}
           />
         </div>

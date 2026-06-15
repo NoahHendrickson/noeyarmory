@@ -12,6 +12,10 @@ export const MAX_PREVIEW_RESULTS_FIREFOX = 8;
 /** Cap fuzzy matches before filter/sort — filters may narrow further. */
 export const FUSE_PRE_LIMIT = 300;
 
+/** Sentinel option id for the "Damage perks" entry in the Trait 1 / Trait 2 pickers. */
+export const DAMAGE_PERKS_VALUE_ID = "__damage-perks__";
+export const DAMAGE_PERKS_LABEL = "Damage perks";
+
 export const CUSTOM_FILTER_CATEGORY_ID = "customFilter";
 export const CUSTOM_FILTER_DRAFT_CATEGORY_ID = "customFilterDraft";
 export const CUSTOM_FILTER_TRAIT_CATEGORY_IDS = new Set(["trait"]);

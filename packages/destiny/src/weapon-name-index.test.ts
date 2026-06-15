@@ -4,7 +4,7 @@ import { sampleWeapons } from "./fixtures/sample-weapons";
 import { internWeaponCatalog } from "./intern-weapons";
 import {
   buildWeaponNameIndex,
-  createWeaponFuse,
+  createWeaponSearcher,
   filterWeaponNames,
   rankWeaponResults,
   suggestWeaponNames,
@@ -42,10 +42,10 @@ describe("name search parity with/without prebuilt index", () => {
   });
 
   test("weaponsMatchingTextQuery returns identical results either way", () => {
-    const fuse = createWeaponFuse(weapons);
+    const searcher = createWeaponSearcher(weapons);
     for (const q of queries) {
-      const withIndex = weaponsMatchingTextQuery(weapons, fuse, q, 50, nameIndex).map((w) => w.hash);
-      const without = weaponsMatchingTextQuery(weapons, fuse, q, 50).map((w) => w.hash);
+      const withIndex = weaponsMatchingTextQuery(weapons, searcher, q, 50, nameIndex).map((w) => w.hash);
+      const without = weaponsMatchingTextQuery(weapons, searcher, q, 50).map((w) => w.hash);
       expect(withIndex).toEqual(without);
     }
   });

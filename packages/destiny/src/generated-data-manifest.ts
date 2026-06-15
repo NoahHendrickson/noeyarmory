@@ -4,7 +4,9 @@ export const GENERATED_DATA_MANIFEST_PATH = `/data/${GENERATED_DATA_MANIFEST_FIL
 export const DEFAULT_GENERATED_DATA_PATHS = {
   weapons: "/data/weapons.json",
   weaponDetails: "/data/weapons-detail.json",
+  newWeapons: "/data/new-weapons.json",
   armor: "/data/armor.json",
+  newArmor: "/data/new-armor.json",
 } as const;
 
 export type GeneratedDataKey = keyof typeof DEFAULT_GENERATED_DATA_PATHS;

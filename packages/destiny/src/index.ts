@@ -9,12 +9,16 @@ export type {
   WeaponDetailFields,
   WeaponIndex,
   WeaponDetailIndex,
-  SerializedWeaponFuseIndex,
+  WeaponCatalogBaseline,
+  WeaponCatalogDiffSource,
+  NewWeaponIndex,
   DamageTypeRef,
   WeaponTypeRef,
   AmmoTypeRef,
   ArmorDoc,
   ArmorIndex,
+  NewArmorIndex,
+  NewArmorSetGroup,
   ArmorArchetypeRef,
   Armor30SetBonus,
   Armor30SetRef,
@@ -79,10 +83,12 @@ export {
   filterWeapons,
   sortWeapons,
   weaponsWithPerk,
-  createWeaponFuse,
-  serializeWeaponFuseIndex,
+  createWeaponSearcher,
+  type WeaponSearcher,
   fuzzySearchWeapons,
   collectFacets,
+  collectActivitySourceFacets,
+  type CollectActivitySourceFacetsOptions,
   collectRaidSourceFacets,
   type CollectRaidSourceFacetsOptions,
   collectPerks,
@@ -105,6 +111,7 @@ export {
   type WeaponNameIndex,
   type PopularityLookup,
 } from "./search";
+export { isDamagePerk, damagePerkIndexSet, collectDamagePerkNames } from "./damage-perks";
 export {
   parseWeaponQuery,
   planWeaponTextSearch,
@@ -130,6 +137,18 @@ export {
   type GeneratedDataManifest,
   type GeneratedDataManifestFile,
 } from "./generated-data-manifest";
+export { buildNewWeaponIndex } from "./new-weapons";
+export {
+  ARMOR_CLASS_ORDER,
+  ARMOR_SLOT_ORDER,
+  armorSetElementId,
+  buildNewArmorActivityNav,
+  buildNewArmorIndex,
+  filterNewArmorSets,
+  groupNewArmorBySet,
+  type NewArmorActivityNav,
+  type NewArmorActivityNavLink,
+} from "./new-armor";
 export {
   filterArmor,
   sortArmor,
@@ -154,9 +173,21 @@ export {
 } from "./owned-armor-search";
 export {
   ACTIVITY_INTRO_SEASON,
+  ACTIVITY_SOURCE_ALIASES,
+  CURATED_SOURCE_LABELS,
+  DUNGEON_SOURCE_ALIASES,
+  DUNGEON_SOURCE_LABELS,
+  EVENT_SOURCE_ALIASES,
+  EVENT_SOURCE_LABELS,
+  OPS_SOURCE_ALIASES,
+  OPS_SOURCE_LABELS,
   RAID_SOURCE_ALIASES,
   RAID_SOURCE_LABELS,
+  activitySourceMatchesQuery,
+  canonicalActivitySource,
   canonicalRaidSource,
+  isCuratedActivitySource,
+  isDungeonSource,
   isRaidSource,
   matchesWeaponSource,
   normalizeWeaponSource,
@@ -164,6 +195,8 @@ export {
   resolveWeaponSeason,
   type ResolvedWeaponSeason,
 } from "./weapon-provenance";
+export { abbreviateWeaponType } from "./weapon-type-abbrev";
+export { isCatalogWeapon, reconcileCraftableTwins } from "./weapon-variants";
 export { sampleWeapons } from "./fixtures/sample-weapons";
 export { sampleDamageTypes } from "./fixtures/sample-damage-types";
 export { sampleWeaponTypes } from "./fixtures/sample-weapon-types";

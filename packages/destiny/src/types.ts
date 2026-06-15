@@ -1,8 +1,3 @@
-import type Fuse from "fuse.js";
-
-/** Serialized fuse.js index payload — `Fuse.createIndex(...).toJSON()`, parsed by `Fuse.parseIndex`. */
-export type SerializedWeaponFuseIndex = Parameters<typeof Fuse.parseIndex>[0];
-
 /** Raw investment-stat delta from a plug (pre stat-group scaling). */
 export interface StatMod {
   hash: number;
@@ -74,6 +69,8 @@ export interface WeaponSummary {
   source?: string;
   /** Manifest investment-table index — proxy for add order when season is unknown. */
   releaseIndex: number;
+  /** Legacy item hash superseded by a newer craftable twin (still kept for direct URL / vault). */
+  superseded?: boolean;
   /** Base Ammo Generation display value (0–100); omitted when the weapon has no such stat. */
   ammoGeneration?: number;
   columns: InternedPerkColumn[];
@@ -160,8 +157,6 @@ export interface WeaponIndex {
   weaponTypes?: WeaponTypeRef[];
   /** Ammo type catalog from DestinyIconDefinition HUD icons (Primary / Special / Heavy). */
   ammoTypes?: AmmoTypeRef[];
-  /** Optional prebuilt fuse.js index (serialized) so clients skip the cold-load build. */
-  fuseIndex?: SerializedWeaponFuseIndex;
 }
 
 export interface WeaponDetailIndex {
@@ -170,6 +165,26 @@ export interface WeaponDetailIndex {
   details: Record<string, WeaponDetailFields>;
   /** Stat groups referenced by weapon details (string key = statGroupHash). */
   statGroups?: Record<string, StatGroupRef>;
+}
+
+/** Committed hash snapshot used when no prior generated weapon index exists (e.g. CI builds). */
+export interface WeaponCatalogBaseline {
+  version: string;
+  generatedAt: string;
+  weaponHashes: number[];
+}
+
+export type WeaponCatalogDiffSource = WeaponIndex | WeaponCatalogBaseline;
+
+/** Weapons newly introduced between two generated weapon indexes. */
+export interface NewWeaponIndex {
+  version: string;
+  generatedAt: string;
+  hasBaseline: boolean;
+  baselineVersion?: string;
+  baselineGeneratedAt?: string;
+  newWeaponHashes: number[];
+  weapons: WeaponSummary[];
 }
 
 export type ArmorStat = WeaponStat;
@@ -228,5 +243,36 @@ export interface ArmorIndex {
   /** Global stat archetype plug catalog (Armor 3.0). */
   archetypes: ArmorArchetypeRef[];
   /** Armor 3.0 sets that have set bonus perks. */
+  armor30Sets: Armor30SetRef[];
+}
+
+/** Committed hash snapshot used when no prior generated armor index exists (e.g. CI builds). */
+export interface ArmorCatalogBaseline {
+  version: string;
+  generatedAt: string;
+  armorHashes: number[];
+}
+
+export type ArmorCatalogDiffSource = ArmorIndex | ArmorCatalogBaseline;
+
+/** A new-armor catalog entry grouped by Armor 3.0 set (or standalone piece). */
+export interface NewArmorSetGroup {
+  key: string;
+  name: string;
+  source?: string;
+  set?: Armor30SetRef;
+  pieces: ArmorDoc[];
+}
+
+/** Armor newly introduced between two generated armor indexes. */
+export interface NewArmorIndex {
+  version: string;
+  generatedAt: string;
+  hasBaseline: boolean;
+  baselineVersion?: string;
+  baselineGeneratedAt?: string;
+  newArmorHashes: number[];
+  newSetHashes: number[];
+  armor: ArmorDoc[];
   armor30Sets: Armor30SetRef[];
 }

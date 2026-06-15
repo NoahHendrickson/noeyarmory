@@ -1,17 +1,20 @@
 import { memo } from "react";
 import { ResultRow } from "@repo/ui";
-import type { WeaponDpsEntry, WeaponSummary } from "@repo/destiny";
+import { abbreviateWeaponType, type WeaponDpsEntry, type WeaponSummary } from "@repo/destiny";
 
 import { CraftableBadge } from "./craftable-badge";
 import { ElementIcon } from "./element-icon";
+import { NewItemBadge } from "./new-item-badge";
+import { PinToggleButton } from "./pin-toggle-button";
 import { WeaponDpsLabel } from "./weapon-dps-label";
 import { bungieIcon } from "../lib/bungie";
 
-/** e.g. "Pinpoint Slug Shotgun" from frame "Pinpoint Slug Frame" + type "Shotgun". */
+/** e.g. "Pinpoint Slug SG" from frame "Pinpoint Slug Frame" + type "Shotgun". */
 export function weaponTypeLabel(type: string, frame?: string): string {
-  if (!frame) return type;
+  const shortType = abbreviateWeaponType(type);
+  if (!frame) return shortType;
   const archetype = frame.replace(/ Frame$/, "");
-  return `${archetype} ${type}`;
+  return `${archetype} ${shortType}`;
 }
 
 /** Subset a result row needs (works for browse summaries and owned weapons). */
@@ -27,6 +30,7 @@ export type WeaponResultData = Pick<
   | "rarity"
   | "frame"
   | "craftable"
+  | "source"
 >;
 
 /** A single weapon row in the command-palette results list. */
@@ -35,15 +39,35 @@ export const WeaponResultRow = memo(function WeaponResultRow({
   elementIconPath,
   dps,
   onSelect,
+  pinned = false,
+  onTogglePin,
+  isNew = false,
 }: {
   weapon: WeaponResultData;
   /** Bungie manifest icon path for the weapon's damage type. */
   elementIconPath?: string;
   dps?: WeaponDpsEntry;
   onSelect?: () => void;
+  pinned?: boolean;
+  onTogglePin?: () => void;
+  isNew?: boolean;
 }) {
   const icon = bungieIcon(weapon.icon);
   const watermark = bungieIcon(weapon.watermark);
+  const dpsLabel =
+    dps != null ? (
+      <span className="hidden sm:inline-flex">
+        <WeaponDpsLabel entry={dps} />
+      </span>
+    ) : null;
+  const pinButton =
+    onTogglePin != null ? (
+      <PinToggleButton
+        pinned={pinned}
+        label={`${pinned ? "Unpin" : "Pin"} ${weapon.name}`}
+        onToggle={onTogglePin}
+      />
+    ) : null;
 
   return (
     <ResultRow
@@ -78,10 +102,21 @@ export const WeaponResultRow = memo(function WeaponResultRow({
       title={weapon.name}
       subtitle={
         <span className="flex flex-col gap-0.5">
-          <span className="inline-flex items-center gap-2">
+          <span className="inline-flex min-w-0 items-center gap-2">
             <ElementIcon element={weapon.element} iconPath={elementIconPath} colored />
+            {isNew ? <NewItemBadge /> : null}
             {weapon.craftable ? <CraftableBadge className="mx-0.5" /> : null}
             {weaponTypeLabel(weapon.type, weapon.frame)}
+            {weapon.source ? (
+              <>
+                <span className="text-muted-foreground/50 shrink-0" aria-hidden>
+                  ·
+                </span>
+                <span className="text-muted-foreground min-w-0 truncate text-xs">
+                  {weapon.source}
+                </span>
+              </>
+            ) : null}
           </span>
           {dps != null ? (
             <span className="sm:hidden">
@@ -91,9 +126,10 @@ export const WeaponResultRow = memo(function WeaponResultRow({
         </span>
       }
       trailing={
-        dps != null ? (
-          <span className="hidden sm:inline-flex">
-            <WeaponDpsLabel entry={dps} />
+        pinButton != null || dpsLabel != null ? (
+          <span className="inline-flex items-center gap-2">
+            {pinButton}
+            {dpsLabel}
           </span>
         ) : undefined
       }

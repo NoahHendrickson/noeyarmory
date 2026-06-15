@@ -1,10 +1,10 @@
 import { memo } from "react";
-import Image from "next/image";
 import { Button, ResultRow } from "@repo/ui";
 
-import { bungieIcon } from "../lib/bungie";
 import type { OwnedArmorItem } from "../lib/armor-types";
+import { ArmorItemIcon } from "./armor-item-icon";
 import { ArmorResultSubtitle } from "./armor-result-subtitle";
+import { NewItemBadge } from "./new-item-badge";
 
 const CLASS_CHARACTERS = new Set(["Titan", "Hunter", "Warlock"]);
 
@@ -54,17 +54,27 @@ export const ArmorResultRow = memo(function ArmorResultRow({
   onEquip,
   onMoveToCharacter,
   actionState,
+  isNew = false,
 }: {
   armor: OwnedArmorItem;
   onSelect?: () => void;
   onEquip?: () => void;
   onMoveToCharacter?: () => void;
   actionState?: ArmorActionState;
+  isNew?: boolean;
 }) {
-  const icon = bungieIcon(armor.icon);
-  const watermark = bungieIcon(armor.watermark);
+  const watermark = armor.watermark;
 
-  const subtitle = <ArmorResultSubtitle armor={armor} />;
+  const subtitleContent = <ArmorResultSubtitle armor={armor} />;
+
+  const subtitle = isNew ? (
+    <span className="inline-flex flex-wrap items-center gap-2">
+      <NewItemBadge />
+      {subtitleContent}
+    </span>
+  ) : (
+    subtitleContent
+  );
 
   const isPending = actionState?.pendingInstanceId === armor.instanceId;
   const equipPending = isPending && actionState?.pendingAction === "equip";
@@ -80,21 +90,12 @@ export const ArmorResultRow = memo(function ArmorResultRow({
       render={onSelect ? undefined : <div />}
       onClick={onSelect}
       icon={
-        <>
-          {icon && (
-            <Image src={icon} alt="" width={40} height={40} className="size-full" unoptimized />
-          )}
-          {watermark && (
-            <Image
-              src={watermark}
-              alt=""
-              width={40}
-              height={40}
-              className="absolute inset-0 size-full"
-              unoptimized
-            />
-          )}
-        </>
+        <ArmorItemIcon
+          icon={armor.icon}
+          watermark={watermark}
+          size={40}
+          className="size-full ring-0"
+        />
       }
       title={armor.name}
       subtitle={subtitle}

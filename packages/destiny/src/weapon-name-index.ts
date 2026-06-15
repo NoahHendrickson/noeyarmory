@@ -1,4 +1,5 @@
 import type { WeaponSummary } from "./types";
+import { isCatalogWeapon } from "./weapon-variants";
 
 /**
  * Precomputed name lookup built once per weapon catalog load.
@@ -28,7 +29,9 @@ export function buildWeaponNameIndex(weapons: WeaponSummary[]): WeaponNameIndex 
     const list = byName.get(weapon.name);
     if (list) list.push(weapon);
     else byName.set(weapon.name, [weapon]);
-    countByName.set(weapon.name, (countByName.get(weapon.name) ?? 0) + 1);
+    if (isCatalogWeapon(weapon)) {
+      countByName.set(weapon.name, (countByName.get(weapon.name) ?? 0) + 1);
+    }
   }
 
   const names = [...byName.keys()].sort((a, b) => a.localeCompare(b));

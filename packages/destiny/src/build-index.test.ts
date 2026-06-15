@@ -4,6 +4,9 @@ import { describe, expect, it } from "vitest";
 import {
   buildAmmoTypeCatalog,
   buildColumnPerks,
+  collectSocketPlugCandidates,
+  deriveAttunementSourceOverrides,
+  plugSetEntryCanRoll,
   buildDamageTypeCatalog,
   buildWeaponTypeCatalog,
 } from "./build-index";
@@ -127,6 +130,81 @@ describe("buildWeaponTypeCatalog", () => {
   });
 });
 
+describe("deriveAttunementSourceOverrides", () => {
+  it("maps activity attunement vendor items back to their weapon source", () => {
+    const defs = {
+      DestinyInventoryItemDefinition: {
+        69227618: {
+          hash: 69227618,
+          displayProperties: {
+            name: "Cynosure",
+            description:
+              "Attune to an item to increase its drop chance from this activity. Only one item may be attuned to at a time.",
+            iconHash: 2827141087,
+          },
+        },
+        2827141087: {
+          hash: 2827141087,
+          itemType: 3,
+          displayProperties: { name: "Cynosure" },
+        },
+      },
+      DestinyVendorDefinition: {
+        1137601706: {
+          hash: 1137601706,
+          displayProperties: {
+            name: "Fireteam Ops Attunement",
+            description:
+              "Attune to an item to increase its drop chance from this activity. Only one item may be attuned to at a time.",
+          },
+          itemList: [{ itemHash: 69227618 }],
+        },
+      },
+    } as unknown as ManifestDefs;
+
+    expect(deriveAttunementSourceOverrides(defs)).toEqual(
+      new Map([[2827141087, "Fireteam Ops"]]),
+    );
+  });
+});
+
+describe("plugSetEntryCanRoll", () => {
+  it("treats randomized plug-set members as rollable even when Bungie marks them false", () => {
+    const socket = { randomizedPlugSetHash: 100, reusablePlugSetHash: 200 };
+    expect(plugSetEntryCanRoll(socket, 100, { plugItemHash: 1, currentlyCanRoll: false })).toBe(
+      true,
+    );
+    expect(plugSetEntryCanRoll(socket, 200, { plugItemHash: 1, currentlyCanRoll: false })).toBe(
+      false,
+    );
+    expect(plugSetEntryCanRoll(socket, 200, { plugItemHash: 1, currentlyCanRoll: true })).toBe(
+      true,
+    );
+  });
+});
+
+describe("collectSocketPlugCandidates", () => {
+  it("OR-merges rollability when the same hash appears more than once", () => {
+    const plugSets = {
+      10: {
+        reusablePlugItems: [
+          { plugItemHash: 1, currentlyCanRoll: false },
+          { plugItemHash: 1, currentlyCanRoll: true },
+        ],
+      },
+    };
+    expect(
+      collectSocketPlugCandidates({ reusablePlugSetHash: 10 }, plugSets),
+    ).toEqual([{ hash: 1, canRoll: true }]);
+  });
+
+  it("treats singleInitialItemHash plugs as rollable for display (fixed origin traits)", () => {
+    expect(
+      collectSocketPlugCandidates({ singleInitialItemHash: 99 }, {}),
+    ).toEqual([{ hash: 99, canRoll: true }]);
+  });
+});
+
 describe("buildColumnPerks", () => {
   it("captures base and enhanced descriptions without conflating them", () => {
     const items: Record<number, DestinyInventoryItemDefinition> = {
@@ -190,5 +268,19 @@ describe("buildColumnPerks", () => {
         alternateHashes: [10],
       },
     ]);
+  });
+
+  it("merges canRoll from enhanced-tier plugs when the base plug is marked not rollable", () => {
+    const items: Record<number, DestinyInventoryItemDefinition> = {
+      10: traitPlug(10, "Outlaw", "Precision kills increase reload speed.", 3),
+      11: traitPlug(11, "Outlaw", "Precision kills increase reload speed.", 2),
+    };
+
+    const { perks } = buildColumnPerks(
+      [{ hash: 10, canRoll: true }, { hash: 11, canRoll: false }],
+      items,
+    );
+
+    expect(perks[0]?.currentlyCanRoll).toBe(true);
   });
 });

@@ -10,6 +10,7 @@ import {
 } from "./intern-weapons";
 import type { PerkRef, WeaponDetailFields, WeaponDoc } from "./types";
 import {
+  collectActivitySourceFacets,
   collectColumnPerks,
   collectFacets,
   collectRaidSourceFacets,
@@ -24,7 +25,7 @@ import {
   sortFilteredWeaponNames,
   weaponsMatchingTextQuery,
   weaponsWithPerk,
-  createWeaponFuse,
+  createWeaponSearcher,
 } from "./search";
 import { AMMO_GENERATION_STAT_HASH } from "./weapon-stats";
 import { buildWeaponIndexLookups, refreshWeaponSummaries } from "./weapon-index-lookups";
@@ -239,6 +240,37 @@ describe("facets + perks", () => {
     expect(raids).not.toHaveProperty("Solstice");
   });
 
+  test("collectActivitySourceFacets includes curated dungeons and Ops sources", () => {
+    const sources = Object.fromEntries(
+      collectActivitySourceFacets([
+        ...sampleSummaries,
+        { source: "Prophecy" },
+        { source: "Source: Fireteam Ops" },
+        { source: "Solo Ops" },
+        { source: "Source: Sparrow Racing League" },
+        { source: "Solstice" },
+      ]).map((facet) => [facet.value, facet.count]),
+    );
+
+    expect(sources).toMatchObject({
+      "Root of Nightmares": 1,
+      "Vault of Glass": 1,
+      Prophecy: 1,
+      "Fireteam Ops": 1,
+      "Solo Ops": 1,
+      "Sparrow Racing League": 1,
+    });
+    expect(sources).not.toHaveProperty("Solstice");
+  });
+
+  test("collectActivitySourceFacets can list every known curated source label", () => {
+    const sources = collectActivitySourceFacets([], { includeAllKnownLabels: true });
+    expect(sources.length).toBeGreaterThan(20);
+    expect(sources.every((facet) => facet.count === 0)).toBe(true);
+    expect(sources.some((facet) => facet.value === "Prophecy")).toBe(true);
+    expect(sources.some((facet) => facet.value === "Fireteam Ops")).toBe(true);
+  });
+
   test("collectRaidSourceFacets can list every raid label for armor browse", () => {
     const raids = collectRaidSourceFacets([], { includeAllRaidLabels: true });
     expect(raids.length).toBeGreaterThan(10);
@@ -307,6 +339,65 @@ describe("position-aware trait, slot + origin filters", () => {
   });
 });
 
+describe("damage perk trait filters", () => {
+  const dp = (hash: number, name: string, description: string): PerkRef => ({
+    hash,
+    name,
+    currentlyCanRoll: true,
+    description,
+  });
+  // 0: damage perk, 1: not, 2: damage perk
+  const damageCatalog: PerkRef[] = [
+    dp(1, "Frenzy", "Being in combat for an extended time increases damage, handling, and reload speed."),
+    dp(2, "Outlaw", "Precision kills greatly decrease reload time."),
+    dp(3, "Bait and Switch", "Deal damage with all equipped weapons within a short time to give this weapon a damage boost."),
+  ];
+  const base = sampleSummaries[0]!;
+  const weapon = (hash: number, name: string, trait1: number[], trait2: number[]) => ({
+    ...base,
+    hash,
+    name,
+    columns: [
+      { kind: "Trait", perkIndices: trait1 },
+      { kind: "Trait", perkIndices: trait2 },
+    ],
+  });
+  const weapons = [
+    weapon(9101, "Alpha", [0, 1], [1]),
+    weapon(9102, "Beta", [1], [1, 2]),
+    weapon(9103, "Gamma", [1], [1]),
+  ];
+
+  test("trait1DamagePerks keeps only weapons with a damage perk in the FIRST trait column", () => {
+    expect(names(filterWeapons(weapons, { trait1DamagePerks: true }, damageCatalog))).toEqual([
+      "Alpha",
+    ]);
+  });
+
+  test("trait2DamagePerks keeps only weapons with a damage perk in the SECOND trait column", () => {
+    expect(names(filterWeapons(weapons, { trait2DamagePerks: true }, damageCatalog))).toEqual([
+      "Beta",
+    ]);
+  });
+
+  test("both flags AND together", () => {
+    expect(
+      filterWeapons(weapons, { trait1DamagePerks: true, trait2DamagePerks: true }, damageCatalog),
+    ).toEqual([]);
+  });
+
+  test("composes with a named trait filter on the other column", () => {
+    expect(
+      names(
+        filterWeapons(weapons, { trait1: ["Outlaw"], trait2DamagePerks: true }, damageCatalog),
+      ),
+    ).toEqual(["Beta"]);
+    expect(
+      filterWeapons(weapons, { trait1: ["Frenzy"], trait2DamagePerks: true }, damageCatalog),
+    ).toEqual([]);
+  });
+});
+
 describe("filterWeaponNames", () => {
   test("returns flat matches with weapon-specific searchRank", () => {
     const matches = filterWeaponNames(sampleSummaries, "fate");
@@ -335,15 +426,15 @@ describe("hasStrongWeaponNameMatch", () => {
 });
 
 describe("weaponsMatchingTextQuery", () => {
-  test("includes exact name matches before fuse-only matches", () => {
-    const fuse = createWeaponFuse(sampleSummaries);
-    const matches = weaponsMatchingTextQuery(sampleSummaries, fuse, "fate", 20);
+  test("includes exact name matches before fuzzy-only matches", () => {
+    const searcher = createWeaponSearcher(sampleSummaries);
+    const matches = weaponsMatchingTextQuery(sampleSummaries, searcher, "fate", 20);
     expect(matches[0]?.name).toBe("Fatebringer");
   });
 
   test("respects the same chip filters as full results", () => {
-    const fuse = createWeaponFuse(sampleSummaries);
-    const candidates = weaponsMatchingTextQuery(sampleSummaries, fuse, "fate", 20);
+    const searcher = createWeaponSearcher(sampleSummaries);
+    const candidates = weaponsMatchingTextQuery(sampleSummaries, searcher, "fate", 20);
 
     expect(
       filterWeapons(candidates, { element: ["Solar"] }, samplePerks).map((weapon) => weapon.name),
@@ -361,8 +452,8 @@ describe("rankWeaponResults", () => {
       if (weapon.name === "Sunshot Scout") return { ...weapon, ammoGeneration: 99 };
       return weapon;
     });
-    const fuse = createWeaponFuse(summaries);
-    const candidates = weaponsMatchingTextQuery(summaries, fuse, "sun", 20);
+    const searcher = createWeaponSearcher(summaries);
+    const candidates = weaponsMatchingTextQuery(summaries, searcher, "sun", 20);
 
     expect(
       rankWeaponResults(candidates, "sun", "ammo-gen-desc").map((weapon) => weapon.name),
@@ -376,8 +467,8 @@ describe("rankWeaponResults", () => {
   });
 
   test("preserves search relevance within the name-matched bucket when sorting by name", () => {
-    const fuse = createWeaponFuse(sampleSummaries);
-    const candidates = weaponsMatchingTextQuery(sampleSummaries, fuse, "sun", 20);
+    const searcher = createWeaponSearcher(sampleSummaries);
+    const candidates = weaponsMatchingTextQuery(sampleSummaries, searcher, "sun", 20);
     const expectedNameOrder = sortFilteredWeaponNames(filterWeaponNames(sampleSummaries, "sun"))
       .map((match) => match.value)
       .filter((name) => candidates.some((weapon) => weapon.name === name));

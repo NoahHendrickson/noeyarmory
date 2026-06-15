@@ -3,6 +3,7 @@ import type { DestinyInventoryItemDefinition } from "bungie-api-ts/destiny2";
 import type { DestinyIconDefinitionEntry, ManifestDefs } from "./manifest";
 import { internWeaponCatalog } from "./intern-weapons";
 import { normalizeWeaponSource, resolveWeaponSeason } from "./weapon-provenance";
+import { reconcileCraftableTwins } from "./weapon-variants";
 import { GENERIC_WEAPON_TYPE_ICONS } from "./weapon-type-icon-paths";
 import type {
   AmmoTypeRef,
@@ -77,6 +78,59 @@ function weaponInvestmentStats(
   return weaponStats;
 }
 
+type SocketPlugSetEntry = { plugItemHash: number; currentlyCanRoll?: boolean };
+
+/** Socket entry subset needed for rollability heuristics. */
+export interface SocketPlugSource {
+  randomizedPlugSetHash?: number;
+  reusablePlugSetHash?: number;
+  singleInitialItemHash?: number;
+}
+
+/**
+ * Whether a manifest plug-set entry should be treated as currently rollable.
+ *
+ * Bungie marks every plug in randomized pools `currentlyCanRoll: false` (all 6k+
+ * legendary weapon perk sockets in the current manifest). Membership in the socket's
+ * randomized plug set is the signal that a perk is in today's roll pool. The flag is
+ * only meaningful for reusable-only pools (fixed/curated options).
+ */
+export function plugSetEntryCanRoll(
+  socketEntry: SocketPlugSource,
+  plugSetHash: number,
+  plugEntry: SocketPlugSetEntry,
+): boolean {
+  if (
+    socketEntry.randomizedPlugSetHash != null &&
+    plugSetHash === socketEntry.randomizedPlugSetHash
+  ) {
+    return true;
+  }
+  return plugEntry.currentlyCanRoll ?? false;
+}
+
+/** Collect deduped plug candidates for one socket, OR-merging rollability per hash. */
+export function collectSocketPlugCandidates(
+  socketEntry: SocketPlugSource,
+  plugSets: Record<number, { reusablePlugItems?: SocketPlugSetEntry[] }>,
+): { hash: number; canRoll: boolean }[] {
+  const byHash = new Map<number, boolean>();
+  const plugSetHash = socketEntry.randomizedPlugSetHash ?? socketEntry.reusablePlugSetHash;
+
+  if (plugSetHash != null) {
+    for (const plug of plugSets[plugSetHash]?.reusablePlugItems ?? []) {
+      const canRoll = plugSetEntryCanRoll(socketEntry, plugSetHash, plug);
+      const existing = byHash.get(plug.plugItemHash);
+      byHash.set(plug.plugItemHash, existing == null ? canRoll : existing || canRoll);
+    }
+  } else if (socketEntry.singleInitialItemHash) {
+    // Fixed socket plug (e.g. origin trait) — not random, but not retired either.
+    byHash.set(socketEntry.singleInitialItemHash, true);
+  }
+
+  return [...byHash.entries()].map(([hash, canRoll]) => ({ hash, canRoll }));
+}
+
 /** One visible perk per name; enhanced-tier hashes are kept as `alternateHashes` for vault resolution. */
 export function buildColumnPerks(
   candidates: { hash: number; canRoll: boolean }[],
@@ -106,6 +160,7 @@ export function buildColumnPerks(
 
     if (isEnhancedPlug(pd)) {
       const row = byName.get(name) ?? { hash: 0, name, canRoll: false };
+      row.canRoll = row.canRoll || canRoll;
       row.enhancedHash = hash;
       row.enhancedDescription = plugDescription(pd);
       byName.set(name, row);
@@ -242,6 +297,49 @@ export function buildStatGroupCatalog(
   return catalog;
 }
 
+const ATTUNEMENT_VENDOR_SUFFIX = " Attunement";
+const ATTUNEMENT_DESCRIPTION_PATTERN =
+  /attune to an item to increase its drop chance from this activity/i;
+
+function sourceFromAttunementVendorName(name: string | undefined): string | undefined {
+  const source = name?.trim().replace(new RegExp(`${ATTUNEMENT_VENDOR_SUFFIX}$`, "i"), "").trim();
+  return source || undefined;
+}
+
+function attunementItemWeaponHash(item: DestinyInventoryItemDefinition): number | undefined {
+  const description = item.displayProperties?.description ?? "";
+  if (!ATTUNEMENT_DESCRIPTION_PATTERN.test(description)) return undefined;
+  return item.displayProperties?.iconHash;
+}
+
+/** Activity attunement vendors expose updated Ops sources for their attunable weapons. */
+export function deriveAttunementSourceOverrides(defs: ManifestDefs): Map<number, string> {
+  const overrides = new Map<number, string>();
+  const items = defs.DestinyInventoryItemDefinition;
+  const vendors = defs.DestinyVendorDefinition ?? {};
+
+  for (const vendor of Object.values(vendors)) {
+    const source = sourceFromAttunementVendorName(vendor.displayProperties?.name);
+    if (!source) continue;
+    const description = vendor.displayProperties?.description ?? "";
+    if (!ATTUNEMENT_DESCRIPTION_PATTERN.test(description)) continue;
+
+    for (const entry of vendor.itemList ?? []) {
+      const attunementItem = items[entry.itemHash];
+      if (!attunementItem) continue;
+      const weaponHash = attunementItemWeaponHash(attunementItem);
+      if (weaponHash == null) continue;
+      const weapon = items[weaponHash];
+      if (!weapon) continue;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison -- compared to the known Weapon value
+      if (weapon.itemType !== WEAPON_ITEM_TYPE) continue;
+      overrides.set(weaponHash, source);
+    }
+  }
+
+  return overrides;
+}
+
 /** Flatten the manifest definitions into a searchable weapon index. */
 export function buildWeaponIndex(
   defs: ManifestDefs,
@@ -254,6 +352,7 @@ export function buildWeaponIndex(
   const damageTypes = defs.DestinyDamageTypeDefinition;
   const collectibles = defs.DestinyCollectibleDefinition;
   const presentationNodes = defs.DestinyPresentationNodeDefinition;
+  const sourceOverrides = deriveAttunementSourceOverrides(defs);
 
   const weapons: WeaponDoc[] = [];
 
@@ -280,24 +379,10 @@ export function buildWeaponIndex(
       if (!entry) continue;
       const isIntrinsic = intrinsicIdx.has(idx);
 
-      const candidates: { hash: number; canRoll: boolean }[] = [];
-      const plugSetHash = entry.randomizedPlugSetHash ?? entry.reusablePlugSetHash;
-      if (plugSetHash != null) {
-        for (const p of plugSets[plugSetHash]?.reusablePlugItems ?? []) {
-          candidates.push({ hash: p.plugItemHash, canRoll: p.currentlyCanRoll ?? false });
-        }
-      } else if (entry.singleInitialItemHash) {
-        candidates.push({ hash: entry.singleInitialItemHash, canRoll: false });
-      }
+      const candidates = collectSocketPlugCandidates(entry, plugSets);
       if (!candidates.length) continue;
 
-      const seen = new Set<number>();
-      const unique = candidates.filter(({ hash }) => {
-        if (seen.has(hash)) return false;
-        seen.add(hash);
-        return true;
-      });
-      const { perks, identifier } = buildColumnPerks(unique, items);
+      const { perks, identifier } = buildColumnPerks(candidates, items);
       if (!perks.length) continue;
       columns.push({ kind: columnKind(isIntrinsic, identifier), perks });
     }
@@ -317,11 +402,13 @@ export function buildWeaponIndex(
         : undefined) ?? "Kinetic";
     const collectible =
       item.collectibleHash != null ? collectibles[item.collectibleHash] : undefined;
-    const source = normalizeWeaponSource(
-      collectible?.sourceString,
-      presentationNodes,
-      collectible?.parentNodeHashes,
-    );
+    const source =
+      sourceOverrides.get(item.hash) ??
+      normalizeWeaponSource(
+        collectible?.sourceString,
+        presentationNodes,
+        collectible?.parentNodeHashes,
+      );
     const season = resolveWeaponSeason(item, collectible, defs);
 
     const perkNames: string[] = [];
@@ -363,7 +450,8 @@ export function buildWeaponIndex(
   }
 
   weapons.sort((a, b) => a.name.localeCompare(b.name));
-  const { index, detailIndex } = internWeaponCatalog(weapons, version);
+  const reconciled = reconcileCraftableTwins(weapons);
+  const { index, detailIndex } = internWeaponCatalog(reconciled, version);
   const statGroupHashes = new Set<number>();
   for (const weapon of weapons) {
     if (weapon.statGroupHash != null) statGroupHashes.add(weapon.statGroupHash);

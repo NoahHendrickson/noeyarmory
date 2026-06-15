@@ -1,22 +1,30 @@
-import Fuse from "fuse.js";
-
 import { matchRank } from "@repo/search-rank";
 
-import type { InternedPerkColumn, PerkRef, SerializedWeaponFuseIndex, WeaponSummary } from "./types";
+import type { InternedPerkColumn, PerkRef, WeaponSummary } from "./types";
+import { damagePerkIndexSet } from "./damage-perks";
 import type { WeaponDpsLookup } from "./weapon-dps";
 import type { WeaponNameIndex } from "./weapon-name-index";
 import {
+  canonicalActivitySource,
   canonicalRaidSource,
+  CURATED_SOURCE_LABELS,
+  isCuratedActivitySource,
   isRaidSource,
-  matchesWeaponSource,
+  matchesWeaponSourceLowered,
   RAID_SOURCE_LABELS,
 } from "./weapon-provenance";
+import { createWeaponSearcher, type WeaponSearcher } from "./weapon-searcher";
+import { isCatalogWeapon } from "./weapon-variants";
 
 export type { WeaponNameIndex } from "./weapon-name-index";
 export { buildWeaponNameIndex } from "./weapon-name-index";
 
 /** Optional name→popularity score (higher = more sought-after) used as a ranking tiebreak. */
 export type PopularityLookup = ReadonlyMap<string, number>;
+
+/** Shared default-locale collator — far cheaper than String#localeCompare in hot sorts. */
+const collator = new Intl.Collator();
+const compareStrings = (a: string, b: string): number => collator.compare(a, b);
 
 function popularityOf(name: string, popularity?: PopularityLookup): number {
   return popularity?.get(name.toLowerCase()) ?? 0;
@@ -42,17 +50,17 @@ export function sortWeapons(
 ): WeaponSummary[] {
   const sorted = [...weapons];
   if (order === "name") {
-    sorted.sort((a, b) => a.name.localeCompare(b.name));
+    sorted.sort((a, b) => compareStrings(a.name, b.name));
     return sorted;
   }
   if (order === "dps-desc") {
     sorted.sort((a, b) => {
       const aDps = dpsByName?.get(a.name)?.dps;
       const bDps = dpsByName?.get(b.name)?.dps;
-      if (aDps == null && bDps == null) return a.name.localeCompare(b.name);
+      if (aDps == null && bDps == null) return compareStrings(a.name, b.name);
       if (aDps == null) return 1;
       if (bDps == null) return -1;
-      return bDps - aDps || a.name.localeCompare(b.name);
+      return bDps - aDps || compareStrings(a.name, b.name);
     });
     return sorted;
   }
@@ -60,18 +68,18 @@ export function sortWeapons(
     sorted.sort((a, b) => {
       const aAmmoGen = a.ammoGeneration;
       const bAmmoGen = b.ammoGeneration;
-      if (aAmmoGen == null && bAmmoGen == null) return a.name.localeCompare(b.name);
+      if (aAmmoGen == null && bAmmoGen == null) return compareStrings(a.name, b.name);
       if (aAmmoGen == null) return 1;
       if (bAmmoGen == null) return -1;
-      return bAmmoGen - aAmmoGen || a.name.localeCompare(b.name);
+      return bAmmoGen - aAmmoGen || compareStrings(a.name, b.name);
     });
     return sorted;
   }
   if (order === "season-desc") {
-    sorted.sort((a, b) => seasonSortKey(b) - seasonSortKey(a) || a.name.localeCompare(b.name));
+    sorted.sort((a, b) => seasonSortKey(b) - seasonSortKey(a) || compareStrings(a.name, b.name));
     return sorted;
   }
-  sorted.sort((a, b) => seasonSortKey(a) - seasonSortKey(b) || a.name.localeCompare(b.name));
+  sorted.sort((a, b) => seasonSortKey(a) - seasonSortKey(b) || compareStrings(a.name, b.name));
   return sorted;
 }
 
@@ -92,6 +100,10 @@ export interface WeaponFilters {
   trait1?: string[];
   /** Perk rollable in the SECOND trait column (OR within). */
   trait2?: string[];
+  /** When true, the FIRST trait column must roll at least one damage perk. */
+  trait1DamagePerks?: boolean;
+  /** When true, the SECOND trait column must roll at least one damage perk. */
+  trait2DamagePerks?: boolean;
   /** Perk rollable in the origin-trait column (OR within). */
   originTrait?: string[];
   /** Weapon must be able to roll ALL of these perks in ANY column (case-insensitive). */
@@ -108,28 +120,20 @@ export interface WeaponFilters {
 
 const lower = (s: string) => s.toLowerCase();
 
-function matchesFacet(value: string, selected?: string[]): boolean {
-  if (!selected || selected.length === 0) return true;
-  return selected.some((s) => lower(s) === lower(value));
+/** Lowered selected-facet values; an empty set means "no constraint". */
+function loweredSet(values?: string[]): Set<string> {
+  const set = new Set<string>();
+  for (const value of values ?? []) set.add(lower(value));
+  return set;
+}
+
+function facetMatches(value: string, wanted: Set<string>): boolean {
+  return wanted.size === 0 || wanted.has(lower(value));
 }
 
 function seasonFacetValue(weapon: WeaponSummary): string | undefined {
   if (weapon.seasonName) return weapon.seasonName;
   return weapon.seasonNumber != null ? `Season ${weapon.seasonNumber}` : undefined;
-}
-
-function matchesOptionalFacet(
-  value: string | undefined,
-  selected?: string[],
-  aliases: readonly string[] = [],
-): boolean {
-  if (!selected || selected.length === 0) return true;
-  if (!value) return false;
-  const accepted = new Set([value, ...aliases].map(lower));
-  return selected.some((s) => {
-    const wanted = lower(s.trim());
-    return wanted.length > 0 && accepted.has(wanted);
-  });
 }
 
 function seasonAliases(weapon: WeaponSummary): string[] {
@@ -138,14 +142,21 @@ function seasonAliases(weapon: WeaponSummary): string[] {
     : [];
 }
 
-function matchesCraftable(craftable: boolean, selected?: string[]): boolean {
-  if (!selected || selected.length === 0) return true;
-  return selected.some((s) => {
-    const v = lower(s);
-    if (v === "yes") return craftable;
-    if (v === "no") return !craftable;
-    return false;
-  });
+/**
+ * Per-weapon rollable-perk set, memoized for the session — `filterWeapons` runs
+ * per keystroke (and ~20× per keystroke for palette previews), so don't rebuild
+ * the Set per weapon per call. Refreshed summaries are new objects, so stale
+ * entries simply fall out of the WeakMap.
+ */
+const perksLowerSets = new WeakMap<WeaponSummary, Set<string>>();
+
+function perksLowerSet(weapon: WeaponSummary): Set<string> {
+  let set = perksLowerSets.get(weapon);
+  if (!set) {
+    set = new Set(weapon.perksLower);
+    perksLowerSets.set(weapon, set);
+  }
+  return set;
 }
 
 function traitColumns(columns: InternedPerkColumn[]): InternedPerkColumn[] {
@@ -177,6 +188,15 @@ function columnRollsAny(
   });
 }
 
+/** True if `column` can roll any perk whose catalog index is in `indices`. */
+function columnRollsAnyIndex(
+  column: InternedPerkColumn | undefined,
+  indices: ReadonlySet<number>,
+): boolean {
+  if (!column) return false;
+  return column.perkIndices.some((index) => indices.has(index));
+}
+
 /** Filter weapons by attribute facets, position-aware trait columns, and required perks. */
 export function filterWeapons(
   weapons: WeaponSummary[],
@@ -187,27 +207,65 @@ export function filterWeapons(
   const customPerkGroups = (filters.customPerkGroups ?? [])
     .map((group) => group.map(lower).filter(Boolean))
     .filter((group) => group.length > 0);
-  // Lowercase the (tiny) filter name lists once, not per weapon×column.
-  const trait1Wanted = new Set((filters.trait1 ?? []).map(lower));
-  const trait2Wanted = new Set((filters.trait2 ?? []).map(lower));
-  const originWanted = new Set((filters.originTrait ?? []).map(lower));
+  // Lowercase the (tiny) filter value lists once, not per weapon×facet.
+  const nameWanted = loweredSet(filters.name);
+  const elementWanted = loweredSet(filters.element);
+  const typeWanted = loweredSet(filters.type);
+  const ammoWanted = loweredSet(filters.ammo);
+  const rarityWanted = loweredSet(filters.rarity);
+  const slotWanted = loweredSet(filters.slot);
+  const frameWanted = loweredSet(filters.frame);
+  const seasonWanted = new Set((filters.season ?? []).map((s) => lower(s.trim())));
+  const sourceActive = (filters.source?.length ?? 0) > 0;
+  const sourceWanted = (filters.source ?? []).map((s) => lower(s.trim()));
+  const trait1Wanted = loweredSet(filters.trait1);
+  const trait2Wanted = loweredSet(filters.trait2);
+  const originWanted = loweredSet(filters.originTrait);
+  const damageIndices =
+    filters.trait1DamagePerks || filters.trait2DamagePerks ? damagePerkIndexSet(perks) : null;
+  const craftableActive = (filters.craftable?.length ?? 0) > 0;
+  let craftableYes = false;
+  let craftableNo = false;
+  for (const value of filters.craftable ?? []) {
+    const v = lower(value);
+    if (v === "yes") craftableYes = true;
+    else if (v === "no") craftableNo = true;
+  }
   const needsOwned = requiredPerks.length > 0 || customPerkGroups.length > 0;
   return weapons.filter((w) => {
-    if (!matchesFacet(w.name, filters.name)) return false;
-    if (!matchesFacet(w.element, filters.element)) return false;
-    if (!matchesFacet(w.type, filters.type)) return false;
-    if (!matchesFacet(w.ammo, filters.ammo)) return false;
-    if (!matchesFacet(w.rarity, filters.rarity)) return false;
-    if (!matchesFacet(w.slot, filters.slot)) return false;
-    if (filters.frame?.length && !matchesFacet(w.frame ?? "", filters.frame)) return false;
-    if (!matchesWeaponSource(w.source, filters.source)) return false;
-    if (!matchesOptionalFacet(seasonFacetValue(w), filters.season, seasonAliases(w))) return false;
-    if (!matchesCraftable(w.craftable, filters.craftable)) return false;
+    if (!isCatalogWeapon(w)) return false;
+    if (!facetMatches(w.name, nameWanted)) return false;
+    if (!facetMatches(w.element, elementWanted)) return false;
+    if (!facetMatches(w.type, typeWanted)) return false;
+    if (!facetMatches(w.ammo, ammoWanted)) return false;
+    if (!facetMatches(w.rarity, rarityWanted)) return false;
+    if (!facetMatches(w.slot, slotWanted)) return false;
+    if (frameWanted.size && !frameWanted.has(lower(w.frame ?? ""))) return false;
+    if (sourceActive && !matchesWeaponSourceLowered(w.source, sourceWanted)) return false;
+    if (seasonWanted.size) {
+      const season = seasonFacetValue(w);
+      if (!season) return false;
+      if (
+        !seasonWanted.has(lower(season)) &&
+        !seasonAliases(w).some((alias) => seasonWanted.has(lower(alias)))
+      ) {
+        return false;
+      }
+    }
+    if (craftableActive && !(w.craftable ? craftableYes : craftableNo)) return false;
     if (filters.adept != null && w.adept !== filters.adept) return false;
-    if (trait1Wanted.size || trait2Wanted.size) {
+    if (trait1Wanted.size || trait2Wanted.size || damageIndices) {
       const traits = traitColumns(w.columns);
       if (!columnRollsAny(traits[0], trait1Wanted, perks)) return false;
       if (!columnRollsAny(traits[1], trait2Wanted, perks)) return false;
+      if (damageIndices) {
+        if (filters.trait1DamagePerks && !columnRollsAnyIndex(traits[0], damageIndices)) {
+          return false;
+        }
+        if (filters.trait2DamagePerks && !columnRollsAnyIndex(traits[1], damageIndices)) {
+          return false;
+        }
+      }
     }
     if (
       originWanted.size &&
@@ -216,7 +274,7 @@ export function filterWeapons(
       return false;
     }
     if (needsOwned) {
-      const owned = new Set(w.perksLower);
+      const owned = perksLowerSet(w);
       if (!requiredPerks.every((p) => owned.has(p))) return false;
       if (!customPerkGroups.every((group) => group.some((p) => owned.has(p)))) return false;
     }
@@ -244,9 +302,11 @@ export function weaponsWithPerk(
   weapons: WeaponSummary[],
   perk: string | number,
 ): WeaponSummary[] {
-  if (typeof perk === "number") return weapons.filter((w) => w.perkHashes.includes(perk));
+  if (typeof perk === "number") {
+    return weapons.filter((w) => isCatalogWeapon(w) && w.perkHashes.includes(perk));
+  }
   const target = lower(perk);
-  return weapons.filter((w) => w.perksLower.includes(target));
+  return weapons.filter((w) => isCatalogWeapon(w) && w.perksLower.includes(target));
 }
 
 function weaponNameRank(nameLower: string, queryLower: string): number | null {
@@ -339,7 +399,7 @@ export function sortFilteredWeaponNames(
       a.searchRank - b.searchRank ||
       popularityOf(b.value, popularity) - popularityOf(a.value, popularity) ||
       b.count - a.count ||
-      a.value.localeCompare(b.value),
+      compareStrings(a.value, b.value),
   );
 }
 
@@ -356,10 +416,10 @@ function appendUniqueWeapons(
   }
 }
 
-/** Collect exact name hits plus fuse matches for a text query, deduped. */
+/** Collect exact name hits plus fuzzy matches for a text query, deduped. */
 export function weaponsMatchingTextQuery(
   weapons: WeaponSummary[],
-  fuse: Fuse<WeaponSummary>,
+  searcher: WeaponSearcher,
   query: string,
   limit: number,
   index?: WeaponNameIndex,
@@ -373,38 +433,33 @@ export function weaponsMatchingTextQuery(
   const rankedNames = sortFilteredWeaponNames(filterWeaponNames(weapons, q, index));
   for (const { value } of rankedNames) {
     // O(1) expansion via the prebuilt name index; fall back to a scan otherwise.
-    const named = index?.byName.get(value) ?? weapons.filter((weapon) => weapon.name === value);
+    const named = (
+      index?.byName.get(value) ?? weapons.filter((weapon) => weapon.name === value)
+    ).filter(isCatalogWeapon);
     appendUniqueWeapons(seen, merged, named);
   }
 
-  appendUniqueWeapons(
-    seen,
-    merged,
-    fuse.search(q, { limit }).map((result) => result.item),
-  );
+  appendUniqueWeapons(seen, merged, searcher.search(q, limit));
 
   return merged;
 }
 
 function sortNameMatchedWeapons(
   weapons: WeaponSummary[],
-  query: string,
+  matches: FilteredWeaponName[],
   sort: WeaponSort,
   dpsByName?: WeaponDpsLookup,
-  index?: WeaponNameIndex,
   popularity?: PopularityLookup,
 ): WeaponSummary[] {
   if (sort !== "name") return sortWeapons(weapons, sort, dpsByName);
 
-  const rankByName = new Map(
-    filterWeaponNames(weapons, query, index).map((match) => [match.value, match.searchRank]),
-  );
+  const rankByName = new Map(matches.map((match) => [match.value, match.searchRank]));
   return [...weapons].sort(
     (a, b) =>
       (rankByName.get(a.name) ?? Number.MAX_SAFE_INTEGER) -
         (rankByName.get(b.name) ?? Number.MAX_SAFE_INTEGER) ||
       popularityOf(b.name, popularity) - popularityOf(a.name, popularity) ||
-      a.name.localeCompare(b.name),
+      compareStrings(a.name, b.name),
   );
 }
 
@@ -425,7 +480,10 @@ export function rankWeaponResults(
     return sortWeapons(weapons, sort, dpsByName);
   }
 
-  const nameMatches = new Set(filterWeaponNames(weapons, q, index).map((match) => match.value));
+  // Compute the ranked name matches once and thread them through — the
+  // name-bucket sort below needs the same answer.
+  const matches = filterWeaponNames(weapons, q, index);
+  const nameMatches = new Set(matches.map((match) => match.value));
   const nameMatched: WeaponSummary[] = [];
   const rest: WeaponSummary[] = [];
   for (const weapon of weapons) {
@@ -433,7 +491,7 @@ export function rankWeaponResults(
   }
 
   return [
-    ...sortNameMatchedWeapons(nameMatched, q, sort, dpsByName, index, popularity),
+    ...sortNameMatchedWeapons(nameMatched, matches, sort, dpsByName, popularity),
     ...sortWeapons(rest, sort, dpsByName),
   ];
 }
@@ -457,49 +515,17 @@ export function suggestWeaponNames(
     .map(({ value, count }) => ({ value, count }));
 }
 
-const WEAPON_FUSE_KEYS = [
-  { name: "name", weight: 3 },
-  { name: "type", weight: 1 },
-  { name: "perks", weight: 1 },
-];
+/** Typo-tolerant fuzzy search over weapon name/type/perk text — see weapon-searcher.ts. */
+export { createWeaponSearcher, type WeaponSearcher } from "./weapon-searcher";
 
-const WEAPON_FUSE_OPTIONS = {
-  keys: WEAPON_FUSE_KEYS,
-  threshold: 0.3,
-  ignoreLocation: true,
-} as const;
-
-/**
- * Build a reusable Fuse index for fuzzy name/type/perk search.
- *
- * Pass a `serializedIndex` (from {@link serializeWeaponFuseIndex}, e.g. emitted
- * at generate time) to skip the client-side tokenization pass on cold load.
- */
-export function createWeaponFuse(
-  weapons: WeaponSummary[],
-  serializedIndex?: SerializedWeaponFuseIndex,
-): Fuse<WeaponSummary> {
-  if (serializedIndex) {
-    return new Fuse(weapons, WEAPON_FUSE_OPTIONS, Fuse.parseIndex<WeaponSummary>(serializedIndex));
-  }
-  return new Fuse(weapons, WEAPON_FUSE_OPTIONS);
-}
-
-/** Serialize a prebuilt weapon Fuse index (shipped so clients don't rebuild it). */
-export function serializeWeaponFuseIndex(weapons: WeaponSummary[]): SerializedWeaponFuseIndex {
-  return Fuse.createIndex(WEAPON_FUSE_KEYS, weapons).toJSON();
-}
-
-/** Convenience fuzzy search (rebuilds the index each call — prefer createWeaponFuse for UIs). */
+/** Convenience fuzzy search (rebuilds the searcher each call — prefer createWeaponSearcher for UIs). */
 export function fuzzySearchWeapons(
   weapons: WeaponSummary[],
   query: string,
   limit = 50,
 ): WeaponSummary[] {
   if (!query.trim()) return weapons;
-  return createWeaponFuse(weapons)
-    .search(query, { limit })
-    .map((r) => r.item);
+  return createWeaponSearcher(weapons).search(query, limit);
 }
 
 export interface FacetOption {
@@ -510,12 +536,35 @@ export interface FacetOption {
 function sortFacetCounts(counts: Map<string, number>): FacetOption[] {
   return [...counts.entries()]
     .map(([value, count]) => ({ value, count }))
-    .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value));
+    .sort((a, b) => b.count - a.count || compareStrings(a.value, b.value));
 }
 
 export interface CollectRaidSourceFacetsOptions {
   /** List every known raid even when the count is zero (armor vault browse). */
   includeAllRaidLabels?: boolean;
+}
+
+export interface CollectActivitySourceFacetsOptions {
+  /** List every known curated activity even when the count is zero (armor vault browse). */
+  includeAllKnownLabels?: boolean;
+}
+
+/** Curated source facets for the Source filter palette category. */
+export function collectActivitySourceFacets(
+  items: ReadonlyArray<{ source?: string }>,
+  options?: CollectActivitySourceFacetsOptions,
+): FacetOption[] {
+  const source = new Map<string, number>();
+  if (options?.includeAllKnownLabels) {
+    for (const label of CURATED_SOURCE_LABELS) source.set(label, 0);
+  }
+  for (const item of items) {
+    if (!item.source || !isCuratedActivitySource(item.source)) continue;
+    const canonical = canonicalActivitySource(item.source);
+    if (!canonical) continue;
+    source.set(canonical, (source.get(canonical) ?? 0) + 1);
+  }
+  return sortFacetCounts(source);
 }
 
 /** Raid-only source facets for the Source filter palette category. */
@@ -551,6 +600,7 @@ export function collectFacets(weapons: WeaponSummary[]): Record<string, FacetOpt
   let craftableNo = 0;
 
   for (const w of weapons) {
+    if (!isCatalogWeapon(w)) continue;
     if (w.element) element.set(w.element, (element.get(w.element) ?? 0) + 1);
     if (w.type) type.set(w.type, (type.get(w.type) ?? 0) + 1);
     if (w.ammo) ammo.set(w.ammo, (ammo.get(w.ammo) ?? 0) + 1);
@@ -606,7 +656,7 @@ export function collectPerks(weapons: WeaponSummary[], perks: PerkRef[]): PerkOp
       }
     }
   }
-  return [...byName.values()].sort((a, b) => a.name.localeCompare(b.name));
+  return [...byName.values()].sort((a, b) => compareStrings(a.name, b.name));
 }
 
 export interface ColumnPerkOptions {
@@ -654,7 +704,7 @@ export function collectColumnPerks(
   }
 
   const sort = (m: Map<string, PerkOption>) =>
-    [...m.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+    [...m.values()].sort((a, b) => b.count - a.count || compareStrings(a.name, b.name));
   return { trait1: sort(trait1), trait2: sort(trait2), originTrait: sort(originTrait) };
 }
 
