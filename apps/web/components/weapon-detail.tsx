@@ -16,6 +16,7 @@ import {
 
 import { useWeaponBuild } from "../lib/use-weapon-build";
 import { useWeaponDps } from "../lib/use-weapon-dps";
+import { useHasHover } from "../hooks/use-has-hover";
 import { useStatGroups, useWeaponDetail, useWeapons } from "../lib/weapons-context";
 import { trackPerkCommit } from "../lib/track-perk-commit";
 import { trackWeaponView } from "../lib/track-weapon-view";
@@ -136,6 +137,7 @@ export function WeaponDetailView({
   const { dpsByName } = useWeaponDps();
   const statGroups = useStatGroups();
   const build = useWeaponBuild(weapon);
+  const hasHover = useHasHover();
   const [hoverPreview, setHoverPreview] = useState<{
     columnIndex: number;
     perk: PerkRef;
@@ -263,6 +265,7 @@ export function WeaponDetailView({
                       columnIndex={columnIndex}
                       linkPerks={canSelect ? false : linkPerks}
                       highlightedPerks={highlightedPerks}
+                      hasHover={hasHover}
                       selectedPerkHash={
                         canSelect ? build.selectedByColumn.get(columnIndex) : undefined
                       }

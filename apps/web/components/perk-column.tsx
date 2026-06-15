@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { memo, useCallback } from "react";
+import type { ReactNode } from "react";
 import {
   cn,
   frostedSurface,
@@ -20,7 +21,6 @@ import {
 import type { PerkRef, PerkColumn } from "@repo/destiny";
 
 import { ClarityAttribution, ClarityDescription } from "./clarity-description";
-import { useHasHover } from "../hooks/use-has-hover";
 import { bungieIcon } from "../lib/bungie";
 import type { ClarityDescriptionMap, ClarityLine } from "../lib/clarity-types";
 import type { ClarityPerkTiers } from "../lib/clarity-provider";
@@ -53,12 +53,8 @@ function dedupePerksByName(perks: PerkRef[]): PerkRef[] {
   return [...byName.values()];
 }
 
-function perkInfoPopupClassName(clarityLines: ClarityLine[] | undefined): string {
-  return cn(
-    frostedSurface("panel"),
-    "relative overflow-hidden rounded-md p-0",
-    perkTooltipMaxWidth(clarityLines),
-  );
+function perkInfoPanelClassName(clarityLines: ClarityLine[] | undefined): string {
+  return cn("relative overflow-hidden rounded-md p-0", perkTooltipMaxWidth(clarityLines));
 }
 
 const PERK_INFO_POSITIONER_PROPS = {
@@ -139,6 +135,7 @@ const PerkTile = memo(function PerkTile({
   size = "md",
   highlighted = false,
   selected = false,
+  hasHover,
   onSelect,
   onHover,
   onHoverEnd,
@@ -149,12 +146,12 @@ const PerkTile = memo(function PerkTile({
   size?: "md" | "lg";
   highlighted?: boolean;
   selected?: boolean;
+  hasHover: boolean;
   onSelect?: (perk: PerkRef) => void;
   onHover?: (perk: PerkRef) => void;
   onHoverEnd?: () => void;
   clarityDescriptions: ClarityDescriptionMap | null;
 }) {
-  const hasHover = useHasHover();
   const tiers = getClarityPerkTiers(clarityDescriptions, perk);
   const clarityLines = getClarityDisplayLines(tiers);
   const icon = bungieIcon(perk.icon);
@@ -171,24 +168,49 @@ const PerkTile = memo(function PerkTile({
         }
       : undefined;
 
-  const selectButton = onSelect ? (
+  const selectButtonClassName =
+    "group inline-flex rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  const linkClassName = "group inline-flex rounded-full";
+
+  const wrapInteractive = (content: ReactNode) => {
+    if (onSelect) {
+      return (
+        <button
+          type="button"
+          aria-label={perk.name}
+          aria-pressed={selected}
+          onClick={() => onSelect(perk)}
+          {...hoverHandlers}
+          className={selectButtonClassName}
+        >
+          {content}
+        </button>
+      );
+    }
+    if (linkPerks) {
+      return (
+        <Link href={`/perk/${perk.hash}`} className={linkClassName}>
+          {content}
+        </Link>
+      );
+    }
+    return content;
+  };
+
+  const triggerRender = onSelect ? (
     <button
       type="button"
       aria-label={perk.name}
       aria-pressed={selected}
       onClick={() => onSelect(perk)}
       {...hoverHandlers}
-      className="group inline-flex rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className={selectButtonClassName}
     />
-  ) : null;
-
-  const perkLink = linkPerks ? (
-    <Link href={`/perk/${perk.hash}`} className="group inline-flex rounded-full" />
-  ) : null;
-
-  const staticTrigger = <span className="inline-flex" />;
-
-  const triggerRender = selectButton ?? perkLink ?? staticTrigger;
+  ) : linkPerks ? (
+    <Link href={`/perk/${perk.hash}`} className={linkClassName} />
+  ) : (
+    <span className="inline-flex" />
+  );
 
   const tile = (
     <span
@@ -230,24 +252,7 @@ const PerkTile = memo(function PerkTile({
   if (!hasClarityOrBungieTooltip(perk, tiers)) {
     return (
       <span title={onSelect ? undefined : perk.name} className="inline-flex">
-        {selectButton ? (
-          <button
-            type="button"
-            aria-label={perk.name}
-            aria-pressed={selected}
-            onClick={() => onSelect?.(perk)}
-            {...hoverHandlers}
-            className="group inline-flex rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            {tile}
-          </button>
-        ) : perkLink ? (
-          <Link href={`/perk/${perk.hash}`} className="group inline-flex rounded-full">
-            {tile}
-          </Link>
-        ) : (
-          tile
-        )}
+        {wrapInteractive(tile)}
       </span>
     );
   }
@@ -255,35 +260,36 @@ const PerkTile = memo(function PerkTile({
   const infoPopup = (
     <PerkTooltipContent perk={perk} tiers={tiers} clarityLines={clarityLines} />
   );
+  const panelClassName = perkInfoPanelClassName(clarityLines);
 
-  if (!hasHover) {
+  if (hasHover) {
     return (
-      <Popover modal={false}>
-        <PopoverTrigger render={triggerRender}>{tile}</PopoverTrigger>
-        <PopoverPortal>
-          <PopoverPositioner {...PERK_INFO_POSITIONER_PROPS}>
-            <PopoverPopup className={perkInfoPopupClassName(clarityLines)}>
+      <Tooltip disableHoverablePopup>
+        <TooltipTrigger delay={0} render={triggerRender}>
+          {tile}
+        </TooltipTrigger>
+        <TooltipPortal>
+          <TooltipPositioner {...PERK_INFO_POSITIONER_PROPS}>
+            <TooltipPopup className={cn(panelClassName, "pointer-events-none")}>
               {infoPopup}
-            </PopoverPopup>
-          </PopoverPositioner>
-        </PopoverPortal>
-      </Popover>
+            </TooltipPopup>
+          </TooltipPositioner>
+        </TooltipPortal>
+      </Tooltip>
     );
   }
 
   return (
-    <Tooltip disableHoverablePopup>
-      <TooltipTrigger delay={0} render={triggerRender}>
-        {tile}
-      </TooltipTrigger>
-      <TooltipPortal>
-        <TooltipPositioner {...PERK_INFO_POSITIONER_PROPS}>
-          <TooltipPopup className={cn(perkInfoPopupClassName(clarityLines), "pointer-events-none")}>
+    <Popover modal={false}>
+      <PopoverTrigger render={triggerRender}>{tile}</PopoverTrigger>
+      <PopoverPortal>
+        <PopoverPositioner {...PERK_INFO_POSITIONER_PROPS}>
+          <PopoverPopup className={cn(frostedSurface("panel"), panelClassName)}>
             {infoPopup}
-          </TooltipPopup>
-        </TooltipPositioner>
-      </TooltipPortal>
-    </Tooltip>
+          </PopoverPopup>
+        </PopoverPositioner>
+      </PopoverPortal>
+    </Popover>
   );
 });
 
@@ -294,6 +300,7 @@ export function PerkColumnView({
   linkPerks = true,
   highlightedPerks,
   selectedPerkHash,
+  hasHover,
   onSelectPerk,
   onHoverPerk,
   onHoverEnd,
@@ -306,6 +313,8 @@ export function PerkColumnView({
   /** Lowercase perk names from the community DPS benchmark build. */
   highlightedPerks?: ReadonlySet<string>;
   selectedPerkHash?: number;
+  /** Whether the primary pointer supports hover (passed from the weapon detail view). */
+  hasHover: boolean;
   onSelectPerk?: (columnIndex: number, perk: PerkRef) => void;
   onHoverPerk?: (columnIndex: number, perk: PerkRef) => void;
   onHoverEnd?: () => void;
@@ -334,6 +343,7 @@ export function PerkColumnView({
           linkPerks={linkPerks}
           highlighted={highlightedPerks?.has(perk.name.toLowerCase())}
           selected={selectedPerkHash === perk.hash}
+          hasHover={hasHover}
           onSelect={onSelectPerk ? handleSelect : undefined}
           onHover={onHoverPerk ? handleHover : undefined}
           onHoverEnd={onHoverEnd}
