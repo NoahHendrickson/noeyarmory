@@ -2,7 +2,14 @@ import type { PaletteChip } from "@repo/ui";
 import type { WeaponFilters } from "@repo/destiny";
 
 import type { CustomWeaponFilter } from "../use-custom-weapon-filters";
-import { CUSTOM_FILTER_CATEGORY_ID, DAMAGE_PERKS_VALUE_ID } from "./constants";
+import type { OwnedArmorFilters } from "../owned-armor-search";
+import {
+  ARMOR_DUPLICATE_CATEGORY_ID,
+  ARMOR_DUPLICATE_NO_VALUE_ID,
+  ARMOR_DUPLICATE_YES_VALUE_ID,
+  CUSTOM_FILTER_CATEGORY_ID,
+  DAMAGE_PERKS_VALUE_ID,
+} from "./constants";
 
 /** Maps the sentinel "Damage perks" picker option to its boolean filter field. */
 function damagePerksFilterKey(
@@ -39,12 +46,18 @@ export function chipsToWeaponFilters(
   return customPerkGroups.length > 0 ? { ...merged, customPerkGroups } : merged;
 }
 
-export function chipsToArmorFilters(chips: PaletteChip[]): Record<string, string[]> {
+export function chipsToArmorFilters(chips: PaletteChip[]): OwnedArmorFilters {
   const f: Record<string, string[]> = {};
+  let isDupe: boolean | undefined;
   for (const chip of chips) {
+    if (chip.categoryId === ARMOR_DUPLICATE_CATEGORY_ID) {
+      if (chip.valueId === ARMOR_DUPLICATE_YES_VALUE_ID) isDupe = true;
+      else if (chip.valueId === ARMOR_DUPLICATE_NO_VALUE_ID) isDupe = false;
+      continue;
+    }
     (f[chip.categoryId] ??= []).push(chip.value);
   }
-  return f;
+  return isDupe != null ? { ...f, isDupe } : f;
 }
 
 export function withHypotheticalChip(

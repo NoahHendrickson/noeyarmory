@@ -20,6 +20,8 @@ export interface PaletteCategory {
   examples?: string;
   /** When true, hide this category from suggestions once a chip is committed (e.g. Trait 1). */
   single?: boolean;
+  /** Hide this category once this many values from it are committed. */
+  maxSelections?: number;
   /** When false, omit from cross-category inline chip suggestions (drill-down still works). */
   inlineSuggestions?: boolean;
   /**

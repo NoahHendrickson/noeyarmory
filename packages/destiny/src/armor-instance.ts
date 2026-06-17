@@ -6,7 +6,9 @@ import {
   PLUG_CATEGORY_ARMOR_ARCHETYPES,
   PLUG_CATEGORY_TUNING_MODS,
   TUNING_MOD_TO_STAT_HASH,
+  ARMOR_STAT_PLUG_CATEGORIES,
 } from "./armor30-constants";
+import type { StatMod } from "./types";
 
 export interface ItemSocketPlug {
   plugHash?: number;
@@ -24,6 +26,47 @@ export interface Armor30StatRoll {
 }
 
 const ARMOR3_STAT_HASH_LIST = Object.values(ARMOR3_STAT_HASHES);
+
+/** Subtract equipped mod/tuning stat bonuses so profile stats reflect the base roll. */
+export function subtractEquippedPlugStatBonuses(
+  stats: ItemStat[],
+  plugHashes: readonly (number | undefined)[],
+  plugStatMap: ReadonlyMap<number, readonly StatMod[]>,
+): ItemStat[] {
+  const bonuses = new Map<number, number>();
+  for (const plugHash of plugHashes) {
+    if (plugHash == null) continue;
+    const mods = plugStatMap.get(plugHash);
+    if (!mods) continue;
+    for (const mod of mods) {
+      if (!(mod.hash in ARMOR3_STAT_NAME_BY_HASH)) continue;
+      bonuses.set(mod.hash, (bonuses.get(mod.hash) ?? 0) + mod.value);
+    }
+  }
+
+  if (bonuses.size === 0) return stats;
+
+  return stats.map((stat) => {
+    const bonus = bonuses.get(stat.statHash);
+    if (bonus == null || bonus === 0) return stat;
+    return { ...stat, value: Math.max(0, stat.value - bonus) };
+  });
+}
+
+/** Slotted armor mod hashes plus the equipped tuning plug (not intrinsics/archetypes). */
+export function collectArmorStatAdjustingPlugHashes(
+  sockets: ItemSocketPlug[],
+  rolledModHashes: readonly number[],
+  plugsBySocket: Record<number, ReusablePlug[]> | undefined,
+): number[] {
+  const hashes = new Set(rolledModHashes);
+  const tuningIndex = findTuningSocketIndexFromInstance(sockets, plugsBySocket);
+  if (tuningIndex != null) {
+    const tuningHash = sockets[tuningIndex]?.plugHash;
+    if (tuningHash != null) hashes.add(tuningHash);
+  }
+  return [...hashes];
+}
 
 /** Ranked Armor 3.0 stats: primary → tertiary, then the remaining stats (zeros last). */
 export function resolveArmor30Stats(stats: ItemStat[]): Armor30StatRoll[] {

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { equipArmor } from "../../../../lib/bungie-actions";
+import { equipArmor, transferArmorToCharacter } from "../../../../lib/bungie-actions";
 import { findOwnedArmorForAction, resolveCharacterForArmor } from "../../../../lib/bungie-profile";
 import { isSameOriginRequest } from "../../../../lib/request-guards";
 import { getSession, isSignedIn } from "../../../../lib/session";
@@ -31,9 +31,12 @@ export async function POST(req: Request) {
     }
 
     const { armor, characters } = found;
-    if (armor.location !== "inventory") {
+    if (armor.location === "equipped") {
+      return NextResponse.json({ error: "Item is already equipped" }, { status: 400 });
+    }
+    if (armor.location !== "inventory" && armor.location !== "vault") {
       return NextResponse.json(
-        { error: "Item must be on a character's inventory to equip" },
+        { error: "Item cannot be equipped from this location" },
         { status: 400 },
       );
     }
@@ -46,11 +49,19 @@ export async function POST(req: Request) {
       );
     }
 
-    if (armor.ownerCharacterId !== characterId) {
+    if (armor.location === "inventory" && armor.ownerCharacterId !== characterId) {
       return NextResponse.json(
         { error: "Item is not on the matching class character" },
         { status: 400 },
       );
+    }
+
+    if (armor.location === "vault") {
+      await transferArmorToCharacter(session, {
+        instanceId,
+        itemHash: armor.armor.hash,
+        characterId,
+      });
     }
 
     await equipArmor(session, { instanceId, characterId });

@@ -33,6 +33,7 @@ export interface OwnedArmorItem {
   setName?: string;
   setBonuses?: Armor30SetBonus[];
   archetype?: string;
+  secondaryStat?: string;
   tertiaryStat?: string;
   tunableStat?: string;
   /** Ranked Armor 3.0 stats (primary → tertiary, then the rest). */

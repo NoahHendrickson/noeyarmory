@@ -5,6 +5,7 @@ import type { PaletteChip, ValueSuggestion } from "@repo/ui";
 import { createOwnedArmorFuse, filterOwnedArmor, searchOwnedArmor, sortOwnedArmor } from "@repo/destiny";
 
 import type { OwnedArmorItem } from "../lib/armor-types";
+import { buildArmorDuplicateDiffs } from "../lib/armor-duplicate-diffs";
 import { MAX_RESULTS, MAX_SHOW_ALL } from "../lib/palette/constants";
 import { chipsToArmorFilters } from "../lib/palette/weapon-filters";
 import { buildArmorCategories } from "../lib/palette/armor-categories";
@@ -48,6 +49,11 @@ export function useArmorSearchResults({
 
   const resultLimit = showAllResults ? MAX_SHOW_ALL : MAX_RESULTS;
   const armorShown = armorResults.slice(0, resultLimit);
+
+  const armorDuplicateDiffs = useMemo(
+    () => (armorFilters.isDupe === true ? buildArmorDuplicateDiffs(owned) : new Map()),
+    [armorFilters.isDupe, owned],
+  );
 
   const armorPreviewItems = useMemo(() => {
     if (!previewsEnabled) return [];
@@ -107,6 +113,7 @@ export function useArmorSearchResults({
     armorResults,
     armorShown,
     armorPreviewItems,
+    armorDuplicateDiffs,
     resultCount: armorResults.length,
     shownCount: armorShown.length,
   };

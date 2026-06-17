@@ -16,8 +16,15 @@ export const FUSE_PRE_LIMIT = 300;
 export const DAMAGE_PERKS_VALUE_ID = "__damage-perks__";
 export const DAMAGE_PERKS_LABEL = "Damage perks";
 
+export const ARMOR_DUPLICATE_CATEGORY_ID = "duplicate";
+export const ARMOR_DUPLICATE_YES_VALUE_ID = "yes";
+export const ARMOR_DUPLICATE_NO_VALUE_ID = "no";
+export const ARMOR_DUPLICATE_YES_LABEL = "Yes";
+export const ARMOR_DUPLICATE_NO_LABEL = "No";
+
 export const CUSTOM_FILTER_CATEGORY_ID = "customFilter";
 export const CUSTOM_FILTER_DRAFT_CATEGORY_ID = "customFilterDraft";
 export const CUSTOM_FILTER_TRAIT_CATEGORY_IDS = new Set(["trait"]);
+export const PERK_COMBO_CATEGORY_ID = "perkCombo";
 
 export const ARMOR_LOGIN_URL = "/api/auth/login?returnTo=%2F%3Fmode%3Darmor";

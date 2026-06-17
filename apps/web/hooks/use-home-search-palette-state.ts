@@ -177,6 +177,7 @@ export function useHomeSearchPaletteState({
   const {
     armorShown,
     armorPreviewItems,
+    armorDuplicateDiffs,
     resultCount: armorResultCount,
     shownCount: armorShownCount,
   } = useArmorSearchResults({
@@ -230,6 +231,7 @@ export function useHomeSearchPaletteState({
     weaponShownCount,
     armorShown,
     armorPreviewItems,
+    armorDuplicateDiffs,
     armorResultCount,
     armorShownCount,
   };

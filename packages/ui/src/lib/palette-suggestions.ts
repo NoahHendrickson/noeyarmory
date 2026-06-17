@@ -8,7 +8,9 @@ export const MAX_VALUE_SUGGESTIONS = 20;
 
 /** Single-select categories (Trait 1, …) are hidden once they already have a chip. */
 export function categoryIsFull(category: PaletteCategory, chips: PaletteChip[]): boolean {
-  return category.single === true && chips.some((c) => c.categoryId === category.id);
+  const limit = category.maxSelections ?? (category.single === true ? 1 : null);
+  if (limit == null) return false;
+  return chips.filter((c) => c.categoryId === category.id).length >= limit;
 }
 
 export function availableCategories(

@@ -56,7 +56,7 @@ function plugDescription(def: DestinyInventoryItemDefinition): string | undefine
 }
 
 /** Non-conditional investment stat modifiers from a plug definition. */
-function plugStatMods(def: DestinyInventoryItemDefinition): StatMod[] | undefined {
+export function extractPlugStatMods(def: DestinyInventoryItemDefinition): StatMod[] | undefined {
   const mods: StatMod[] = [];
   for (const inv of def.investmentStats ?? []) {
     if (inv.isConditionallyActive || inv.value === 0) continue;
@@ -176,7 +176,7 @@ export function buildColumnPerks(
       description: plugDescription(pd),
       enhancedHash: row?.enhancedHash,
       enhancedDescription: row?.enhancedDescription,
-      statMods: plugStatMods(pd) ?? row?.statMods,
+      statMods: extractPlugStatMods(pd) ?? row?.statMods,
     });
   }
 

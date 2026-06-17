@@ -4,6 +4,7 @@ import type { FilterChipElement, FilterChipProps, FilterChipTone } from "@repo/u
 import { AmmoIcon } from "../components/ammo-icon";
 import { ElementIcon, isElementName } from "../components/element-icon";
 import { bungieIcon } from "./bungie";
+import { PERK_COMBO_CATEGORY_ID } from "./palette/constants";
 
 export interface FilterChipIconMaps {
   elementIcons?: ReadonlyMap<string, string | undefined>;
@@ -16,7 +17,12 @@ export function getFilterChipAppearance(
   value: string,
   iconMaps?: FilterChipIconMaps,
 ): Pick<FilterChipProps, "tone" | "element" | "valueIcon" | "hideLabel" | "iconOnly"> {
-  if (categoryId === "trait1" || categoryId === "trait2" || categoryId === "customFilter") {
+  if (
+    categoryId === "trait1" ||
+    categoryId === "trait2" ||
+    categoryId === PERK_COMBO_CATEGORY_ID ||
+    categoryId === "customFilter"
+  ) {
     return { tone: "trait" satisfies FilterChipTone };
   }
 
@@ -94,6 +100,7 @@ export function getFilterChipAppearance(
 
   if (
     categoryId === "classType" ||
+    categoryId === "duplicate" ||
     categoryId === "setName" ||
     categoryId === "archetype" ||
     categoryId === "tertiaryStat" ||

@@ -52,7 +52,6 @@ import {
 import { useWeaponDps } from "../lib/use-weapon-dps";
 import { useWeaponIconMaps } from "../lib/use-weapon-icon-maps";
 import { useWeaponDetail, useWeapons } from "../lib/weapons-context";
-import { useNewItemMarkers } from "../lib/use-new-item-markers";
 import { getFilterChipAppearance } from "../lib/filter-chip-appearance";
 import { ArmorResultRow } from "./armor-result-row";
 import { PinnedFilterPills } from "./pinned-filter-pills";
@@ -99,7 +98,6 @@ export function HomeSearch({
   initialMode?: Mode;
 }) {
   const { weapons, perks, isSample, byHash } = useWeapons();
-  const { newWeaponHashes, newArmorHashes } = useNewItemMarkers();
   const { elementIconMap, typeIconMap, ammoIconMap } = useWeaponIconMaps();
   const { dpsByName } = useWeaponDps();
   const { filters: customFilters, createFilter } = useCustomWeaponFilters();
@@ -199,6 +197,7 @@ export function HomeSearch({
     weaponShownCount,
     armorShown,
     armorPreviewItems,
+    armorDuplicateDiffs,
     armorResultCount,
     armorShownCount,
   } = useHomeSearchPaletteState({
@@ -293,7 +292,6 @@ export function HomeSearch({
           dps={dpsByName.get(weapon.name)}
           pinned={pinnedWeaponHashSet.has(weapon.hash)}
           onTogglePin={() => toggleWeaponHash(weapon.hash)}
-          isNew={newWeaponHashes.has(weapon.hash)}
         />
       );
     },
@@ -304,7 +302,6 @@ export function HomeSearch({
       dpsByName,
       pinnedWeaponHashSet,
       toggleWeaponHash,
-      newWeaponHashes,
     ],
   );
 
@@ -315,16 +312,16 @@ export function HomeSearch({
       return (
         <ArmorResultRow
           armor={armor}
+          duplicateDiff={armorDuplicateDiffs.get(armor.instanceId)}
           actionState={armorAction}
           onEquip={() => void runArmorAction(armor.instanceId, "equip", "/api/armor/equip")}
           onMoveToCharacter={() =>
             void runArmorAction(armor.instanceId, "transfer", "/api/armor/transfer")
           }
-          isNew={newArmorHashes.has(armor.hash)}
         />
       );
     },
-    [armorById, armorPreviewById, armorAction, runArmorAction, newArmorHashes],
+    [armorById, armorPreviewById, armorDuplicateDiffs, armorAction, runArmorAction],
   );
 
   const addComposerPerk = useCallback((categoryId: string, option: PaletteValueOption) => {

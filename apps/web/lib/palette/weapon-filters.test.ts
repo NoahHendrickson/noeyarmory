@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import type { PaletteChip } from "@repo/ui";
 
-import { DAMAGE_PERKS_LABEL, DAMAGE_PERKS_VALUE_ID } from "./constants";
+import { DAMAGE_PERKS_LABEL, DAMAGE_PERKS_VALUE_ID, PERK_COMBO_CATEGORY_ID } from "./constants";
 import { chipsToArmorFilters, chipsToWeaponFilters, withHypotheticalChip } from "./weapon-filters";
 
 describe("chipsToWeaponFilters", () => {
@@ -70,6 +70,29 @@ describe("chipsToWeaponFilters", () => {
       trait2: ["Frenzy"],
     });
   });
+
+  test("maps Perk Combo chips to the combo filter array", () => {
+    const chips: PaletteChip[] = [
+      {
+        id: `${PERK_COMBO_CATEGORY_ID}:repulsor-brace`,
+        categoryId: PERK_COMBO_CATEGORY_ID,
+        categoryLabel: "Perk Combo",
+        value: "Repulsor Brace",
+        valueId: "repulsor-brace",
+      },
+      {
+        id: `${PERK_COMBO_CATEGORY_ID}:destabilizing-rounds`,
+        categoryId: PERK_COMBO_CATEGORY_ID,
+        categoryLabel: "Perk Combo",
+        value: "Destabilizing Rounds",
+        valueId: "destabilizing-rounds",
+      },
+    ];
+
+    expect(chipsToWeaponFilters(chips, [])).toEqual({
+      perkCombo: ["Repulsor Brace", "Destabilizing Rounds"],
+    });
+  });
 });
 
 describe("withHypotheticalChip", () => {
@@ -93,6 +116,18 @@ describe("withHypotheticalChip", () => {
       trait1: ["Frenzy"],
     });
   });
+
+  test("Perk Combo preview appends to the combo filter array", () => {
+    expect(
+      withHypotheticalChip(
+        { perkCombo: ["Repulsor Brace"] },
+        PERK_COMBO_CATEGORY_ID,
+        "Destabilizing Rounds",
+        "destabilizing-rounds",
+        [],
+      ),
+    ).toEqual({ perkCombo: ["Repulsor Brace", "Destabilizing Rounds"] });
+  });
 });
 
 describe("chipsToArmorFilters", () => {
@@ -107,5 +142,30 @@ describe("chipsToArmorFilters", () => {
       },
     ];
     expect(chipsToArmorFilters(chips)).toEqual({ classType: ["Hunter"] });
+  });
+
+  test("maps duplicate yes/no chips to the boolean filter", () => {
+    expect(
+      chipsToArmorFilters([
+        {
+          id: "duplicate:yes",
+          categoryId: "duplicate",
+          categoryLabel: "Duplicate",
+          value: "Yes",
+          valueId: "yes",
+        },
+      ]),
+    ).toEqual({ isDupe: true });
+    expect(
+      chipsToArmorFilters([
+        {
+          id: "duplicate:no",
+          categoryId: "duplicate",
+          categoryLabel: "Duplicate",
+          value: "No",
+          valueId: "no",
+        },
+      ]),
+    ).toEqual({ isDupe: false });
   });
 });

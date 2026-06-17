@@ -35,6 +35,18 @@ export const ARMOR3_STAT_ICON_BY_HASH: Record<number, string> = {
 /** Balanced Tuning — present on every tuning socket alongside the +5/-5 mods. */
 export const BALANCED_TUNING_PLUG_HASH = 3122197216;
 
+/** Plug categories whose stat deltas should be stripped from owned armor display stats. */
+export const ARMOR_STAT_PLUG_CATEGORIES = new Set([
+  PLUG_CATEGORY_TUNING_MODS,
+  2912171003, // EnhancementsV2Head
+  3422420680, // EnhancementsV2Arms
+  1526202480, // EnhancementsV2Chest
+  2111701510, // EnhancementsV2Legs
+  912441879, // EnhancementsV2ClassItem
+  2487827355, // EnhancementsV2General
+  4062965806, // ArmorModsGameplay (activity mods)
+]);
+
 /** +5/-5 tuning mod plug hashes → tuned stat hash (from DIM d2-known-values). */
 export const TUNING_MOD_TO_STAT_HASH: Record<number, number> = {
   309000506: ARMOR3_STAT_HASHES.Grenade,

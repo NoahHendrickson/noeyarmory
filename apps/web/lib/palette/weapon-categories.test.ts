@@ -2,8 +2,9 @@ import { describe, expect, test } from "vitest";
 
 import type { PerkOption } from "@repo/destiny";
 
-import { DAMAGE_PERKS_LABEL, DAMAGE_PERKS_VALUE_ID } from "./constants";
+import { DAMAGE_PERKS_LABEL, DAMAGE_PERKS_VALUE_ID, PERK_COMBO_CATEGORY_ID } from "./constants";
 import {
+  buildWeaponCategories,
   isWeaponPerkFilterCategory,
   perkCategory,
   WEAPON_PERK_FILTER_CATEGORY_IDS,
@@ -13,6 +14,7 @@ describe("isWeaponPerkFilterCategory", () => {
   test("is true for the trait and origin perk columns", () => {
     expect(isWeaponPerkFilterCategory("trait1")).toBe(true);
     expect(isWeaponPerkFilterCategory("trait2")).toBe(true);
+    expect(isWeaponPerkFilterCategory(PERK_COMBO_CATEGORY_ID)).toBe(true);
     expect(isWeaponPerkFilterCategory("originTrait")).toBe(true);
   });
 
@@ -23,10 +25,36 @@ describe("isWeaponPerkFilterCategory", () => {
   });
 
   test("covers exactly the published perk-filter category ids", () => {
-    expect([...WEAPON_PERK_FILTER_CATEGORY_IDS]).toEqual(["trait1", "trait2", "originTrait"]);
+    expect([...WEAPON_PERK_FILTER_CATEGORY_IDS]).toEqual([
+      "trait1",
+      "trait2",
+      PERK_COMBO_CATEGORY_ID,
+      "originTrait",
+    ]);
     for (const id of WEAPON_PERK_FILTER_CATEGORY_IDS) {
       expect(isWeaponPerkFilterCategory(id)).toBe(true);
     }
+  });
+});
+
+describe("buildWeaponCategories", () => {
+  test("adds a two-selection Perk Combo category from both trait columns", () => {
+    const categories = buildWeaponCategories(
+      [],
+      {
+        trait1: [{ name: "Repulsor Brace", hash: 1, count: 4, currentlyCanRoll: true }],
+        trait2: [{ name: "Destabilizing Rounds", hash: 2, count: 3, currentlyCanRoll: true }],
+        originTrait: [],
+      },
+      [],
+    );
+
+    const combo = categories.find((category) => category.id === PERK_COMBO_CATEGORY_ID);
+    expect(combo).toMatchObject({ label: "Perk Combo", maxSelections: 2 });
+    expect(combo?.getValues("").map((value) => value.label)).toEqual([
+      "Repulsor Brace",
+      "Destabilizing Rounds",
+    ]);
   });
 });
 

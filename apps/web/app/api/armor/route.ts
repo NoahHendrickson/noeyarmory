@@ -31,6 +31,7 @@ export async function GET() {
         setName: o.setName,
         setBonuses: o.setBonuses,
         archetype: o.archetype,
+        secondaryStat: o.secondaryStat,
         tertiaryStat: o.tertiaryStat,
         tunableStat: o.tunableStat,
         stats: o.stats,

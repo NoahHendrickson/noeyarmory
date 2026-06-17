@@ -57,6 +57,7 @@ describe("GET /api/armor", () => {
           },
         ],
         archetype: "Paragon",
+        secondaryStat: "Health",
         stats: [
           { hash: 2996146975, name: "Weapons", value: 30 },
           { hash: 392767087, name: "Health", value: 15 },
@@ -92,6 +93,7 @@ describe("GET /api/armor", () => {
           name: "Virtuous Helm",
           location: "vault",
           archetype: "Paragon",
+          secondaryStat: "Health",
           setBonuses: [
             expect.objectContaining({
               requiredSetCount: 2,

@@ -244,6 +244,8 @@ export interface ArmorIndex {
   archetypes: ArmorArchetypeRef[];
   /** Armor 3.0 sets that have set bonus perks. */
   armor30Sets: Armor30SetRef[];
+  /** Plug hash → Armor 3.0 stat deltas (mods, tuning, etc.) for stripping equipped bonuses. */
+  plugStatMods?: Record<number, StatMod[]>;
 }
 
 /** Committed hash snapshot used when no prior generated armor index exists (e.g. CI builds). */

@@ -8,12 +8,15 @@ import {
   resolveArmor30Stats,
   resolveTertiaryStat,
   resolveTunableStatForInstance,
+  collectArmorStatAdjustingPlugHashes,
+  subtractEquippedPlugStatBonuses,
   type Armor30SetBonus,
   type ArmorDoc,
   type ArmorIndex,
   type ItemStat,
   type PerkRef,
   type ReusablePlug,
+  type StatMod,
 } from "@repo/destiny";
 
 import { refreshAccessToken, requireEnv } from "./bungie-auth";
@@ -145,6 +148,7 @@ export interface OwnedArmor {
   setName?: string;
   setBonuses?: Armor30SetBonus[];
   archetype?: string;
+  secondaryStat?: string;
   tertiaryStat?: string;
   tunableStat?: string;
   stats?: ReturnType<typeof resolveArmor30Stats>;
@@ -157,6 +161,7 @@ interface ArmorIndexLookups {
   modMap: Map<number, PerkRef>;
   archetypeMap: Map<number, string>;
   armor30SetsByHash: Map<number, Armor30SetBonus[]>;
+  plugStatMap: Map<number, StatMod[]>;
 }
 
 let armorIndexCache: ArmorIndexLookups | null = null;
@@ -170,6 +175,9 @@ function loadArmorIndex(): ArmorIndexLookups {
     archetypeMap: buildArchetypeMap(index.archetypes ?? []),
     armor30SetsByHash: new Map(
       (index.armor30Sets ?? []).map((set) => [set.hash, set.bonuses] as const),
+    ),
+    plugStatMap: new Map(
+      Object.entries(index.plugStatMods ?? {}).map(([hash, mods]) => [Number(hash), mods]),
     ),
   };
   return armorIndexCache;
@@ -292,13 +300,26 @@ function buildOwnedArmor(
 
   const instanceId = item.itemInstanceId;
   const sockets = components.socketData[instanceId]?.sockets ?? [];
+  const reusablePlugs = profileReusablePlugsToRecord(components.reusablePlugData[instanceId]);
   const isArmor30 = armorDoc.isArmor30 ?? false;
+  const rolledMods = resolveRolledPlugs(instanceId, lookups.modMap, components.socketData);
   const profileStats = profileStatsToItemStats(components.statsData[instanceId]?.stats);
+  const statAdjustingPlugHashes = collectArmorStatAdjustingPlugHashes(
+    sockets,
+    rolledMods.flatMap((mod) => [mod.hash, ...(mod.alternateHashes ?? [])]),
+    reusablePlugs,
+  );
+  const baseProfileStats = subtractEquippedPlugStatBonuses(
+    profileStats,
+    statAdjustingPlugHashes,
+    lookups.plugStatMap,
+  );
+  const stats = resolveArmor30Stats(baseProfileStats);
 
   return {
     armor: armorDoc,
     instanceId,
-    rolledMods: resolveRolledPlugs(instanceId, lookups.modMap, components.socketData),
+    rolledMods,
     isArmor30,
     setName: isArmor30 ? armorDoc.setName : undefined,
     setBonuses:
@@ -308,14 +329,12 @@ function buildOwnedArmor(
     archetype: isArmor30
       ? resolveArchetypeFromPlugMap(sockets, lookups.archetypeMap)
       : undefined,
-    tertiaryStat: isArmor30 ? resolveTertiaryStat(profileStats) : undefined,
+    secondaryStat: isArmor30 ? stats[1]?.name : undefined,
+    tertiaryStat: isArmor30 ? resolveTertiaryStat(baseProfileStats) : undefined,
     tunableStat: isArmor30
-      ? resolveTunableStatForInstance(
-          sockets,
-          profileReusablePlugsToRecord(components.reusablePlugData[instanceId]),
-        )
+      ? resolveTunableStatForInstance(sockets, reusablePlugs)
       : undefined,
-    stats: resolveArmor30Stats(profileStats),
+    stats,
     location: located.location,
     ownerCharacterId: located.ownerCharacterId,
   };

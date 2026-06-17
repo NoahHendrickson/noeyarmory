@@ -2,9 +2,9 @@ import { memo } from "react";
 import { Button, ResultRow } from "@repo/ui";
 
 import type { OwnedArmorItem } from "../lib/armor-types";
+import type { ArmorDuplicateDiff } from "../lib/armor-duplicate-diffs";
 import { ArmorItemIcon } from "./armor-item-icon";
 import { ArmorResultSubtitle } from "./armor-result-subtitle";
-import { NewItemBadge } from "./new-item-badge";
 
 const CLASS_CHARACTERS = new Set(["Titan", "Hunter", "Warlock"]);
 
@@ -23,8 +23,9 @@ function moveTooltip(armor: OwnedArmorItem): string | undefined {
 function equipTooltip(armor: OwnedArmorItem): string | undefined {
   if (!canTargetClass(armor.classType)) return "Class-specific armor required";
   if (armor.location === "equipped") return "Already equipped";
-  if (armor.location === "vault") return "Move to character first";
-  if (armor.location !== "inventory") return "Item is not on a character";
+  if (armor.location !== "inventory" && armor.location !== "vault") {
+    return "Item cannot be equipped from this location";
+  }
   return undefined;
 }
 
@@ -33,7 +34,10 @@ function canMoveToCharacter(armor: OwnedArmorItem): boolean {
 }
 
 function canEquip(armor: OwnedArmorItem): boolean {
-  return armor.location === "inventory" && canTargetClass(armor.classType);
+  return (
+    (armor.location === "inventory" || armor.location === "vault") &&
+    canTargetClass(armor.classType)
+  );
 }
 
 function isolatePalettePointer(event: React.PointerEvent) {
@@ -47,6 +51,9 @@ export type ArmorActionState = {
   errorInstanceId?: string;
 };
 
+const armorActionButtonClassName =
+  "bg-armor-action-border text-armor-action-foreground hover:bg-armor-action-hover hover:text-white";
+
 /** A single armor row in the command-palette results list. */
 export const ArmorResultRow = memo(function ArmorResultRow({
   armor,
@@ -54,27 +61,16 @@ export const ArmorResultRow = memo(function ArmorResultRow({
   onEquip,
   onMoveToCharacter,
   actionState,
-  isNew = false,
+  duplicateDiff,
 }: {
   armor: OwnedArmorItem;
   onSelect?: () => void;
   onEquip?: () => void;
   onMoveToCharacter?: () => void;
   actionState?: ArmorActionState;
-  isNew?: boolean;
+  duplicateDiff?: ArmorDuplicateDiff;
 }) {
   const watermark = armor.watermark;
-
-  const subtitleContent = <ArmorResultSubtitle armor={armor} />;
-
-  const subtitle = isNew ? (
-    <span className="inline-flex flex-wrap items-center gap-2">
-      <NewItemBadge />
-      {subtitleContent}
-    </span>
-  ) : (
-    subtitleContent
-  );
 
   const isPending = actionState?.pendingInstanceId === armor.instanceId;
   const equipPending = isPending && actionState?.pendingAction === "equip";
@@ -98,7 +94,7 @@ export const ArmorResultRow = memo(function ArmorResultRow({
         />
       }
       title={armor.name}
-      subtitle={subtitle}
+      subtitle={<ArmorResultSubtitle armor={armor} duplicateDiff={duplicateDiff} />}
       trailing={
         <div
           data-palette-ignore-close
@@ -108,20 +104,18 @@ export const ArmorResultRow = memo(function ArmorResultRow({
           <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-1.5">
             <Button
               type="button"
-              variant="outline"
-              size="sm"
-              className="w-full sm:w-auto"
+              variant="ghost"
+              className={`h-7 w-full rounded-[8px] border-0 px-2.5 py-0 text-xs sm:w-auto sm:px-3 ${armorActionButtonClassName}`}
               disabled={!equipEnabled}
-              title={equipTooltip(armor) ?? "Equip on matching class character (must be in orbit)"}
+              title={equipTooltip(armor) ?? `Equip on ${armor.classType} (must be in orbit)`}
               onClick={() => onEquip?.()}
             >
               {equipPending ? "Equipping…" : "Equip"}
             </Button>
             <Button
               type="button"
-              variant="outline"
-              size="sm"
-              className="w-full sm:w-auto"
+              variant="ghost"
+              className={`h-7 w-full rounded-[8px] border-0 px-2.5 py-0 text-xs sm:w-auto sm:px-3 ${armorActionButtonClassName}`}
               disabled={!moveEnabled}
               title={
                 moveTooltip(armor) ??
@@ -132,7 +126,7 @@ export const ArmorResultRow = memo(function ArmorResultRow({
               {transferPending ? "Moving…" : (
                 <>
                   <span className="sm:hidden">Move</span>
-                  <span className="hidden sm:inline">Move to character</span>
+                  <span className="hidden sm:inline">Move</span>
                 </>
               )}
             </Button>

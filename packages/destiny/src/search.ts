@@ -106,6 +106,8 @@ export interface WeaponFilters {
   trait2DamagePerks?: boolean;
   /** Perk rollable in the origin-trait column (OR within). */
   originTrait?: string[];
+  /** Up to two trait perks that must roll together in separate trait columns, order-agnostic. */
+  perkCombo?: string[];
   /** Weapon must be able to roll ALL of these perks in ANY column (case-insensitive). */
   perks?: string[];
   /** Each group is OR within; every selected custom group must match at least one perk. */
@@ -188,6 +190,18 @@ function columnRollsAny(
   });
 }
 
+function columnRollsName(
+  column: InternedPerkColumn | undefined,
+  wanted: string,
+  perks: PerkRef[],
+): boolean {
+  if (!column) return false;
+  return column.perkIndices.some((index) => {
+    const perk = perks[index];
+    return perk != null && lower(perk.name) === wanted;
+  });
+}
+
 /** True if `column` can roll any perk whose catalog index is in `indices`. */
 function columnRollsAnyIndex(
   column: InternedPerkColumn | undefined,
@@ -197,6 +211,27 @@ function columnRollsAnyIndex(
   return column.perkIndices.some((index) => indices.has(index));
 }
 
+function traitComboMatches(
+  traits: InternedPerkColumn[],
+  wanted: readonly string[],
+  perks: PerkRef[],
+): boolean {
+  const first = wanted[0];
+  if (!first) return true;
+
+  const trait1 = traits[0];
+  const trait2 = traits[1];
+  const second = wanted[1];
+  if (!second) {
+    return columnRollsName(trait1, first, perks) || columnRollsName(trait2, first, perks);
+  }
+
+  return (
+    (columnRollsName(trait1, first, perks) && columnRollsName(trait2, second, perks)) ||
+    (columnRollsName(trait1, second, perks) && columnRollsName(trait2, first, perks))
+  );
+}
+
 /** Filter weapons by attribute facets, position-aware trait columns, and required perks. */
 export function filterWeapons(
   weapons: WeaponSummary[],
@@ -204,6 +239,7 @@ export function filterWeapons(
   perks: PerkRef[],
 ): WeaponSummary[] {
   const requiredPerks = (filters.perks ?? []).map(lower);
+  const perkCombo = [...new Set((filters.perkCombo ?? []).map(lower).filter(Boolean))].slice(0, 2);
   const customPerkGroups = (filters.customPerkGroups ?? [])
     .map((group) => group.map(lower).filter(Boolean))
     .filter((group) => group.length > 0);
@@ -254,10 +290,11 @@ export function filterWeapons(
     }
     if (craftableActive && !(w.craftable ? craftableYes : craftableNo)) return false;
     if (filters.adept != null && w.adept !== filters.adept) return false;
-    if (trait1Wanted.size || trait2Wanted.size || damageIndices) {
+    if (trait1Wanted.size || trait2Wanted.size || damageIndices || perkCombo.length > 0) {
       const traits = traitColumns(w.columns);
       if (!columnRollsAny(traits[0], trait1Wanted, perks)) return false;
       if (!columnRollsAny(traits[1], trait2Wanted, perks)) return false;
+      if (!traitComboMatches(traits, perkCombo, perks)) return false;
       if (damageIndices) {
         if (filters.trait1DamagePerks && !columnRollsAnyIndex(traits[0], damageIndices)) {
           return false;

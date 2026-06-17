@@ -34,6 +34,7 @@ export {
   ARMOR3_STAT_HASHES,
   ARMOR3_STAT_NAME_BY_HASH,
   ARMOR3_STAT_ICON_BY_HASH,
+  ARMOR_STAT_PLUG_CATEGORIES,
   TUNING_MOD_TO_STAT_HASH,
 } from "./armor30-constants";
 export {
@@ -47,6 +48,8 @@ export {
   resolveTunableStatFromReusablePlugs,
   resolveTunableStatForInstance,
   buildArchetypeMap,
+  collectArmorStatAdjustingPlugHashes,
+  subtractEquippedPlugStatBonuses,
   type Armor30StatRoll,
   type ItemSocketPlug,
   type ItemStat,

@@ -178,6 +178,47 @@ describe("filterWeapons", () => {
     );
     expect(names(result)).toEqual(["Sunshot Scout"]);
   });
+
+  test("perk combo matches two perks in separate trait columns regardless of order", () => {
+    expect(
+      names(filterWeapons(sampleSummaries, { perkCombo: ["Surrounded", "Frenzy"] }, samplePerks)),
+    ).toEqual(["Fatebringer"]);
+    expect(
+      names(filterWeapons(sampleSummaries, { perkCombo: ["Frenzy", "Surrounded"] }, samplePerks)),
+    ).toEqual(["Fatebringer"]);
+  });
+
+  test("perk combo rejects perks that only coexist in the same trait column", () => {
+    expect(
+      filterWeapons(sampleSummaries, { perkCombo: ["Firefly", "Explosive Payload"] }, samplePerks),
+    ).toEqual([]);
+  });
+
+  test("single selected combo perk matches either trait column", () => {
+    expect(names(filterWeapons(sampleSummaries, { perkCombo: ["Surrounded"] }, samplePerks))).toEqual([
+      "Fatebringer",
+      "Sunlit Fusion",
+    ]);
+  });
+
+  test("perk combo composes with other facets", () => {
+    expect(
+      names(
+        filterWeapons(
+          sampleSummaries,
+          { element: ["Arc"], perkCombo: ["Surrounded", "Frenzy"] },
+          samplePerks,
+        ),
+      ),
+    ).toEqual(["Fatebringer"]);
+    expect(
+      filterWeapons(
+        sampleSummaries,
+        { type: ["Fusion Rifle"], perkCombo: ["Surrounded", "Frenzy"] },
+        samplePerks,
+      ),
+    ).toEqual([]);
+  });
 });
 
 describe("weaponsWithPerk", () => {

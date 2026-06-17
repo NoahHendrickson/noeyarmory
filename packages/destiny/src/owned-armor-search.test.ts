@@ -15,6 +15,7 @@ const sampleOwned: OwnedArmorSearchItem[] = [
     source: "Root of Nightmares",
     setName: "Virtuous",
     archetype: "Paragon",
+    secondaryStat: "Weapons",
     tertiaryStat: "Melee",
     tunableStat: "Grenade",
     isArmor30: true,
@@ -49,6 +50,54 @@ describe("filterOwnedArmor", () => {
       "Virtuous Helm",
     ]);
     expect(filterOwnedArmor(sampleOwned, { source: ["Vault of Glass"] })).toEqual([]);
+  });
+
+  test("isDupe keeps every Armor 3.0 item sharing set and archetype", () => {
+    const armor: OwnedArmorSearchItem[] = [
+      {
+        name: "Virtuous Helm A",
+        classType: "Hunter",
+        setName: "Virtuous",
+        archetype: "Paragon",
+        secondaryStat: "Weapons",
+        tertiaryStat: "Melee",
+        isArmor30: true,
+      },
+      {
+        name: "Virtuous Helm B",
+        classType: "Hunter",
+        setName: "Virtuous",
+        archetype: "Paragon",
+        secondaryStat: "Weapons",
+        tertiaryStat: "Melee",
+        isArmor30: true,
+      },
+      {
+        name: "Virtuous Helm Singleton",
+        classType: "Hunter",
+        setName: "Virtuous",
+        archetype: "Paragon",
+        secondaryStat: "Weapons",
+        tertiaryStat: "Grenade",
+        tunableStat: "Class",
+        isArmor30: true,
+      },
+      {
+        name: "Legacy Helm",
+        classType: "Hunter",
+        setName: "Virtuous",
+        archetype: "Paragon",
+        tertiaryStat: "Melee",
+        isArmor30: false,
+      },
+    ];
+
+    expect(filterOwnedArmor(armor, { isDupe: true }).map((a) => a.name)).toEqual([
+      "Virtuous Helm A",
+      "Virtuous Helm B",
+      "Virtuous Helm Singleton",
+    ]);
+    expect(filterOwnedArmor(armor, { isDupe: false }).map((a) => a.name)).toEqual(["Legacy Helm"]);
   });
 });
 

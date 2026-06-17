@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { PLUG_CATEGORY_ARMOR3_MASTERWORKS } from "./armor30-constants";
+import {
+  ARMOR3_STAT_HASHES,
+  PLUG_CATEGORY_ARMOR3_MASTERWORKS,
+  PLUG_CATEGORY_TUNING_MODS,
+} from "./armor30-constants";
 import { buildArmorIndex } from "./build-armor-index";
 import type { ManifestDefs } from "./manifest";
 
@@ -104,5 +108,39 @@ describe("buildArmorIndex", () => {
     expect(piece?.setHash).toBe(SET_HASH);
     expect(piece?.setName).toBe("Virtuous");
     expect(piece?.isArmor30).toBe(true);
+  });
+
+  it("indexes plug stat bonuses for armor mods and tuning, not archetypes or masterworks", () => {
+    const defs = minimalArmor30Defs();
+    defs.DestinyInventoryItemDefinition[MASTERWORK_PLUG] = {
+      hash: MASTERWORK_PLUG,
+      plug: { plugCategoryHash: PLUG_CATEGORY_ARMOR3_MASTERWORKS },
+      investmentStats: [{ statTypeHash: ARMOR3_STAT_HASHES.Health, value: 5, isConditionallyActive: false }],
+    } as (typeof defs.DestinyInventoryItemDefinition)[number];
+    defs.DestinyInventoryItemDefinition[6001] = {
+      hash: 6001,
+      plug: { plugCategoryHash: PLUG_CATEGORY_TUNING_MODS },
+      investmentStats: [
+        { statTypeHash: ARMOR3_STAT_HASHES.Weapons, value: 5, isConditionallyActive: false },
+        { statTypeHash: ARMOR3_STAT_HASHES.Health, value: -5, isConditionallyActive: false },
+      ],
+    } as (typeof defs.DestinyInventoryItemDefinition)[number];
+    defs.DestinyInventoryItemDefinition[6002] = {
+      hash: 6002,
+      plug: { plugCategoryHash: 2487827355 },
+      investmentStats: [
+        { statTypeHash: ARMOR3_STAT_HASHES.Melee, value: 10, isConditionallyActive: false },
+      ],
+    } as (typeof defs.DestinyInventoryItemDefinition)[number];
+
+    const index = buildArmorIndex(defs, "test");
+
+    expect(index.plugStatMods).toEqual({
+      6001: [
+        { hash: ARMOR3_STAT_HASHES.Weapons, value: 5 },
+        { hash: ARMOR3_STAT_HASHES.Health, value: -5 },
+      ],
+      6002: [{ hash: ARMOR3_STAT_HASHES.Melee, value: 10 }],
+    });
   });
 });

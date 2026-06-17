@@ -9,7 +9,57 @@ import {
   resolveTertiaryStat,
   resolveTunableStat,
   resolveTunableStatForInstance,
+  subtractEquippedPlugStatBonuses,
+  collectArmorStatAdjustingPlugHashes,
 } from "./armor-instance";
+
+describe("subtractEquippedPlugStatBonuses", () => {
+  const plugStatMap = new Map([
+    [
+      9001,
+      [
+        { hash: ARMOR3_STAT_HASHES.Health, value: -5 },
+        { hash: ARMOR3_STAT_HASHES.Weapons, value: 5 },
+      ],
+    ],
+    [9002, [{ hash: ARMOR3_STAT_HASHES.Melee, value: 10 }]],
+  ]);
+
+  test("reverses tuning and stat mod bonuses", () => {
+    const stats = subtractEquippedPlugStatBonuses(
+      [
+        { statHash: ARMOR3_STAT_HASHES.Weapons, value: 25 },
+        { statHash: ARMOR3_STAT_HASHES.Health, value: 15 },
+        { statHash: ARMOR3_STAT_HASHES.Melee, value: 30 },
+      ],
+      [9001, 9002],
+      plugStatMap,
+    );
+
+    expect(stats).toEqual([
+      { statHash: ARMOR3_STAT_HASHES.Weapons, value: 20 },
+      { statHash: ARMOR3_STAT_HASHES.Health, value: 20 },
+      { statHash: ARMOR3_STAT_HASHES.Melee, value: 20 },
+    ]);
+  });
+
+  test("returns stats unchanged when no equipped plugs match the map", () => {
+    const input = [{ statHash: ARMOR3_STAT_HASHES.Weapons, value: 20 }];
+    expect(subtractEquippedPlugStatBonuses(input, [123], plugStatMap)).toEqual(input);
+  });
+});
+
+describe("collectArmorStatAdjustingPlugHashes", () => {
+  test("includes rolled mod hashes and the equipped tuning plug only", () => {
+    expect(
+      collectArmorStatAdjustingPlugHashes(
+        [{ plugHash: 100 }, { plugHash: 673231129 }, { plugHash: 200 }],
+        [9002, 9003],
+        { 1: [{ plugItemHash: 673231129 }] },
+      ),
+    ).toEqual(expect.arrayContaining([9002, 9003, 673231129]));
+  });
+});
 
 describe("resolveArmor30Stats", () => {
   test("orders nonzero stats by value, then zero stats", () => {

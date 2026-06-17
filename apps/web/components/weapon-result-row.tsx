@@ -4,7 +4,6 @@ import { abbreviateWeaponType, type WeaponDpsEntry, type WeaponSummary } from "@
 
 import { CraftableBadge } from "./craftable-badge";
 import { ElementIcon } from "./element-icon";
-import { NewItemBadge } from "./new-item-badge";
 import { PinToggleButton } from "./pin-toggle-button";
 import { WeaponDpsLabel } from "./weapon-dps-label";
 import { bungieIcon } from "../lib/bungie";
@@ -41,7 +40,6 @@ export const WeaponResultRow = memo(function WeaponResultRow({
   onSelect,
   pinned = false,
   onTogglePin,
-  isNew = false,
 }: {
   weapon: WeaponResultData;
   /** Bungie manifest icon path for the weapon's damage type. */
@@ -50,7 +48,6 @@ export const WeaponResultRow = memo(function WeaponResultRow({
   onSelect?: () => void;
   pinned?: boolean;
   onTogglePin?: () => void;
-  isNew?: boolean;
 }) {
   const icon = bungieIcon(weapon.icon);
   const watermark = bungieIcon(weapon.watermark);
@@ -104,7 +101,6 @@ export const WeaponResultRow = memo(function WeaponResultRow({
         <span className="flex flex-col gap-0.5">
           <span className="inline-flex min-w-0 items-center gap-2">
             <ElementIcon element={weapon.element} iconPath={elementIconPath} colored />
-            {isNew ? <NewItemBadge /> : null}
             {weapon.craftable ? <CraftableBadge className="mx-0.5" /> : null}
             {weaponTypeLabel(weapon.type, weapon.frame)}
             {weapon.source ? (

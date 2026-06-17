@@ -1,6 +1,11 @@
-import { buildColumnPerks, collectSocketPlugCandidates } from "./build-index";
+import { buildColumnPerks, collectSocketPlugCandidates, extractPlugStatMods } from "./build-index";
 import { isArmor30ItemDef } from "./armor-instance";
-import { PLUG_CATEGORY_ARMOR_ARCHETYPES } from "./armor30-constants";
+import {
+  ARMOR3_STAT_NAME_BY_HASH,
+  ARMOR_STAT_PLUG_CATEGORIES,
+  PLUG_CATEGORY_ARMOR_ARCHETYPES,
+  PLUG_CATEGORY_ARMOR3_MASTERWORKS,
+} from "./armor30-constants";
 import type { ManifestDefs } from "./manifest";
 import { normalizeWeaponSource, resolveWeaponSeason } from "./weapon-provenance";
 import type {
@@ -11,6 +16,7 @@ import type {
   ArmorIndex,
   ArmorStat,
   PerkColumn,
+  StatMod,
 } from "./types";
 
 const ARMOR_ITEM_TYPE = 2; // DestinyItemType.Armor
@@ -61,6 +67,30 @@ function buildArchetypeCatalog(defs: ManifestDefs): ArmorArchetypeRef[] {
 
   archetypes.sort((a, b) => a.name.localeCompare(b.name));
   return archetypes;
+}
+
+/** Plug hash → Armor 3.0 stat deltas for equipped mods/tuning (not archetypes or masterworks). */
+function buildPlugStatBonusMap(defs: ManifestDefs): Record<number, StatMod[]> {
+  const items = defs.DestinyInventoryItemDefinition;
+  const map: Record<number, StatMod[]> = {};
+
+  for (const item of Object.values(items)) {
+    const category = item.plug?.plugCategoryHash;
+    if (category == null) continue;
+    if (category === PLUG_CATEGORY_ARMOR_ARCHETYPES) continue;
+    if (category === PLUG_CATEGORY_ARMOR3_MASTERWORKS) continue;
+    if (!ARMOR_STAT_PLUG_CATEGORIES.has(category)) continue;
+
+    const statMods = extractPlugStatMods(item);
+    if (!statMods?.length) continue;
+
+    const armorStatMods = statMods.filter((mod) => mod.hash in ARMOR3_STAT_NAME_BY_HASH);
+    if (!armorStatMods.length) continue;
+
+    map[item.hash] = armorStatMods;
+  }
+
+  return map;
 }
 
 /** Flatten manifest definitions into a searchable armor index. */
@@ -207,5 +237,6 @@ export function buildArmorIndex(defs: ManifestDefs, version: string): ArmorIndex
     armor: armorPieces,
     archetypes,
     armor30Sets,
+    plugStatMods: buildPlugStatBonusMap(defs),
   };
 }

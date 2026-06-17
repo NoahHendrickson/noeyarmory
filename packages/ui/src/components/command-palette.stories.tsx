@@ -421,9 +421,11 @@ export const HidesFullSingleSelectCategory: Story = {
     const input = canvas.getByRole("combobox");
     await userEvent.click(input);
     await userEvent.type(input, "surr");
-    await waitFor(() =>
-      expect(canvas.getByRole("option", { name: /Trait 2.*Surrounded/i })).toBeInTheDocument(),
-    );
+    await waitFor(() => {
+      expect(canvas.getAllByRole("option", { name: /Trait 2.*Surrounded/i }).length).toBeGreaterThan(
+        0,
+      );
+    });
     expect(canvas.queryByRole("option", { name: /Trait 1.*Surrounded/i })).toBeNull();
   },
 };
@@ -435,9 +437,11 @@ export const TypingPerkValueSuggestsChip: Story = {
     const input = canvas.getByRole("combobox");
     await userEvent.click(input);
     await userEvent.type(input, "surr");
-    await waitFor(() =>
-      expect(canvas.getByRole("option", { name: /Trait 2.*Surrounded/i })).toBeInTheDocument(),
-    );
+    await waitFor(() => {
+      expect(canvas.getAllByRole("option", { name: /Trait 2.*Surrounded/i }).length).toBeGreaterThan(
+        0,
+      );
+    });
     await userEvent.keyboard("{Enter}");
     await waitFor(() =>
       expect(canvas.getByRole("button", { name: /remove trait 2/i })).toBeInTheDocument(),
@@ -657,9 +661,11 @@ export const ShowsPreviewWhileTyping: Story = {
     const input = canvas.getByRole("combobox");
     await userEvent.click(input);
     await userEvent.type(input, "surr");
-    await waitFor(() =>
-      expect(canvas.getByRole("option", { name: /Trait 2.*Surrounded/i })).toBeInTheDocument(),
-    );
+    await waitFor(() => {
+      expect(canvas.getAllByRole("option", { name: /Trait 2.*Surrounded/i }).length).toBeGreaterThan(
+        0,
+      );
+    });
     await waitFor(() =>
       expect(canvas.getByRole("option", { name: /Palindrome/ })).toBeInTheDocument(),
     );

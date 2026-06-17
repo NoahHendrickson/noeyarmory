@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import type { PaletteCategory } from "../components/command-palette/types";
-import { filterCategories, scanValueSuggestions } from "./palette-suggestions";
+import { categoryIsFull, filterCategories, scanValueSuggestions } from "./palette-suggestions";
 
 describe("scanValueSuggestions", () => {
   test("skips categories with inlineSuggestions false", () => {
@@ -120,5 +120,46 @@ describe("scanValueSuggestions", () => {
     const suggestions = scanValueSuggestions([trait], "suround", [], { maxRank: 2 });
 
     expect(suggestions).toEqual([]);
+  });
+});
+
+describe("categoryIsFull", () => {
+  test("maxSelections keeps a category available until its selection limit", () => {
+    const category: PaletteCategory = {
+      id: "perkCombo",
+      label: "Perk Combo",
+      maxSelections: 2,
+      getValues: () => [],
+    };
+
+    expect(
+      categoryIsFull(category, [
+        {
+          id: "perkCombo:repulsor-brace",
+          categoryId: "perkCombo",
+          categoryLabel: "Perk Combo",
+          value: "Repulsor Brace",
+          valueId: "repulsor-brace",
+        },
+      ]),
+    ).toBe(false);
+    expect(
+      categoryIsFull(category, [
+        {
+          id: "perkCombo:repulsor-brace",
+          categoryId: "perkCombo",
+          categoryLabel: "Perk Combo",
+          value: "Repulsor Brace",
+          valueId: "repulsor-brace",
+        },
+        {
+          id: "perkCombo:destabilizing-rounds",
+          categoryId: "perkCombo",
+          categoryLabel: "Perk Combo",
+          value: "Destabilizing Rounds",
+          valueId: "destabilizing-rounds",
+        },
+      ]),
+    ).toBe(true);
   });
 });

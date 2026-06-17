@@ -56,6 +56,12 @@
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
 
+  /* Armor row action buttons (Equip / Move) */
+  --armor-action: rgba(135, 190, 235, 0.22);
+  --armor-action-hover: rgba(160, 210, 245, 0.54);
+  --armor-action-foreground: #e6f2fb;
+  --armor-action-border: rgba(160, 210, 245, 0.42);
+
   /* Filter chip tones (Figma node 131:3244) */
   --filter-chip-trait: rgba(57, 148, 229, 0.7);
   --filter-chip-trait-foreground: #ffffff;
@@ -102,6 +108,10 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+  --color-armor-action: var(--armor-action);
+  --color-armor-action-hover: var(--armor-action-hover);
+  --color-armor-action-foreground: var(--armor-action-foreground);
+  --color-armor-action-border: var(--armor-action-border);
   --color-filter-chip-trait: var(--filter-chip-trait);
   --color-filter-chip-trait-foreground: var(--filter-chip-trait-foreground);
   --color-filter-chip-ammo-primary: var(--filter-chip-ammo-primary);
