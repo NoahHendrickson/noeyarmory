@@ -24,7 +24,8 @@ export const ARMOR_DUPLICATE_NO_LABEL = "No";
 
 export const CUSTOM_FILTER_CATEGORY_ID = "customFilter";
 export const CUSTOM_FILTER_DRAFT_CATEGORY_ID = "customFilterDraft";
-export const CUSTOM_FILTER_TRAIT_CATEGORY_IDS = new Set(["trait"]);
+export const TRAIT_CATEGORY_ID = "trait";
+export const CUSTOM_FILTER_TRAIT_CATEGORY_IDS = new Set([TRAIT_CATEGORY_ID]);
 export const PERK_COMBO_CATEGORY_ID = "perkCombo";
 
 export const ARMOR_LOGIN_URL = "/api/auth/login?returnTo=%2F%3Fmode%3Darmor";

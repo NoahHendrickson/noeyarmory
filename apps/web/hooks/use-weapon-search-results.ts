@@ -4,6 +4,7 @@ import { useDeferredValue, useMemo } from "react";
 import type { PaletteCategory, PaletteChip, PalettePanelState, ValueSuggestion } from "@repo/ui";
 import {
   createLruCache,
+  collapseWeaponVersions,
   filterWeaponNames,
   filterWeapons,
   hasStrongWeaponNameMatch,
@@ -25,10 +26,7 @@ import {
 } from "@repo/destiny";
 
 import type { PaletteResultsMode } from "../lib/palette/results-mode";
-import {
-  MAX_RESULTS,
-  MAX_SHOW_ALL,
-} from "../lib/palette/constants";
+import { MAX_RESULTS, MAX_SHOW_ALL } from "../lib/palette/constants";
 import { chipsToWeaponFilters, withHypotheticalChip } from "../lib/palette/weapon-filters";
 import { useSearchPopularity } from "../lib/use-search-popularity";
 import { useWeapons } from "../lib/weapons-context";
@@ -130,8 +128,9 @@ export function useWeaponSearchResults({
       : weapons;
     const filtered = filterWeapons(base, mergedFilters, perks);
     const ranked = rankWeaponResults(filtered, searchText, sort, dpsByName, nameIndex, popularity);
-    resultCache.set(cacheKey, ranked);
-    return ranked;
+    const collapsed = collapseWeaponVersions(ranked, nameIndex.byName);
+    resultCache.set(cacheKey, collapsed);
+    return collapsed;
   }, [
     weaponSearcher,
     weapons,
@@ -205,7 +204,13 @@ export function useWeaponSearchResults({
       // Empty searchText means "filters only" → start from the whole catalog.
       const previewFilters = mergeWeaponFilters(base, plan.filters);
       const textBase = plan.searchText
-        ? weaponsForPreviewQuery(weapons, weaponSearcher, plan.searchText, previewResultLimit, nameIndex)
+        ? weaponsForPreviewQuery(
+            weapons,
+            weaponSearcher,
+            plan.searchText,
+            previewResultLimit,
+            nameIndex,
+          )
         : weapons;
       appendWeapons(filterWeapons(textBase, previewFilters, perks));
     }
@@ -213,10 +218,8 @@ export function useWeaponSearchResults({
     if (candidates.length === 0) return [];
 
     const rankQuery = plan.searchText || q;
-    return rankWeaponResults(candidates, rankQuery, sort, dpsByName, nameIndex, popularity).slice(
-      0,
-      previewResultLimit,
-    );
+    const ranked = rankWeaponResults(candidates, rankQuery, sort, dpsByName, nameIndex, popularity);
+    return collapseWeaponVersions(ranked, nameIndex.byName).slice(0, previewResultLimit);
   }, [
     previewsEnabled,
     mode,

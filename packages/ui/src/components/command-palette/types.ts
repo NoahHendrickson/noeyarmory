@@ -36,6 +36,8 @@ export interface PaletteCategory {
   matchCategoryListByValues?: boolean;
   /** Per-category inline suggestion rank ceiling (default: scan options `maxRank`). */
   inlineMaxRank?: number;
+  /** Lower values sort first among inline suggestions that opt into category priority. */
+  inlineSuggestionPriority?: number;
   /** Values for this category, filtered by the in-category query. */
   getValues: (query: string) => PaletteValueOption[];
 }

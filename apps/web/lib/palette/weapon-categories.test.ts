@@ -14,6 +14,7 @@ describe("isWeaponPerkFilterCategory", () => {
   test("is true for the trait and origin perk columns", () => {
     expect(isWeaponPerkFilterCategory("trait1")).toBe(true);
     expect(isWeaponPerkFilterCategory("trait2")).toBe(true);
+    expect(isWeaponPerkFilterCategory("trait")).toBe(true);
     expect(isWeaponPerkFilterCategory(PERK_COMBO_CATEGORY_ID)).toBe(true);
     expect(isWeaponPerkFilterCategory("originTrait")).toBe(true);
   });
@@ -28,6 +29,7 @@ describe("isWeaponPerkFilterCategory", () => {
     expect([...WEAPON_PERK_FILTER_CATEGORY_IDS]).toEqual([
       "trait1",
       "trait2",
+      "trait",
       PERK_COMBO_CATEGORY_ID,
       "originTrait",
     ]);
@@ -38,6 +40,32 @@ describe("isWeaponPerkFilterCategory", () => {
 });
 
 describe("buildWeaponCategories", () => {
+  test("orders trait suggestions before perk combo and exposes a merged Trait category", () => {
+    const categories = buildWeaponCategories(
+      [],
+      {
+        trait1: [{ name: "Repulsor Brace", hash: 1, count: 4, currentlyCanRoll: true }],
+        trait2: [{ name: "Destabilizing Rounds", hash: 2, count: 3, currentlyCanRoll: true }],
+        originTrait: [],
+      },
+      [],
+    );
+
+    expect(categories.slice(0, 4).map((category) => category.id)).toEqual([
+      "trait1",
+      "trait2",
+      "trait",
+      PERK_COMBO_CATEGORY_ID,
+    ]);
+
+    const trait = categories.find((category) => category.id === "trait");
+    expect(trait).toMatchObject({ label: "Trait", single: true, inlineSuggestionPriority: 2 });
+    expect(trait?.getValues("").map((value) => value.label)).toEqual([
+      "Repulsor Brace",
+      "Destabilizing Rounds",
+    ]);
+  });
+
   test("adds a two-selection Perk Combo category from both trait columns", () => {
     const categories = buildWeaponCategories(
       [],
@@ -80,19 +108,17 @@ describe("perkCategory damage-perks option", () => {
   test("surfaces the pseudo-option when the query matches its label", () => {
     const category = perkCategory("trait1", "Trait 1", options, null, damageNames);
     expect(category.getValues("damage")[0]?.id).toBe(DAMAGE_PERKS_VALUE_ID);
-    expect(
-      category.getValues("outlaw").some((value) => value.id === DAMAGE_PERKS_VALUE_ID),
-    ).toBe(false);
+    expect(category.getValues("outlaw").some((value) => value.id === DAMAGE_PERKS_VALUE_ID)).toBe(
+      false,
+    );
   });
 
   test("omitted when no damage perk names are provided or none match", () => {
     const withoutSet = perkCategory("trait1", "Trait 1", options, null);
-    expect(
-      withoutSet.getValues("").some((value) => value.id === DAMAGE_PERKS_VALUE_ID),
-    ).toBe(false);
+    expect(withoutSet.getValues("").some((value) => value.id === DAMAGE_PERKS_VALUE_ID)).toBe(
+      false,
+    );
     const noMatches = perkCategory("trait1", "Trait 1", options, null, new Set(["vorpal weapon"]));
-    expect(
-      noMatches.getValues("").some((value) => value.id === DAMAGE_PERKS_VALUE_ID),
-    ).toBe(false);
+    expect(noMatches.getValues("").some((value) => value.id === DAMAGE_PERKS_VALUE_ID)).toBe(false);
   });
 });

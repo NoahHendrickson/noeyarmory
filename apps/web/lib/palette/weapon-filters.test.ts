@@ -2,7 +2,12 @@ import { describe, expect, test } from "vitest";
 
 import type { PaletteChip } from "@repo/ui";
 
-import { DAMAGE_PERKS_LABEL, DAMAGE_PERKS_VALUE_ID, PERK_COMBO_CATEGORY_ID } from "./constants";
+import {
+  DAMAGE_PERKS_LABEL,
+  DAMAGE_PERKS_VALUE_ID,
+  PERK_COMBO_CATEGORY_ID,
+  TRAIT_CATEGORY_ID,
+} from "./constants";
 import { chipsToArmorFilters, chipsToWeaponFilters, withHypotheticalChip } from "./weapon-filters";
 
 describe("chipsToWeaponFilters", () => {
@@ -31,7 +36,13 @@ describe("chipsToWeaponFilters", () => {
     ];
     expect(
       chipsToWeaponFilters(chips, [
-        { id: "reload", name: "Reload perks", perkNames: ["Outlaw", "Feeding Frenzy"], createdAt: "", updatedAt: "" },
+        {
+          id: "reload",
+          name: "Reload perks",
+          perkNames: ["Outlaw", "Feeding Frenzy"],
+          createdAt: "",
+          updatedAt: "",
+        },
       ]),
     ).toEqual({ customPerkGroups: [["Outlaw", "Feeding Frenzy"]] });
   });
@@ -93,6 +104,22 @@ describe("chipsToWeaponFilters", () => {
       perkCombo: ["Repulsor Brace", "Destabilizing Rounds"],
     });
   });
+
+  test("maps generic Trait chips to the trait filter array", () => {
+    const chips: PaletteChip[] = [
+      {
+        id: `${TRAIT_CATEGORY_ID}:destabilizing-rounds`,
+        categoryId: TRAIT_CATEGORY_ID,
+        categoryLabel: "Trait",
+        value: "Destabilizing Rounds",
+        valueId: "destabilizing-rounds",
+      },
+    ];
+
+    expect(chipsToWeaponFilters(chips, [])).toEqual({
+      trait: ["Destabilizing Rounds"],
+    });
+  });
 });
 
 describe("withHypotheticalChip", () => {
@@ -114,6 +141,17 @@ describe("withHypotheticalChip", () => {
   test("regular perk values still append to the trait array", () => {
     expect(withHypotheticalChip({}, "trait1", "Frenzy", "frenzy", [])).toEqual({
       trait1: ["Frenzy"],
+    });
+    expect(
+      withHypotheticalChip(
+        {},
+        TRAIT_CATEGORY_ID,
+        "Destabilizing Rounds",
+        "destabilizing-rounds",
+        [],
+      ),
+    ).toEqual({
+      trait: ["Destabilizing Rounds"],
     });
   });
 

@@ -4,7 +4,7 @@ import type { FilterChipElement, FilterChipProps, FilterChipTone } from "@repo/u
 import { AmmoIcon } from "../components/ammo-icon";
 import { ElementIcon, isElementName } from "../components/element-icon";
 import { bungieIcon } from "./bungie";
-import { PERK_COMBO_CATEGORY_ID } from "./palette/constants";
+import { PERK_COMBO_CATEGORY_ID, TRAIT_CATEGORY_ID } from "./palette/constants";
 
 export interface FilterChipIconMaps {
   elementIcons?: ReadonlyMap<string, string | undefined>;
@@ -20,6 +20,7 @@ export function getFilterChipAppearance(
   if (
     categoryId === "trait1" ||
     categoryId === "trait2" ||
+    categoryId === TRAIT_CATEGORY_ID ||
     categoryId === PERK_COMBO_CATEGORY_ID ||
     categoryId === "customFilter"
   ) {

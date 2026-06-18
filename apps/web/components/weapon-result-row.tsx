@@ -105,10 +105,10 @@ export const WeaponResultRow = memo(function WeaponResultRow({
             {weaponTypeLabel(weapon.type, weapon.frame)}
             {weapon.source ? (
               <>
-                <span className="text-muted-foreground/50 shrink-0" aria-hidden>
+                <span className="shrink-0 text-muted-foreground/50" aria-hidden>
                   ·
                 </span>
-                <span className="text-muted-foreground min-w-0 truncate text-xs">
+                <span className="min-w-0 truncate text-xs text-muted-foreground">
                   {weapon.source}
                 </span>
               </>

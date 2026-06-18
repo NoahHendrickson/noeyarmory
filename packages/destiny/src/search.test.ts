@@ -164,7 +164,12 @@ describe("filterWeapons", () => {
   test("multiple custom perk groups require one match from each group", () => {
     const result = filterWeapons(
       sampleSummaries,
-      { customPerkGroups: [["Firefly", "Chill Clip"], ["Explosive Payload", "Frenzy"]] },
+      {
+        customPerkGroups: [
+          ["Firefly", "Chill Clip"],
+          ["Explosive Payload", "Frenzy"],
+        ],
+      },
       samplePerks,
     );
     expect(names(result)).toEqual(["Fatebringer", "Sunshot Scout"]);
@@ -195,10 +200,9 @@ describe("filterWeapons", () => {
   });
 
   test("single selected combo perk matches either trait column", () => {
-    expect(names(filterWeapons(sampleSummaries, { perkCombo: ["Surrounded"] }, samplePerks))).toEqual([
-      "Fatebringer",
-      "Sunlit Fusion",
-    ]);
+    expect(
+      names(filterWeapons(sampleSummaries, { perkCombo: ["Surrounded"] }, samplePerks)),
+    ).toEqual(["Fatebringer", "Sunlit Fusion"]);
   });
 
   test("perk combo composes with other facets", () => {
@@ -343,6 +347,21 @@ describe("position-aware trait, slot + origin filters", () => {
     ]);
   });
 
+  test("generic trait matches either trait column", () => {
+    expect(names(filterWeapons(sampleSummaries, { trait: ["Frenzy"] }, samplePerks))).toEqual([
+      "Fatebringer",
+    ]);
+    expect(
+      names(filterWeapons(sampleSummaries, { trait: ["Reservoir Burst"] }, samplePerks)),
+    ).toEqual(["Sunlit Fusion"]);
+  });
+
+  test("generic trait requires every selected trait perk", () => {
+    expect(
+      names(filterWeapons(sampleSummaries, { trait: ["Surrounded", "Frenzy"] }, samplePerks)),
+    ).toEqual(["Fatebringer"]);
+  });
+
   test("a single-trait weapon never matches a trait2 filter", () => {
     expect(filterWeapons(sampleSummaries, { trait2: ["Reservoir Burst"] }, samplePerks)).toEqual(
       [],
@@ -375,7 +394,11 @@ describe("position-aware trait, slot + origin filters", () => {
       ),
     ).toEqual(["Fatebringer"]);
     expect(
-      filterWeapons(sampleSummaries, { name: ["Fatebringer"], trait2: ["Surrounded"] }, samplePerks),
+      filterWeapons(
+        sampleSummaries,
+        { name: ["Fatebringer"], trait2: ["Surrounded"] },
+        samplePerks,
+      ),
     ).toEqual([]);
   });
 });
@@ -389,9 +412,17 @@ describe("damage perk trait filters", () => {
   });
   // 0: damage perk, 1: not, 2: damage perk
   const damageCatalog: PerkRef[] = [
-    dp(1, "Frenzy", "Being in combat for an extended time increases damage, handling, and reload speed."),
+    dp(
+      1,
+      "Frenzy",
+      "Being in combat for an extended time increases damage, handling, and reload speed.",
+    ),
     dp(2, "Outlaw", "Precision kills greatly decrease reload time."),
-    dp(3, "Bait and Switch", "Deal damage with all equipped weapons within a short time to give this weapon a damage boost."),
+    dp(
+      3,
+      "Bait and Switch",
+      "Deal damage with all equipped weapons within a short time to give this weapon a damage boost.",
+    ),
   ];
   const base = sampleSummaries[0]!;
   const weapon = (hash: number, name: string, trait1: number[], trait2: number[]) => ({
@@ -429,9 +460,7 @@ describe("damage perk trait filters", () => {
 
   test("composes with a named trait filter on the other column", () => {
     expect(
-      names(
-        filterWeapons(weapons, { trait1: ["Outlaw"], trait2DamagePerks: true }, damageCatalog),
-      ),
+      names(filterWeapons(weapons, { trait1: ["Outlaw"], trait2DamagePerks: true }, damageCatalog)),
     ).toEqual(["Beta"]);
     expect(
       filterWeapons(weapons, { trait1: ["Frenzy"], trait2DamagePerks: true }, damageCatalog),

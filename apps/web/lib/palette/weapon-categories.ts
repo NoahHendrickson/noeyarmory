@@ -19,12 +19,14 @@ import {
   DAMAGE_PERKS_LABEL,
   DAMAGE_PERKS_VALUE_ID,
   PERK_COMBO_CATEGORY_ID,
+  TRAIT_CATEGORY_ID,
 } from "./constants";
 
 /** Palette category IDs whose option values are weapon perks (trait + origin columns). */
 export const WEAPON_PERK_FILTER_CATEGORY_IDS = [
   "trait1",
   "trait2",
+  TRAIT_CATEGORY_ID,
   PERK_COMBO_CATEGORY_ID,
   "originTrait",
 ] as const;
@@ -222,6 +224,17 @@ function perkComboCategory(
     ),
     single: false,
     maxSelections: 2,
+    inlineSuggestionPriority: 3,
+  };
+}
+
+function traitCategory(
+  weaponColumnPerks: ReturnType<typeof collectColumnPerks>,
+  perkFuse: ReturnType<typeof createPerkNameFuse>,
+): PaletteCategory {
+  return {
+    ...perkCategory(TRAIT_CATEGORY_ID, "Trait", mergeTraitPerkOptions(weaponColumnPerks), perkFuse),
+    inlineSuggestionPriority: 2,
   };
 }
 
@@ -244,10 +257,17 @@ export function buildWeaponCategories(
   ),
   damagePerkNames?: ReadonlySet<string>,
 ): PaletteCategory[] {
-  const [trait1Id, trait2Id, , originTraitId] = WEAPON_PERK_FILTER_CATEGORY_IDS;
+  const [trait1Id, trait2Id, , , originTraitId] = WEAPON_PERK_FILTER_CATEGORY_IDS;
   return [
-    perkCategory(trait1Id, "Trait 1", weaponColumnPerks.trait1, perkFuse, damagePerkNames),
-    perkCategory(trait2Id, "Trait 2", weaponColumnPerks.trait2, perkFuse, damagePerkNames),
+    {
+      ...perkCategory(trait1Id, "Trait 1", weaponColumnPerks.trait1, perkFuse, damagePerkNames),
+      inlineSuggestionPriority: 0,
+    },
+    {
+      ...perkCategory(trait2Id, "Trait 2", weaponColumnPerks.trait2, perkFuse, damagePerkNames),
+      inlineSuggestionPriority: 1,
+    },
+    traitCategory(weaponColumnPerks, perkFuse),
     perkComboCategory(weaponColumnPerks, perkFuse),
     ...(customFilters.length > 0 ? [customFilterCategory(customFilters)] : []),
     facetCategory("type", "Weapon type", facets.type ?? []),
@@ -270,5 +290,7 @@ export function buildComposerCategories(
     allPerkNames(weaponColumnPerks),
   ),
 ): PaletteCategory[] {
-  return [perkCategory("trait", "Trait", mergeTraitPerkOptions(weaponColumnPerks), perkFuse)];
+  return [
+    perkCategory(TRAIT_CATEGORY_ID, "Trait", mergeTraitPerkOptions(weaponColumnPerks), perkFuse),
+  ];
 }

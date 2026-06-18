@@ -29,6 +29,12 @@ describe("parseWeaponQuery", () => {
     expect(filters.trait1).toEqual(["frenzy"]);
   });
 
+  test("trait keyword maps to the generic trait filter", () => {
+    const { filters } = parseWeaponQuery('trait:"destabilizing rounds" trait2:frenzy');
+    expect(filters.trait).toEqual(["destabilizing rounds"]);
+    expect(filters.trait2).toEqual(["frenzy"]);
+  });
+
   test("is: flags set adept, craftable, and rarity", () => {
     expect(parseWeaponQuery("is:adept").filters.adept).toBe(true);
     expect(parseWeaponQuery("not:adept").filters.adept).toBe(false);
@@ -119,12 +125,13 @@ describe("mergeWeaponFilters", () => {
 
   test("OR-merges facet arrays case-insensitively without duplicates", () => {
     const merged = mergeWeaponFilters(
-      { element: ["Solar"], source: ["Root of Nightmares"] },
-      { element: ["solar", "arc"], season: ["23"] },
+      { element: ["Solar"], source: ["Root of Nightmares"], trait: ["Frenzy"] },
+      { element: ["solar", "arc"], season: ["23"], trait: ["frenzy", "Surrounded"] },
     );
     expect(merged.element).toEqual(["Solar", "arc"]);
     expect(merged.source).toEqual(["Root of Nightmares"]);
     expect(merged.season).toEqual(["23"]);
+    expect(merged.trait).toEqual(["Frenzy", "Surrounded"]);
   });
 
   test("extra adept flag overrides; custom groups concatenate", () => {

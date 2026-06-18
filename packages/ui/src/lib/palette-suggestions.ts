@@ -93,7 +93,12 @@ export function scanValueSuggestions(
   if (!q) return [];
 
   const applied = new Set(chips.map((c) => `${c.categoryId}:${c.valueId}`));
-  const scored: { suggestion: ValueSuggestion; rank: number; popularity: number }[] = [];
+  const scored: {
+    suggestion: ValueSuggestion;
+    rank: number;
+    categoryPriority?: number;
+    popularity: number;
+  }[] = [];
 
   for (const category of categories) {
     if (categoryIsFull(category, chips)) continue;
@@ -116,6 +121,7 @@ export function scanValueSuggestions(
           hint: option.hint,
         },
         rank: effectiveRank(baseRank, option.label, recentValues),
+        categoryPriority: category.inlineSuggestionPriority,
         popularity: parsePopularity(option.hint),
       });
     }
@@ -124,6 +130,9 @@ export function scanValueSuggestions(
   scored.sort(
     (a, b) =>
       a.rank - b.rank ||
+      (a.categoryPriority != null && b.categoryPriority != null
+        ? a.categoryPriority - b.categoryPriority
+        : 0) ||
       b.popularity - a.popularity ||
       a.suggestion.value.localeCompare(b.suggestion.value),
   );

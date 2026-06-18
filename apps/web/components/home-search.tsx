@@ -11,7 +11,6 @@ import {
   PillSelect,
   type PaletteAction,
   type PaletteCategory,
-  type PaletteChip,
   type PaletteRecentItem,
   type PaletteValueOption,
   type PillSelectOption,
@@ -528,7 +527,7 @@ export function HomeSearch({
   }, [composingCustomFilter, getRecentForMode, mode, query, chips]);
 
   const placeholder = composingCustomFilter
-    ? customFilterComposer!.perkNames.length > 0
+    ? customFilterComposer?.perkNames.length
       ? "Add more perks…"
       : "Search trait perks"
     : mode === "weapon"
@@ -559,37 +558,37 @@ export function HomeSearch({
   return (
     <div className="flex min-h-screen flex-col">
       <main className="mx-auto flex w-full flex-1 flex-col px-4 pt-4 sm:pt-[12vh]">
-          <div
-            className={cn(
-              "mx-auto flex w-full max-w-[calc(100vw-2rem)] flex-col sm:w-[min(calc(100vw-2rem),calc(640px+var(--chip-count,0)*96px))]",
-              selectedHash != null && "pointer-events-none invisible",
-            )}
-            style={{ "--chip-count": paletteChips.length } as CSSProperties}
-          >
-            <div className="mb-4 flex flex-wrap items-center gap-2">
-              {mode === "weapon" && pinnedFilters.length > 0 ? (
-                <PinnedFilterPills
-                  filters={pinnedFilters}
-                  onApplyFilter={applyPinnedFilter}
-                  onRemoveFilter={removePinnedFilter}
-                />
-              ) : null}
-              <div
-                data-palette-ignore-close
-                className="ml-auto shrink-0"
-                onClick={(e) => e.stopPropagation()}
-                onPointerDown={(e) => e.stopPropagation()}
-              >
-                <PillSelect
-                  aria-label="Search mode"
-                  options={MODES}
-                  value={mode}
-                  onValueChange={handleModeChange}
-                />
-              </div>
+        <div
+          className={cn(
+            "mx-auto flex w-full max-w-[calc(100vw-2rem)] flex-col sm:w-[min(calc(100vw-2rem),calc(640px+var(--chip-count,0)*96px))]",
+            selectedHash != null && "pointer-events-none invisible",
+          )}
+          style={{ "--chip-count": paletteChips.length } as CSSProperties}
+        >
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            {mode === "weapon" && pinnedFilters.length > 0 ? (
+              <PinnedFilterPills
+                filters={pinnedFilters}
+                onApplyFilter={applyPinnedFilter}
+                onRemoveFilter={removePinnedFilter}
+              />
+            ) : null}
+            <div
+              data-palette-ignore-close
+              className="ml-auto shrink-0"
+              onClick={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <PillSelect
+                aria-label="Search mode"
+                options={MODES}
+                value={mode}
+                onValueChange={handleModeChange}
+              />
             </div>
-            <div className="flex w-full flex-col items-stretch gap-4">
-              <CommandPalette
+          </div>
+          <div className="flex w-full flex-col items-stretch gap-4">
+            <CommandPalette
               className="mx-0"
               instantPreviewExpand={firefoxPalettePerf}
               instantInputSizing={firefoxPalettePerf}
@@ -630,7 +629,7 @@ export function HomeSearch({
               hideCategoryList={composingCustomFilter}
               plainPanelHeader={composingCustomFilter}
               panelHeader={
-                composingCustomFilter ? (
+                customFilterComposer ? (
                   <div
                     className="space-y-3 py-3"
                     data-palette-ignore-close
@@ -645,7 +644,7 @@ export function HomeSearch({
                     </div>
                     <Input
                       id="custom-filter-name"
-                      value={customFilterComposer!.name}
+                      value={customFilterComposer.name}
                       onChange={(event) =>
                         setCustomFilterComposer((prev) =>
                           prev ? { ...prev, name: event.target.value } : prev,

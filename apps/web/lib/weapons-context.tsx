@@ -24,14 +24,7 @@ import {
   type WeaponIndexLookups,
   type WeaponSummary,
 } from "@repo/destiny";
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useState,
-  type ReactNode,
-} from "react";
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 
 import { fetchGeneratedDataFile } from "./generated-data-client";
 import { scheduleIdle } from "./schedule-idle";
@@ -75,7 +68,7 @@ const defaultState: WeaponsState = {
   weaponSearcher: createWeaponSearcher([]),
   loading: true,
   isSample: false,
-  getWeaponDoc: async () => undefined,
+  getWeaponDoc: () => Promise.resolve(undefined),
 };
 
 const WeaponsContext = createContext<WeaponsState>(defaultState);

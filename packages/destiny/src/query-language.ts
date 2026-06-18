@@ -20,6 +20,7 @@ export const ARRAY_FACET_KEYS = [
   "slot",
   "trait1",
   "trait2",
+  "trait",
   "originTrait",
   "perks",
   "craftable",
@@ -97,7 +98,7 @@ function craftableValue(raw: string): string | null {
 
 /**
  * Parse a raw search string into structured {@link WeaponFilters} plus residual
- * free text. Supports `key:value` filters (`perk:`, `trait1:`, `trait2:`,
+ * free text. Supports `key:value` filters (`perk:`, `trait:`, `trait1:`, `trait2:`,
  * `origin:`, `element:`, `type:`, `ammo:`, `slot:`, `rarity:`, `frame:`,
  * `source:`, `season:`, `name:`, `craftable:`) and `is:` flags (`is:adept`, `is:craftable`,
  * `is:exotic`, …). Community shorthands (`hc`, `smg`) are alias-expanded for
@@ -141,7 +142,11 @@ export function parseWeaponQuery(input: string): ParsedWeaponQuery {
       addFacet("perks", rawValue);
       continue;
     }
-    if (key === "trait1" || key === "trait") {
+    if (key === "trait") {
+      addFacet("trait", rawValue);
+      continue;
+    }
+    if (key === "trait1") {
       addFacet("trait1", rawValue);
       continue;
     }

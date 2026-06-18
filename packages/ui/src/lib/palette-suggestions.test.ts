@@ -76,6 +76,31 @@ describe("scanValueSuggestions", () => {
     expect(suggestions.map((s) => s.value)).toEqual(["Rewind Rounds"]);
   });
 
+  test("category priority beats popularity for equal-rank matches", () => {
+    const trait1: PaletteCategory = {
+      id: "trait1",
+      label: "Trait 1",
+      inlineSuggestionPriority: 0,
+      getValues: () => [{ id: "destabilizing-rounds", label: "Destabilizing Rounds", hint: "32" }],
+    };
+    const trait2: PaletteCategory = {
+      id: "trait2",
+      label: "Trait 2",
+      inlineSuggestionPriority: 1,
+      getValues: () => [{ id: "destabilizing-rounds", label: "Destabilizing Rounds", hint: "146" }],
+    };
+    const combo: PaletteCategory = {
+      id: "perkCombo",
+      label: "Perk Combo",
+      inlineSuggestionPriority: 3,
+      getValues: () => [{ id: "destabilizing-rounds", label: "Destabilizing Rounds", hint: "178" }],
+    };
+
+    const suggestions = scanValueSuggestions([combo, trait2, trait1], "destabilizing", []);
+
+    expect(suggestions.map((s) => s.categoryId)).toEqual(["trait1", "trait2", "perkCombo"]);
+  });
+
   test("matchCategoryListByValues keeps facet categories visible while typing", () => {
     const source: PaletteCategory = {
       id: "source",
@@ -112,9 +137,7 @@ describe("scanValueSuggestions", () => {
     const trait: PaletteCategory = {
       id: "trait1",
       label: "Trait 1",
-      getValues: () => [
-        { id: "surrounded", label: "Surrounded", hint: "50", searchRank: 4 },
-      ],
+      getValues: () => [{ id: "surrounded", label: "Surrounded", hint: "50", searchRank: 4 }],
     };
 
     const suggestions = scanValueSuggestions([trait], "suround", [], { maxRank: 2 });

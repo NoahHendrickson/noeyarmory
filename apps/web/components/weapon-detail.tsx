@@ -30,6 +30,8 @@ import { StatBars } from "./stat-bars";
 import { WeaponShareButton } from "./weapon-share-button";
 import { WeaponDpsMetricTooltip } from "./weapon-dps-label";
 
+const EMPTY_SELECTED_PERK_HASHES: number[] = [];
+
 function statsDiffer(a: WeaponStat[], b: WeaponStat[]): boolean {
   const bByHash = new Map(b.map((stat) => [stat.hash, stat.value]));
   return a.some((stat) => bByHash.get(stat.hash) !== stat.value);
@@ -47,16 +49,9 @@ function WeaponThumbnail({ weapon }: { weapon: WeaponDoc }) {
       )}
     >
       {icon ? (
-        <Image
-          src={icon}
-          alt=""
-          width={56}
-          height={56}
-          className="size-full"
-          unoptimized
-        />
+        <Image src={icon} alt="" width={56} height={56} className="size-full" unoptimized />
       ) : (
-        <div className="bg-muted/30 size-full" />
+        <div className="size-full bg-muted/30" />
       )}
       {watermark && (
         <Image
@@ -105,7 +100,7 @@ function WeaponDpsSummary({ entry }: { entry: WeaponDpsEntry }) {
         </WeaponDpsMetricTooltip>
         {hasBenchmarkPerks && (
           <span
-            className="text-3xl text-amber-400 font-medium leading-none"
+            className="text-3xl leading-none font-medium text-amber-400"
             title="Perks marked with * on the right are used in the community DPS benchmark."
           >
             *
@@ -179,7 +174,7 @@ export function WeaponDetailView({
     [highlightedBuildPerks],
   );
 
-  const selectedPerkHashes = interactive ? build.selectedPerkHashes : [];
+  const selectedPerkHashes = interactive ? build.selectedPerkHashes : EMPTY_SELECTED_PERK_HASHES;
 
   const { stats: currentStats } = useMemo(
     () => computeWeaponStats(weapon, selectedPerkHashes, statGroups),
@@ -198,21 +193,24 @@ export function WeaponDetailView({
     [weapon, previewPerkHashes, statGroups],
   );
 
-  const hoverChangesStats =
-    hoverPreview != null && statsDiffer(previewStats, currentStats);
+  const hoverChangesStats = hoverPreview != null && statsDiffer(previewStats, currentStats);
   const displayStats = hoverChangesStats ? previewStats : currentStats;
   const showDeltas = hoverChangesStats;
   const deltaBaseStats = currentStats;
 
   return (
     <div className="mx-auto w-fit max-w-full">
-      <header className="border-border/50 bg-black/[0.03] -mx-4 -mt-4 flex items-start gap-3 border-b px-4 pb-4 pt-4 backdrop-blur-sm sm:-mx-6 sm:-mt-6 sm:px-6 sm:pb-5 sm:pt-6">
+      <header className="-mx-4 -mt-4 flex items-start gap-3 border-b border-border/50 bg-black/[0.03] px-4 pt-4 pb-4 backdrop-blur-sm sm:-mx-6 sm:-mt-6 sm:px-6 sm:pt-6 sm:pb-5">
         <WeaponThumbnail weapon={weapon} />
         <div className="min-w-0 flex-1">
           <h2 className="text-lg font-bold tracking-tight sm:text-xl">{weapon.name}</h2>
-          <div className="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm leading-none">
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm leading-none text-muted-foreground">
             <span className="inline-flex items-center gap-1">
-              <span className="inline-flex items-center" title={weapon.element} aria-label={weapon.element}>
+              <span
+                className="inline-flex items-center"
+                title={weapon.element}
+                aria-label={weapon.element}
+              >
                 <ElementIcon
                   element={weapon.element}
                   iconPath={elementIconPath}
@@ -254,7 +252,7 @@ export function WeaponDetailView({
         <div className="min-w-0">
           <section>
             {weapon.columns.length > 0 ? (
-              <div className="inline-grid grid-flow-col auto-cols-max items-start gap-x-2.5 overflow-x-auto px-1.5 py-1">
+              <div className="inline-grid auto-cols-max grid-flow-col items-start gap-x-2.5 overflow-x-auto px-1.5 py-1">
                 {weapon.columns.map((column, columnIndex) => {
                   if (column.kind === "Intrinsic") return null;
                   const canSelect = interactive;
@@ -286,7 +284,7 @@ export function WeaponDetailView({
                 })}
               </div>
             ) : (
-              <p className="text-muted-foreground text-sm">No perk data.</p>
+              <p className="text-sm text-muted-foreground">No perk data.</p>
             )}
           </section>
         </div>
@@ -295,26 +293,58 @@ export function WeaponDetailView({
   );
 }
 
-/** Standalone `/weapon/[hash]` route view: uses SSR seed when available, else shared index. */
-export function WeaponDetail({
-  hash,
-  initialWeapon,
+export function WeaponDetailWithVersions({
+  weapon,
+  linkPerks = false,
+  dps,
+  highlightedBuildPerks,
+  viewSource,
+  skipInitialViewTrack = false,
 }: {
-  hash: number;
-  initialWeapon?: WeaponDoc;
+  weapon: WeaponDoc;
+  linkPerks?: boolean;
+  dps?: WeaponDpsEntry;
+  highlightedBuildPerks?: readonly string[];
+  viewSource?: "direct" | "search";
+  skipInitialViewTrack?: boolean;
 }) {
-  const { weapon, loading } = useWeaponDetail(hash, initialWeapon);
-  const { dpsByName } = useWeaponDps();
   const trackedHashRef = useRef<number | null>(null);
+  const skippedInitialTrackRef = useRef(false);
 
   useEffect(() => {
-    if (!weapon || trackedHashRef.current === weapon.hash) return;
+    trackedHashRef.current = null;
+    skippedInitialTrackRef.current = false;
+  }, [weapon.hash]);
+
+  useEffect(() => {
+    if (!viewSource) return;
+    if (skipInitialViewTrack && !skippedInitialTrackRef.current) {
+      skippedInitialTrackRef.current = true;
+      trackedHashRef.current = weapon.hash;
+      return;
+    }
+    if (trackedHashRef.current === weapon.hash) return;
     trackedHashRef.current = weapon.hash;
-    trackWeaponView(weapon.hash, "direct");
-  }, [weapon]);
+    trackWeaponView(weapon.hash, viewSource);
+  }, [skipInitialViewTrack, viewSource, weapon.hash]);
+
+  return (
+    <WeaponDetailView
+      weapon={weapon}
+      linkPerks={linkPerks}
+      dps={dps}
+      highlightedBuildPerks={highlightedBuildPerks}
+    />
+  );
+}
+
+/** Standalone `/weapon/[hash]` route view: uses SSR seed when available, else shared index. */
+export function WeaponDetail({ hash, initialWeapon }: { hash: number; initialWeapon?: WeaponDoc }) {
+  const { weapon, loading } = useWeaponDetail(hash, initialWeapon);
+  const { dpsByName } = useWeaponDps();
 
   if (!weapon && loading) {
-    return <div className="text-muted-foreground p-6">Loading…</div>;
+    return <div className="p-6 text-muted-foreground">Loading…</div>;
   }
 
   if (!weapon) {
@@ -330,14 +360,15 @@ export function WeaponDetail({
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 p-4 md:p-6">
-      <Link href="/" className="text-muted-foreground hover:text-foreground text-sm">
+      <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">
         ← Back to search
       </Link>
-      <WeaponDetailView
+      <WeaponDetailWithVersions
         weapon={weapon}
         linkPerks={false}
         dps={dpsByName.get(weapon.name)}
         highlightedBuildPerks={dpsByName.get(weapon.name)?.buildPerks}
+        viewSource="direct"
       />
     </div>
   );

@@ -100,6 +100,8 @@ export interface WeaponFilters {
   trait1?: string[];
   /** Perk rollable in the SECOND trait column (OR within). */
   trait2?: string[];
+  /** Perk rollable in either trait column; every selected perk must match somewhere. */
+  trait?: string[];
   /** When true, the FIRST trait column must roll at least one damage perk. */
   trait1DamagePerks?: boolean;
   /** When true, the SECOND trait column must roll at least one damage perk. */
@@ -232,6 +234,19 @@ function traitComboMatches(
   );
 }
 
+function traitColumnsRollEvery(
+  traits: InternedPerkColumn[],
+  wanted: ReadonlySet<string>,
+  perks: PerkRef[],
+): boolean {
+  for (const name of wanted) {
+    if (!columnRollsName(traits[0], name, perks) && !columnRollsName(traits[1], name, perks)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 /** Filter weapons by attribute facets, position-aware trait columns, and required perks. */
 export function filterWeapons(
   weapons: WeaponSummary[],
@@ -256,6 +271,7 @@ export function filterWeapons(
   const sourceWanted = (filters.source ?? []).map((s) => lower(s.trim()));
   const trait1Wanted = loweredSet(filters.trait1);
   const trait2Wanted = loweredSet(filters.trait2);
+  const traitWanted = loweredSet(filters.trait);
   const originWanted = loweredSet(filters.originTrait);
   const damageIndices =
     filters.trait1DamagePerks || filters.trait2DamagePerks ? damagePerkIndexSet(perks) : null;
@@ -290,10 +306,17 @@ export function filterWeapons(
     }
     if (craftableActive && !(w.craftable ? craftableYes : craftableNo)) return false;
     if (filters.adept != null && w.adept !== filters.adept) return false;
-    if (trait1Wanted.size || trait2Wanted.size || damageIndices || perkCombo.length > 0) {
+    if (
+      trait1Wanted.size ||
+      trait2Wanted.size ||
+      traitWanted.size ||
+      damageIndices ||
+      perkCombo.length > 0
+    ) {
       const traits = traitColumns(w.columns);
       if (!columnRollsAny(traits[0], trait1Wanted, perks)) return false;
       if (!columnRollsAny(traits[1], trait2Wanted, perks)) return false;
+      if (!traitColumnsRollEvery(traits, traitWanted, perks)) return false;
       if (!traitComboMatches(traits, perkCombo, perks)) return false;
       if (damageIndices) {
         if (filters.trait1DamagePerks && !columnRollsAnyIndex(traits[0], damageIndices)) {
