@@ -12,6 +12,7 @@ import {
   isRaidSource,
   matchesWeaponSourceLowered,
   RAID_SOURCE_LABELS,
+  sourceLabels,
 } from "./weapon-provenance";
 import { createWeaponSearcher, type WeaponSearcher } from "./weapon-searcher";
 import { isCatalogWeapon } from "./weapon-variants";
@@ -30,12 +31,7 @@ function popularityOf(name: string, popularity?: PopularityLookup): number {
   return popularity?.get(name.toLowerCase()) ?? 0;
 }
 
-export type WeaponSort =
-  | "name"
-  | "season-desc"
-  | "season-asc"
-  | "dps-desc"
-  | "ammo-gen-desc";
+export type WeaponSort = "name" | "season-desc" | "season-asc" | "dps-desc" | "ammo-gen-desc";
 
 /** Composite key for season ordering: season number dominates, release index breaks ties. */
 function seasonSortKey(weapon: WeaponSummary): number {
@@ -293,7 +289,9 @@ export function filterWeapons(
     if (!facetMatches(w.rarity, rarityWanted)) return false;
     if (!facetMatches(w.slot, slotWanted)) return false;
     if (frameWanted.size && !frameWanted.has(lower(w.frame ?? ""))) return false;
-    if (sourceActive && !matchesWeaponSourceLowered(w.source, sourceWanted)) return false;
+    if (sourceActive && !matchesWeaponSourceLowered(w.source, sourceWanted, w.sources)) {
+      return false;
+    }
     if (seasonWanted.size) {
       const season = seasonFacetValue(w);
       if (!season) return false;
@@ -329,7 +327,11 @@ export function filterWeapons(
     }
     if (
       originWanted.size &&
-      !columnRollsAny(w.columns.find((c) => c.kind === "Origin Trait"), originWanted, perks)
+      !columnRollsAny(
+        w.columns.find((c) => c.kind === "Origin Trait"),
+        originWanted,
+        perks,
+      )
     ) {
       return false;
     }
@@ -343,9 +345,7 @@ export function filterWeapons(
 }
 
 /** Lowercase perk name → weapons that can roll it. */
-export function buildWeaponsByPerkName(
-  weapons: WeaponSummary[],
-): Map<string, WeaponSummary[]> {
+export function buildWeaponsByPerkName(weapons: WeaponSummary[]): Map<string, WeaponSummary[]> {
   const map = new Map<string, WeaponSummary[]>();
   for (const weapon of weapons) {
     for (const key of weapon.perksLower) {
@@ -358,10 +358,7 @@ export function buildWeaponsByPerkName(
 }
 
 /** Every weapon that can roll a given perk (by name or hash). */
-export function weaponsWithPerk(
-  weapons: WeaponSummary[],
-  perk: string | number,
-): WeaponSummary[] {
+export function weaponsWithPerk(weapons: WeaponSummary[], perk: string | number): WeaponSummary[] {
   if (typeof perk === "number") {
     return weapons.filter((w) => isCatalogWeapon(w) && w.perkHashes.includes(perk));
   }
@@ -611,7 +608,7 @@ export interface CollectActivitySourceFacetsOptions {
 
 /** Curated source facets for the Source filter palette category. */
 export function collectActivitySourceFacets(
-  items: ReadonlyArray<{ source?: string }>,
+  items: ReadonlyArray<{ source?: string; sources?: readonly string[] }>,
   options?: CollectActivitySourceFacetsOptions,
 ): FacetOption[] {
   const source = new Map<string, number>();
@@ -619,17 +616,21 @@ export function collectActivitySourceFacets(
     for (const label of CURATED_SOURCE_LABELS) source.set(label, 0);
   }
   for (const item of items) {
-    if (!item.source || !isCuratedActivitySource(item.source)) continue;
-    const canonical = canonicalActivitySource(item.source);
-    if (!canonical) continue;
-    source.set(canonical, (source.get(canonical) ?? 0) + 1);
+    const seen = new Set<string>();
+    for (const label of sourceLabels(item)) {
+      if (!isCuratedActivitySource(label)) continue;
+      const canonical = canonicalActivitySource(label);
+      if (!canonical || seen.has(canonical)) continue;
+      seen.add(canonical);
+      source.set(canonical, (source.get(canonical) ?? 0) + 1);
+    }
   }
   return sortFacetCounts(source);
 }
 
 /** Raid-only source facets for the Source filter palette category. */
 export function collectRaidSourceFacets(
-  items: ReadonlyArray<{ source?: string }>,
+  items: ReadonlyArray<{ source?: string; sources?: readonly string[] }>,
   options?: CollectRaidSourceFacetsOptions,
 ): FacetOption[] {
   const source = new Map<string, number>();
@@ -637,10 +638,14 @@ export function collectRaidSourceFacets(
     for (const label of RAID_SOURCE_LABELS) source.set(label, 0);
   }
   for (const item of items) {
-    if (!item.source || !isRaidSource(item.source)) continue;
-    const canonical = canonicalRaidSource(item.source);
-    if (!canonical) continue;
-    source.set(canonical, (source.get(canonical) ?? 0) + 1);
+    const seen = new Set<string>();
+    for (const label of sourceLabels(item)) {
+      if (!isRaidSource(label)) continue;
+      const canonical = canonicalRaidSource(label);
+      if (!canonical || seen.has(canonical)) continue;
+      seen.add(canonical);
+      source.set(canonical, (source.get(canonical) ?? 0) + 1);
+    }
   }
   return sortFacetCounts(source);
 }
@@ -726,10 +731,7 @@ export interface ColumnPerkOptions {
 }
 
 /** Distinct perks per position-aware column for filter palette categories. */
-export function collectColumnPerks(
-  weapons: WeaponSummary[],
-  perks: PerkRef[],
-): ColumnPerkOptions {
+export function collectColumnPerks(weapons: WeaponSummary[], perks: PerkRef[]): ColumnPerkOptions {
   const trait1 = new Map<string, PerkOption>();
   const trait2 = new Map<string, PerkOption>();
   const originTrait = new Map<string, PerkOption>();
@@ -756,6 +758,7 @@ export function collectColumnPerks(
   };
 
   for (const w of weapons) {
+    if (!isCatalogWeapon(w)) continue;
     const traits = traitColumns(w.columns);
     if (traits[0]) add(trait1, columnPerks(traits[0], perks));
     if (traits[1]) add(trait2, columnPerks(traits[1], perks));

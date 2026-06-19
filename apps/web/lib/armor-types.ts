@@ -28,6 +28,8 @@ export interface OwnedArmorItem {
   rarity: string;
   /** Raid or activity source, e.g. "Root of Nightmares". */
   source?: string;
+  /** All acquisition/activity sources for shared loot pools; includes `source` when present. */
+  sources?: string[];
   rolledMods: OwnedArmorMod[];
   isArmor30?: boolean;
   setName?: string;

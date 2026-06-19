@@ -101,6 +101,25 @@ export const ACTIVITY_SOURCE_ALIASES: Readonly<Record<string, readonly string[]>
   ...EVENT_SOURCE_ALIASES,
 };
 
+const SHATTERED_THRONE_SOURCE = "The Shattered Throne";
+const DREAMING_CITY_SOURCE_PATTERN = /dreaming city/i;
+const SHATTERED_THRONE_DREAMING_CITY_WEAPON_NAMES = new Set(
+  [
+    "Abide the Return",
+    "Retold Tale",
+    "Sleepless",
+    "Tigerspite",
+    "Twilight Oath",
+    "Vouchsafe",
+    "Waking Vigil",
+  ].map((name) => name.toLowerCase()),
+);
+const SHATTERED_THRONE_UPDATED_WEAPON_NAMES = new Set(
+  ["Canis Major", "Chrysura Melo", "Fractethyst", "Vulpecula"].map((name) =>
+    name.toLowerCase(),
+  ),
+);
+
 const RAID_SOURCE_LABEL_SET = new Set(RAID_SOURCE_LABELS.map((label) => label.toLowerCase()));
 const DUNGEON_SOURCE_LABEL_SET = new Set(
   DUNGEON_SOURCE_LABELS.map((label) => label.toLowerCase()),
@@ -238,6 +257,56 @@ function cleanSourceString(source: string | undefined): string | undefined {
   return value ? trimActivityLabel(value) : undefined;
 }
 
+export interface ResolvedWeaponSources {
+  source?: string;
+  sources?: string[];
+}
+
+function uniqueSourceLabels(source: string | undefined, sources: readonly string[] = []): string[] {
+  const labels: string[] = [];
+  const seen = new Set<string>();
+  for (const label of [source, ...sources]) {
+    const trimmed = trimActivityLabel(label ?? "");
+    const key = trimmed.toLowerCase();
+    if (!trimmed || seen.has(key)) continue;
+    labels.push(trimmed);
+    seen.add(key);
+  }
+  return labels;
+}
+
+export function sourceLabels(item: { source?: string; sources?: readonly string[] }): string[] {
+  return uniqueSourceLabels(item.source, item.sources);
+}
+
+export function sourceFields(
+  source: string | undefined,
+  sources: readonly string[] = [],
+): ResolvedWeaponSources {
+  const labels = uniqueSourceLabels(source, sources);
+  return {
+    source,
+    ...(labels.length > 1 ? { sources: labels } : {}),
+  };
+}
+
+function isDreamingCityShatteredThroneLoot(itemName: string): boolean {
+  const name = itemName.trim();
+  return (
+    SHATTERED_THRONE_DREAMING_CITY_WEAPON_NAMES.has(name.toLowerCase()) ||
+    /^Reverie Dawn\b/i.test(name)
+  );
+}
+
+function secondaryActivitySourcesForItem(itemName: string, source: string | undefined): string[] {
+  if (canonicalActivitySource(source) === SHATTERED_THRONE_SOURCE) return [];
+  const name = itemName.trim().toLowerCase();
+  if (SHATTERED_THRONE_UPDATED_WEAPON_NAMES.has(name)) return [SHATTERED_THRONE_SOURCE];
+  if (!isDreamingCityShatteredThroneLoot(itemName)) return [];
+  if (!source || !DREAMING_CITY_SOURCE_PATTERN.test(source)) return [];
+  return [SHATTERED_THRONE_SOURCE];
+}
+
 function walkPresentationNodeNames(
   nodes: ManifestDefs["DestinyPresentationNodeDefinition"],
   startHashes: number[] | undefined,
@@ -286,6 +355,16 @@ export function normalizeWeaponSource(
     activityFromPresentationParents(parentNames) ??
     cleanSourceString(sourceString)
   );
+}
+
+export function resolveWeaponSources(
+  itemName: string,
+  sourceString: string | undefined,
+  nodes: ManifestDefs["DestinyPresentationNodeDefinition"],
+  parentNodeHashes: number[] | undefined,
+): ResolvedWeaponSources {
+  const source = normalizeWeaponSource(sourceString, nodes, parentNodeHashes);
+  return sourceFields(source, secondaryActivitySourcesForItem(itemName, source));
 }
 
 function seasonByNumber(
@@ -465,21 +544,26 @@ export function activitySourceMatchesQuery(source: string, query: string): boole
 export function matchesWeaponSourceLowered(
   source: string | undefined,
   loweredNeedles: readonly string[],
+  sources: readonly string[] = [],
 ): boolean {
-  const canonical = canonicalActivitySource(source);
-  if (!canonical) return false;
-  const haystack = lower(canonical);
-  return loweredNeedles.some((needle) => needle.length > 0 && haystack.includes(needle));
+  return sourceLabels({ source, sources }).some((label) => {
+    const canonical = canonicalActivitySource(label);
+    if (!canonical) return false;
+    const haystack = lower(canonical);
+    return loweredNeedles.some((needle) => needle.length > 0 && haystack.includes(needle));
+  });
 }
 
 /** True when a weapon source matches any selected activity fragment (substring, case-insensitive). */
 export function matchesWeaponSource(
   source: string | undefined,
   selected: string[] | undefined,
+  sources: readonly string[] = [],
 ): boolean {
   if (!selected?.length) return true;
   return matchesWeaponSourceLowered(
     source,
     selected.map((entry) => lower(entry.trim())),
+    sources,
   );
 }

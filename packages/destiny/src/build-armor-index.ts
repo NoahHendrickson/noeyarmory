@@ -7,7 +7,7 @@ import {
   PLUG_CATEGORY_ARMOR3_MASTERWORKS,
 } from "./armor30-constants";
 import type { ManifestDefs } from "./manifest";
-import { normalizeWeaponSource, resolveWeaponSeason } from "./weapon-provenance";
+import { resolveWeaponSeason, resolveWeaponSources } from "./weapon-provenance";
 import type {
   Armor30SetBonus,
   Armor30SetRef,
@@ -197,7 +197,8 @@ export function buildArmorIndex(defs: ManifestDefs, version: string): ArmorIndex
 
     const collectible =
       item.collectibleHash != null ? collectibles[item.collectibleHash] : undefined;
-    const source = normalizeWeaponSource(
+    const { source, sources } = resolveWeaponSources(
+      name,
       collectible?.sourceString,
       presentationNodes,
       collectible?.parentNodeHashes,
@@ -214,6 +215,7 @@ export function buildArmorIndex(defs: ManifestDefs, version: string): ArmorIndex
       type: item.itemTypeDisplayName || slot,
       rarity: item.inventory?.tierTypeName ?? "Legendary",
       source,
+      sources,
       seasonNumber: season?.seasonNumber,
       releaseIndex: item.index,
       stats: armorStats,

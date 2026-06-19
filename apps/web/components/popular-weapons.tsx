@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import type { WeaponSummary } from "@repo/destiny";
+import { primaryCatalogWeaponForHash, type WeaponSummary } from "@repo/destiny";
 
 import { bungieIcon } from "../lib/bungie";
 import { useWeaponIconMaps } from "../lib/use-weapon-icon-maps";
@@ -34,7 +34,7 @@ function PopularWeaponCard({
     <button
       type="button"
       onClick={() => onSelect(weapon.hash)}
-      className="group bg-card/80 hover:border-ring/60 w-full rounded-lg border p-3 text-left transition-colors"
+      className="group w-full rounded-lg border bg-card/80 p-3 text-left transition-colors hover:border-ring/60"
     >
       <div className="flex gap-3">
         <div className="relative size-14 shrink-0 overflow-hidden rounded">
@@ -53,10 +53,10 @@ function PopularWeaponCard({
           ) : null}
         </div>
         <div className="min-w-0 flex-1">
-          <div className="group-hover:text-primary truncate font-medium transition-colors">
+          <div className="truncate font-medium transition-colors group-hover:text-primary">
             {weapon.name}
           </div>
-          <div className="text-muted-foreground inline-flex items-center gap-2 text-sm">
+          <div className="inline-flex items-center gap-2 text-sm text-muted-foreground">
             <span className="inline-flex items-center gap-1">
               <ElementIcon element={weapon.element} iconPath={elementIconPath} colored />
               <AmmoIcon ammo={weapon.ammo} iconPath={ammoIconPath} className="size-7" />
@@ -78,7 +78,7 @@ function PopularWeaponCard({
 }
 
 export function PopularWeapons({ onSelectWeapon }: { onSelectWeapon: (hash: number) => void }) {
-  const { byHash } = useWeapons();
+  const { byHash, nameIndex } = useWeapons();
   const { elementIconMap, ammoIconMap } = useWeaponIconMaps();
   const [weapons, setWeapons] = useState<WeaponSummary[]>([]);
 
@@ -97,12 +97,22 @@ export function PopularWeapons({ onSelectWeapon }: { onSelectWeapon: (hash: numb
           return;
         }
 
-        const resolved = data.weapons
-          .map((entry) => byHash.get(entry.hash))
-          .filter((weapon): weapon is WeaponSummary => weapon != null);
+        const resolved: WeaponSummary[] = [];
+        const seen = new Set<number>();
+        let missing = false;
+        for (const entry of data.weapons) {
+          const weapon = primaryCatalogWeaponForHash(entry.hash, byHash, nameIndex.byName);
+          if (!weapon) {
+            missing = true;
+            break;
+          }
+          if (seen.has(weapon.hash)) continue;
+          seen.add(weapon.hash);
+          resolved.push(weapon);
+        }
 
         // Only show when every Redis entry resolves in the local weapon index.
-        setWeapons(resolved.length === data.weapons.length ? resolved : []);
+        setWeapons(missing ? [] : resolved);
       })
       .catch(() => {
         if (!cancelled) setWeapons([]);
@@ -111,13 +121,13 @@ export function PopularWeapons({ onSelectWeapon }: { onSelectWeapon: (hash: numb
     return () => {
       cancelled = true;
     };
-  }, [byHash]);
+  }, [byHash, nameIndex]);
 
   if (weapons.length === 0) return null;
 
   return (
     <section className="mx-auto mt-14 w-full max-w-3xl sm:mt-16">
-      <h2 className="text-muted-foreground mb-3 text-center text-xs font-semibold tracking-wide">
+      <h2 className="mb-3 text-center text-xs font-semibold tracking-wide text-muted-foreground">
         Popular lately
       </h2>
       <div className="grid gap-3 sm:grid-cols-2">

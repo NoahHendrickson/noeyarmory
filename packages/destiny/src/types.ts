@@ -67,9 +67,11 @@ export interface WeaponSummary {
   seasonName?: string;
   /** Acquisition source from the collectible definition, e.g. "Root of Nightmares". */
   source?: string;
+  /** All acquisition/activity sources for shared loot pools; includes `source` when present. */
+  sources?: string[];
   /** Manifest investment-table index — proxy for add order when season is unknown. */
   releaseIndex: number;
-  /** Legacy item hash superseded by a newer craftable twin (still kept for direct URL / vault). */
+  /** Legacy item hash superseded by a newer same-name def (still kept for direct URL / vault). */
   superseded?: boolean;
   /** Base Ammo Generation display value (0–100); omitted when the weapon has no such stat. */
   ammoGeneration?: number;
@@ -204,6 +206,8 @@ export interface ArmorDoc {
   rarity: string;
   /** Acquisition source from the collectible definition, e.g. "Root of Nightmares". */
   source?: string;
+  /** All acquisition/activity sources for shared loot pools; includes `source` when present. */
+  sources?: string[];
   seasonNumber?: number;
   releaseIndex: number;
   stats: ArmorStat[];

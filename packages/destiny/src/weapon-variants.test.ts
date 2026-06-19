@@ -5,6 +5,7 @@ import {
   collapseWeaponVersions,
   isCatalogWeapon,
   originTraitNamesForWeapons,
+  primaryCatalogWeaponForHash,
   primaryWeaponVersion,
   reconcileCraftableTwins,
   sortWeaponVersions,
@@ -67,6 +68,67 @@ describe("reconcileCraftableTwins", () => {
     ]);
     expect(result.every((w) => w.superseded !== true)).toBe(true);
   });
+
+  it("marks older non-craftable reprisals superseded and copies source onto the newest def", () => {
+    const result = reconcileCraftableTwins([
+      weapon(1664372054, "Threat Level", {
+        source: "Scourge of the Past",
+        seasonNumber: 5,
+        releaseIndex: 29_444,
+        columns: [{ kind: "Trait", perks: [perk("Rampage")] }],
+        perks: ["Rampage"],
+      }),
+      weapon(1523151869, "Threat Level", {
+        source: "Pantheon",
+        releaseIndex: 35_273,
+        columns: [{ kind: "Trait", perks: [perk("One-Two Punch")] }],
+        perks: ["One-Two Punch"],
+      }),
+      weapon(950894542, "Threat Level", {
+        releaseIndex: 35_285,
+        columns: [{ kind: "Trait", perks: [perk("Bewildering Burst")] }],
+        perks: ["Bewildering Burst"],
+      }),
+    ]);
+
+    const legacy = result.find((w) => w.hash === 1664372054);
+    const pantheon = result.find((w) => w.hash === 1523151869);
+    const latest = result.find((w) => w.hash === 950894542);
+    expect(legacy?.superseded).toBe(true);
+    expect(pantheon?.superseded).toBe(true);
+    expect(latest?.superseded).toBeUndefined();
+    expect(latest?.source).toBe("Pantheon");
+  });
+
+  it("copies Arena Ops source onto the newest Kindled Orchid def without a collectible", () => {
+    const result = reconcileCraftableTwins([
+      weapon(2575506895, "Kindled Orchid", {
+        source: "Crafted in a Black Armory forge",
+        releaseIndex: 29_440,
+        columns: [{ kind: "Trait", perks: [perk("Rampage")] }],
+        perks: ["Rampage"],
+      }),
+      weapon(3961462214, "Kindled Orchid", {
+        source: "Arena Ops",
+        releaseIndex: 35_470,
+        columns: [{ kind: "Trait", perks: [perk("Kill Clip")] }],
+        perks: ["Kill Clip"],
+      }),
+      weapon(334964261, "Kindled Orchid", {
+        releaseIndex: 35_490,
+        columns: [{ kind: "Trait", perks: [perk("Kill Clip")] }],
+        perks: ["Kill Clip"],
+      }),
+    ]);
+
+    const blackArmory = result.find((w) => w.hash === 2575506895);
+    const arenaOps = result.find((w) => w.hash === 3961462214);
+    const latest = result.find((w) => w.hash === 334964261);
+    expect(blackArmory?.superseded).toBe(true);
+    expect(arenaOps?.superseded).toBe(true);
+    expect(latest?.superseded).toBeUndefined();
+    expect(latest?.source).toBe("Arena Ops");
+  });
 });
 
 describe("isCatalogWeapon", () => {
@@ -79,12 +141,32 @@ describe("isCatalogWeapon", () => {
 describe("weapon version grouping", () => {
   it("sorts same-name catalog versions newest first", () => {
     const sorted = sortWeaponVersions([
-      weapon(1, "Cynosure", { seasonNumber: 20, releaseIndex: 500 }),
-      weapon(2, "Cynosure", { seasonNumber: 24, releaseIndex: 100 }),
-      weapon(3, "Cynosure", { seasonNumber: 24, releaseIndex: 200 }),
+      weapon(1, "Cynosure", { seasonNumber: 20, releaseIndex: 100 }),
+      weapon(2, "Cynosure", { seasonNumber: 24, releaseIndex: 200 }),
+      weapon(3, "Cynosure", { seasonNumber: 24, releaseIndex: 300 }),
     ]);
 
     expect(sorted.map((w) => w.hash)).toEqual([3, 2, 1]);
+  });
+
+  it("prefers higher releaseIndex over legacy season metadata (Threat Level)", () => {
+    const primary = primaryWeaponVersion([
+      weapon(1664372054, "Threat Level", {
+        seasonNumber: 5,
+        releaseIndex: 29_444,
+        columns: [{ kind: "Trait", perks: [perk("Rampage")] }],
+      }),
+      weapon(1523151869, "Threat Level", {
+        releaseIndex: 35_273,
+        columns: [{ kind: "Trait", perks: [perk("One-Two Punch")] }],
+      }),
+      weapon(950894542, "Threat Level", {
+        releaseIndex: 35_285,
+        columns: [{ kind: "Trait", perks: [perk("Bewildering Burst")] }],
+      }),
+    ]);
+
+    expect(primary?.hash).toBe(950894542);
   });
 
   it("picks a craftable version when recency is otherwise tied", () => {
@@ -135,6 +217,26 @@ describe("weapon version grouping", () => {
     const byName = new Map([["Uncivil Discourse", [oldOrigin, latestOrigin]]]);
 
     expect(collapseWeaponVersions([oldOrigin], byName).map((w) => w.hash)).toEqual([2]);
+  });
+
+  it("maps a raw legacy hash to the primary catalog version for saved hash surfaces", () => {
+    const legacy = weapon(1664372054, "Threat Level", {
+      superseded: true,
+      seasonNumber: 5,
+      releaseIndex: 29_444,
+      columns: [{ kind: "Trait", perks: [perk("Rampage")] }],
+    });
+    const primary = weapon(950894542, "Threat Level", {
+      releaseIndex: 35_285,
+      columns: [{ kind: "Trait", perks: [perk("Bewildering Burst")] }],
+    });
+    const byHash = new Map([
+      [legacy.hash, legacy],
+      [primary.hash, primary],
+    ]);
+    const byName = new Map([["Threat Level", [legacy, primary]]]);
+
+    expect(primaryCatalogWeaponForHash(1664372054, byHash, byName)?.hash).toBe(950894542);
   });
 
   it("excludes superseded versions and aggregates origin trait options", () => {

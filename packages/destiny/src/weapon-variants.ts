@@ -1,4 +1,5 @@
 import type { InternedPerkColumn, PerkColumn, PerkRef, WeaponDoc, WeaponSummary } from "./types";
+import { sourceFields, sourceLabels } from "./weapon-provenance";
 
 type WeaponVersionCandidate = Pick<
   WeaponSummary,
@@ -9,19 +10,34 @@ type WeaponWithColumns = {
   columns: readonly (InternedPerkColumn | PerkColumn)[];
 };
 
-/**
- * Bungie reprised craftable raid weapons (Monument of Triumph / 9.7+) as new item
- * hashes with updated plug sets. Legacy hashes remain for older vault copies but
- * should not be the catalog default when a modern craftable twin exists.
- */
-export function reconcileCraftableTwins(weapons: WeaponDoc[]): WeaponDoc[] {
+function groupWeaponsByName(weapons: WeaponDoc[]): Map<string, WeaponDoc[]> {
   const byName = new Map<string, WeaponDoc[]>();
   for (const weapon of weapons) {
     const list = byName.get(weapon.name);
     if (list) list.push(weapon);
     else byName.set(weapon.name, [weapon]);
   }
+  return byName;
+}
 
+function copySourceFromLegacy(primary: WeaponDoc, legacy: readonly WeaponDoc[]): void {
+  const donor = legacy.find((weapon) => weapon.source) ?? legacy[0];
+  const source = primary.source ?? donor?.source;
+  if (!source) return;
+  const sources = [
+    ...sourceLabels(primary),
+    ...legacy.flatMap((weapon) => sourceLabels(weapon)),
+  ];
+  Object.assign(primary, sourceFields(source, sources));
+}
+
+/**
+ * Mark older same-name manifest defs superseded so browse/search surfaces show the
+ * current perk pool. Handles craftable raid reprisals and non-craftable reissues
+ * (e.g. Pantheon Threat Level). Legacy hashes remain for direct URL / vault lookup.
+ */
+export function reconcileCraftableTwins(weapons: WeaponDoc[]): WeaponDoc[] {
+  const byName = groupWeaponsByName(weapons);
   const superseded = new Set<number>();
 
   for (const group of byName.values()) {
@@ -30,16 +46,21 @@ export function reconcileCraftableTwins(weapons: WeaponDoc[]): WeaponDoc[] {
     const modern = [...group]
       .filter((weapon) => weapon.craftable)
       .sort((a, b) => b.releaseIndex - a.releaseIndex)[0];
-    if (!modern) continue;
+    if (modern) {
+      const legacy = group.filter(
+        (weapon) => !weapon.craftable && weapon.releaseIndex < modern.releaseIndex,
+      );
+      if (legacy.length > 0) {
+        copySourceFromLegacy(modern, legacy);
+        for (const old of legacy) superseded.add(old.hash);
+      }
+      continue;
+    }
 
-    const legacy = group.filter(
-      (weapon) => !weapon.craftable && weapon.releaseIndex < modern.releaseIndex,
-    );
-    if (legacy.length === 0) continue;
-
-    const donor = legacy.find((weapon) => weapon.source) ?? legacy[0]!;
-    if (!modern.source && donor.source) modern.source = donor.source;
-
+    const sorted = [...group].sort((a, b) => b.releaseIndex - a.releaseIndex);
+    const primary = sorted[0]!;
+    const legacy = sorted.slice(1);
+    copySourceFromLegacy(primary, legacy);
     for (const old of legacy) superseded.add(old.hash);
   }
 
@@ -53,9 +74,13 @@ export function isCatalogWeapon(weapon: { superseded?: boolean }): boolean {
   return weapon.superseded !== true;
 }
 
-/** Composite recency key for picking the display version of a same-name weapon group. */
+/**
+ * Recency key for picking the display version of a same-name weapon group.
+ * Manifest `item.index` (`releaseIndex`) is authoritative for reprised duplicates;
+ * `seasonNumber` only breaks ties because reprisals often lack season metadata.
+ */
 export function weaponVersionSortKey(weapon: WeaponVersionCandidate): number {
-  return (weapon.seasonNumber ?? 0) * 1_000_000 + weapon.releaseIndex;
+  return weapon.releaseIndex * 1_000 + (weapon.seasonNumber ?? 0);
 }
 
 /** Same-name weapon versions, newest catalog entry first. */
@@ -75,6 +100,19 @@ export function primaryWeaponVersion<T extends WeaponVersionCandidate>(
   weapons: readonly T[],
 ): T | undefined {
   return sortWeaponVersions(weapons)[0];
+}
+
+/** Primary catalog version for a stored/raw weapon hash. */
+export function primaryCatalogWeaponForHash<T extends WeaponVersionCandidate>(
+  hash: number,
+  byHash: ReadonlyMap<number, T>,
+  byName?: ReadonlyMap<string, readonly T[]>,
+): T | undefined {
+  const weapon = byHash.get(hash);
+  if (!weapon) return undefined;
+
+  const versions = byName?.get(weapon.name) ?? [weapon];
+  return primaryWeaponVersion(versions);
 }
 
 /**

@@ -11,6 +11,7 @@ import {
   matchesWeaponSource,
   normalizeWeaponSource,
   raidSourceMatchesQuery,
+  resolveWeaponSources,
   resolveWeaponSeason,
 } from "./weapon-provenance";
 
@@ -61,6 +62,36 @@ describe("normalizeWeaponSource", () => {
     expect(
       normalizeWeaponSource(undefined, presentationNodes, [1154828558]),
     ).toBe("Vault of Glass");
+  });
+});
+
+describe("resolveWeaponSources", () => {
+  test("keeps Dreaming City primary source and adds Shattered Throne for known dungeon loot", () => {
+    expect(
+      resolveWeaponSources(
+        "Retold Tale",
+        "Dreaming City",
+        presentationNodes,
+        [],
+      ),
+    ).toEqual({
+      source: "Dreaming City",
+      sources: ["Dreaming City", "The Shattered Throne"],
+    });
+  });
+
+  test("adds Shattered Throne for updated dungeon weapons with old seasonal sources", () => {
+    expect(
+      resolveWeaponSources(
+        "Chrysura Melo",
+        "Season of the Lost",
+        presentationNodes,
+        [],
+      ),
+    ).toEqual({
+      source: "Season of the Lost",
+      sources: ["Season of the Lost", "The Shattered Throne"],
+    });
   });
 });
 

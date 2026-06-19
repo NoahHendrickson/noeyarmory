@@ -10,6 +10,8 @@ export interface OwnedArmorSearchItem {
   classType: string;
   /** Raid or activity source from the armor definition, e.g. "Root of Nightmares". */
   source?: string;
+  /** All acquisition/activity sources for shared loot pools; includes `source` when present. */
+  sources?: readonly string[];
   setName?: string;
   archetype?: string;
   secondaryStat?: string;
@@ -65,7 +67,7 @@ export function filterOwnedArmor<T extends OwnedArmorSearchItem>(
     filters.isDupe === true || filters.isDupe === false ? duplicateArmorKeys(armor) : null;
   return armor.filter((a) => {
     if (!matchesFacet(a.classType, filters.classType)) return false;
-    if (!matchesWeaponSource(a.source, filters.source)) return false;
+    if (!matchesWeaponSource(a.source, filters.source, a.sources)) return false;
     if (!matchesFacet(a.setName, filters.setName)) return false;
     if (!matchesFacet(a.archetype, filters.archetype)) return false;
     if (!matchesFacet(a.secondaryStat, filters.secondaryStat)) return false;

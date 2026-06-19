@@ -143,6 +143,19 @@ describe("filterWeapons", () => {
     ]);
   });
 
+  test("source facet matches secondary activity sources", () => {
+    const dreamingCityWeapon = {
+      ...sampleSummaries[0]!,
+      name: "Retold Tale",
+      source: "Dreaming City",
+      sources: ["Dreaming City", "The Shattered Throne"],
+    };
+
+    expect(
+      names(filterWeapons([dreamingCityWeapon], { source: ["shattered"] }, samplePerks)),
+    ).toEqual(["Retold Tale"]);
+  });
+
   test("season facet supports season labels and season numbers", () => {
     expect(
       names(filterWeapons(sampleSummaries, { season: ["Season of the Wish"] }, samplePerks)),
@@ -290,6 +303,7 @@ describe("facets + perks", () => {
       collectActivitySourceFacets([
         ...sampleSummaries,
         { source: "Prophecy" },
+        { source: "Dreaming City", sources: ["Dreaming City", "The Shattered Throne"] },
         { source: "Source: Fireteam Ops" },
         { source: "Solo Ops" },
         { source: "Source: Sparrow Racing League" },
@@ -301,6 +315,7 @@ describe("facets + perks", () => {
       "Root of Nightmares": 1,
       "Vault of Glass": 1,
       Prophecy: 1,
+      "The Shattered Throne": 1,
       "Fireteam Ops": 1,
       "Solo Ops": 1,
       "Sparrow Racing League": 1,
@@ -621,6 +636,53 @@ describe("collectColumnPerks", () => {
   test("counts weapons per trait1 perk", () => {
     const { trait1 } = collectColumnPerks(sampleSummaries, samplePerks);
     expect(trait1.find((p) => p.name === "Firefly")?.count).toBe(2);
+  });
+
+  test("excludes superseded weapons from column perk options", () => {
+    const p = (hash: number, name: string): PerkRef => ({
+      hash,
+      name,
+      currentlyCanRoll: true,
+    });
+    const weapons: WeaponDoc[] = [
+      {
+        hash: 1664372054,
+        name: "Threat Level",
+        type: "Shotgun",
+        element: "Kinetic",
+        ammo: "Special",
+        rarity: "Legendary",
+        slot: "Kinetic",
+        craftable: false,
+        adept: false,
+        releaseIndex: 29_444,
+        superseded: true,
+        stats: [],
+        columns: [{ kind: "Trait", perks: [p(1, "Rampage")] }],
+        perks: ["Rampage"],
+        perkHashes: [1],
+      },
+      {
+        hash: 950894542,
+        name: "Threat Level",
+        type: "Shotgun",
+        element: "Kinetic",
+        ammo: "Special",
+        rarity: "Legendary",
+        slot: "Kinetic",
+        craftable: false,
+        adept: false,
+        releaseIndex: 35_285,
+        stats: [],
+        columns: [{ kind: "Trait", perks: [p(2, "Bewildering Burst")] }],
+        perks: ["Bewildering Burst"],
+        perkHashes: [2],
+      },
+    ];
+    const { index } = internWeaponCatalog(weapons, "test");
+    const { trait1 } = collectColumnPerks(index.weapons, index.perks);
+
+    expect(trait1.map((perk) => perk.name)).toEqual(["Bewildering Burst"]);
   });
 
   test("currentlyCanRoll stays true when any weapon can still roll the perk", () => {

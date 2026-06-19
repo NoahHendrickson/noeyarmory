@@ -2,7 +2,12 @@ import type { DestinyInventoryItemDefinition } from "bungie-api-ts/destiny2";
 
 import type { DestinyIconDefinitionEntry, ManifestDefs } from "./manifest";
 import { internWeaponCatalog } from "./intern-weapons";
-import { normalizeWeaponSource, resolveWeaponSeason } from "./weapon-provenance";
+import {
+  resolveWeaponSeason,
+  resolveWeaponSources,
+  sourceFields,
+  sourceLabels,
+} from "./weapon-provenance";
 import { reconcileCraftableTwins } from "./weapon-variants";
 import { GENERIC_WEAPON_TYPE_ICONS } from "./weapon-type-icon-paths";
 import type {
@@ -402,13 +407,16 @@ export function buildWeaponIndex(
         : undefined) ?? "Kinetic";
     const collectible =
       item.collectibleHash != null ? collectibles[item.collectibleHash] : undefined;
-    const source =
-      sourceOverrides.get(item.hash) ??
-      normalizeWeaponSource(
-        collectible?.sourceString,
-        presentationNodes,
-        collectible?.parentNodeHashes,
-      );
+    const resolvedSources = resolveWeaponSources(
+      name,
+      collectible?.sourceString,
+      presentationNodes,
+      collectible?.parentNodeHashes,
+    );
+    const sourceOverride = sourceOverrides.get(item.hash);
+    const { source, sources } = sourceOverride
+      ? sourceFields(sourceOverride, sourceLabels(resolvedSources))
+      : resolvedSources;
     const season = resolveWeaponSeason(item, collectible, defs);
 
     const perkNames: string[] = [];
@@ -439,6 +447,7 @@ export function buildWeaponIndex(
       seasonNumber: season?.seasonNumber,
       seasonName: season?.seasonName,
       source,
+      sources,
       releaseIndex: item.index,
       stats: weaponStats,
       investmentStats: investmentStats.length > 0 ? investmentStats : undefined,

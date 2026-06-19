@@ -1,6 +1,10 @@
 import { useCallback, useMemo } from "react";
 import type { PaletteCategory, PaletteValueOption } from "@repo/ui";
-import type { WeaponSummary } from "@repo/destiny";
+import {
+  primaryCatalogWeaponForHash,
+  type WeaponNameIndex,
+  type WeaponSummary,
+} from "@repo/destiny";
 
 import {
   pinnedFilterKey,
@@ -14,6 +18,7 @@ interface UseWeaponSearchPinsParams {
   composingCustomFilter: boolean;
   weaponCategories: PaletteCategory[];
   weaponByHash: ReadonlyMap<number, WeaponSummary>;
+  weaponNameIndex: WeaponNameIndex;
   addChip: (categoryId: string, option: PaletteValueOption) => void;
   setQuery: (query: string) => void;
   setPaletteOpen: (open: boolean) => void;
@@ -24,6 +29,7 @@ export function useWeaponSearchPins({
   composingCustomFilter,
   weaponCategories,
   weaponByHash,
+  weaponNameIndex,
   addChip,
   setQuery,
   setPaletteOpen,
@@ -42,15 +48,54 @@ export function useWeaponSearchPins({
     [pinnedFilters],
   );
 
-  const pinnedWeaponHashSet = useMemo(() => new Set(pinnedWeaponHashes), [pinnedWeaponHashes]);
+  const primaryHashForPinnedHash = useMemo(() => {
+    const hashes = new Map<number, number>();
+    for (const hash of pinnedWeaponHashes) {
+      const weapon = primaryCatalogWeaponForHash(hash, weaponByHash, weaponNameIndex.byName);
+      if (weapon) hashes.set(hash, weapon.hash);
+    }
+    return hashes;
+  }, [pinnedWeaponHashes, weaponByHash, weaponNameIndex]);
 
-  const pinnedWeapons = useMemo(
-    () =>
-      pinnedWeaponHashes.flatMap((hash) => {
-        const weapon = weaponByHash.get(hash);
-        return weapon ? [weapon] : [];
-      }),
-    [pinnedWeaponHashes, weaponByHash],
+  const pinnedWeaponHashSet = useMemo(
+    () => new Set(primaryHashForPinnedHash.values()),
+    [primaryHashForPinnedHash],
+  );
+
+  const pinnedWeapons = useMemo(() => {
+    const seen = new Set<number>();
+    return pinnedWeaponHashes.flatMap((hash) => {
+      const weapon = primaryCatalogWeaponForHash(hash, weaponByHash, weaponNameIndex.byName);
+      if (!weapon || seen.has(weapon.hash)) return [];
+      seen.add(weapon.hash);
+      return [weapon];
+    });
+  }, [pinnedWeaponHashes, weaponByHash, weaponNameIndex]);
+
+  const removePinnedWeaponHash = useCallback(
+    (hash: number) => {
+      const weapon = primaryCatalogWeaponForHash(hash, weaponByHash, weaponNameIndex.byName);
+      const targetHash = weapon?.hash ?? hash;
+      for (const pinnedHash of pinnedWeaponHashes) {
+        if ((primaryHashForPinnedHash.get(pinnedHash) ?? pinnedHash) === targetHash) {
+          removeWeaponHash(pinnedHash);
+        }
+      }
+    },
+    [pinnedWeaponHashes, primaryHashForPinnedHash, removeWeaponHash, weaponByHash, weaponNameIndex],
+  );
+
+  const togglePinnedWeaponHash = useCallback(
+    (hash: number) => {
+      const weapon = primaryCatalogWeaponForHash(hash, weaponByHash, weaponNameIndex.byName);
+      const targetHash = weapon?.hash ?? hash;
+      if (pinnedWeaponHashSet.has(targetHash)) {
+        removePinnedWeaponHash(targetHash);
+      } else {
+        toggleWeaponHash(targetHash);
+      }
+    },
+    [pinnedWeaponHashSet, removePinnedWeaponHash, toggleWeaponHash, weaponByHash, weaponNameIndex],
   );
 
   const applyPinnedFilter = useCallback(
@@ -95,8 +140,8 @@ export function useWeaponSearchPins({
     pinnedWeaponHashSet,
     applyPinnedFilter,
     removePinnedFilter: removeFilter,
-    toggleWeaponHash,
-    removeWeaponHash,
+    toggleWeaponHash: togglePinnedWeaponHash,
+    removeWeaponHash: removePinnedWeaponHash,
     renderValueTrailing,
   };
 }

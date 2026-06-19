@@ -185,6 +185,7 @@ export function internWeaponCatalog(
       seasonNumber: weapon.seasonNumber,
       seasonName: weapon.seasonName,
       source: weapon.source,
+      sources: weapon.sources,
       releaseIndex: weapon.releaseIndex,
       ...(weapon.superseded ? { superseded: true } : {}),
       ...(ammoGeneration != null ? { ammoGeneration } : {}),

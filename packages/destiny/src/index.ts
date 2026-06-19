@@ -195,7 +195,11 @@ export {
   matchesWeaponSource,
   normalizeWeaponSource,
   raidSourceMatchesQuery,
+  resolveWeaponSources,
+  sourceFields,
+  sourceLabels,
   resolveWeaponSeason,
+  type ResolvedWeaponSources,
   type ResolvedWeaponSeason,
 } from "./weapon-provenance";
 export { abbreviateWeaponType } from "./weapon-type-abbrev";
@@ -204,6 +208,7 @@ export {
   isCatalogWeapon,
   originTraitNamesForWeapon,
   originTraitNamesForWeapons,
+  primaryCatalogWeaponForHash,
   primaryWeaponVersion,
   reconcileCraftableTwins,
   sortWeaponVersions,

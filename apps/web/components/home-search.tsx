@@ -96,7 +96,7 @@ export function HomeSearch({
   signedIn?: boolean;
   initialMode?: Mode;
 }) {
-  const { weapons, perks, isSample, byHash } = useWeapons();
+  const { weapons, perks, isSample, byHash, nameIndex } = useWeapons();
   const { elementIconMap, typeIconMap, ammoIconMap } = useWeaponIconMaps();
   const { dpsByName } = useWeaponDps();
   const { filters: customFilters, createFilter } = useCustomWeaponFilters();
@@ -232,6 +232,7 @@ export function HomeSearch({
     composingCustomFilter,
     weaponCategories,
     weaponByHash: byHash,
+    weaponNameIndex: nameIndex,
     addChip,
     setQuery,
     setPaletteOpen,

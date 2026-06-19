@@ -84,6 +84,26 @@ describe("buildWeaponCategories", () => {
       "Destabilizing Rounds",
     ]);
   });
+
+  test("lists known dungeon sources even before generated data has matching weapons", () => {
+    const categories = buildWeaponCategories(
+      [],
+      {
+        trait1: [],
+        trait2: [],
+        originTrait: [],
+      },
+      [],
+    );
+
+    const source = categories.find((category) => category.id === "source");
+    expect(source?.getValues("shattered")).toContainEqual(
+      expect.objectContaining({
+        label: "The Shattered Throne",
+        hint: "0",
+      }),
+    );
+  });
 });
 
 describe("perkCategory damage-perks option", () => {
