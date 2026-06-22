@@ -2,11 +2,15 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { cn } from "@repo/ui";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { cn, PillSelect, type PillSelectOption } from "@repo/ui";
 import {
   computeWeaponStats,
+  currentWeaponPerkPoolVersions,
   formatWeaponDpsParts,
+  weaponPerkPoolVersionForHash,
+  weaponsInVersionFamily,
   WEAPON_DPS_SHEET_NAME,
   type PerkRef,
   type WeaponDoc,
@@ -31,6 +35,31 @@ import { WeaponShareButton } from "./weapon-share-button";
 import { WeaponDpsMetricTooltip } from "./weapon-dps-label";
 
 const EMPTY_SELECTED_PERK_HASHES: number[] = [];
+
+function WeaponVersionSelector({
+  options,
+  value,
+  onValueChange,
+}: {
+  options: PillSelectOption<string>[];
+  value: string;
+  onValueChange: (value: string) => void;
+}) {
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-2">
+      <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+        Version
+      </span>
+      <PillSelect
+        variant="ghost"
+        aria-label="Weapon version"
+        options={options}
+        value={value}
+        onValueChange={onValueChange}
+      />
+    </div>
+  );
+}
 
 function statsDiffer(a: WeaponStat[], b: WeaponStat[]): boolean {
   const bByHash = new Map(b.map((stat) => [stat.hash, stat.value]));
@@ -118,6 +147,7 @@ export function WeaponDetailView({
   highlightedBuildPerks,
   dps,
   interactive = true,
+  versionSelector,
 }: {
   weapon: WeaponDoc;
   linkPerks?: boolean;
@@ -127,6 +157,8 @@ export function WeaponDetailView({
   dps?: WeaponDpsEntry;
   /** Enable perk selection for stat preview. */
   interactive?: boolean;
+  /** Optional selector for switching between current same-name perk pools. */
+  versionSelector?: ReactNode;
 }) {
   const { damageTypes, ammoTypes } = useWeapons();
   const { dpsByName } = useWeaponDps();
@@ -235,6 +267,7 @@ export function WeaponDetailView({
             </span>
             <span>{weaponTypeLabel(weapon.type, weapon.frame)}</span>
           </div>
+          {versionSelector}
         </div>
         <WeaponShareButton weaponHash={weapon.hash} />
       </header>
@@ -300,6 +333,7 @@ export function WeaponDetailWithVersions({
   highlightedBuildPerks,
   viewSource,
   skipInitialViewTrack = false,
+  onSelectVersion,
 }: {
   weapon: WeaponDoc;
   linkPerks?: boolean;
@@ -307,13 +341,39 @@ export function WeaponDetailWithVersions({
   highlightedBuildPerks?: readonly string[];
   viewSource?: "direct" | "search";
   skipInitialViewTrack?: boolean;
+  onSelectVersion?: (hash: number) => void;
 }) {
+  const { weapons } = useWeapons();
   const trackedHashRef = useRef<number | null>(null);
   const skippedInitialTrackRef = useRef(false);
+  const versionOptions = useMemo(() => {
+    const siblings = weaponsInVersionFamily(weapons, weapon.name);
+    if (siblings.length === 0) return [];
+    return currentWeaponPerkPoolVersions(siblings);
+  }, [weapons, weapon.name]);
+  const activeVersion = useMemo(
+    () => weaponPerkPoolVersionForHash(versionOptions, weapon.hash) ?? versionOptions[0],
+    [versionOptions, weapon.hash],
+  );
+  const pillOptions = useMemo<PillSelectOption<string>[]>(
+    () =>
+      versionOptions.map((version) => ({
+        value: String(version.weapon.hash),
+        label: version.label,
+      })),
+    [versionOptions],
+  );
+  const versionSelector =
+    onSelectVersion && versionOptions.length > 1 && activeVersion ? (
+      <WeaponVersionSelector
+        options={pillOptions}
+        value={String(activeVersion.weapon.hash)}
+        onValueChange={(value) => onSelectVersion(Number(value))}
+      />
+    ) : undefined;
 
   useEffect(() => {
     trackedHashRef.current = null;
-    skippedInitialTrackRef.current = false;
   }, [weapon.hash]);
 
   useEffect(() => {
@@ -334,14 +394,32 @@ export function WeaponDetailWithVersions({
       linkPerks={linkPerks}
       dps={dps}
       highlightedBuildPerks={highlightedBuildPerks}
+      versionSelector={versionSelector}
     />
   );
 }
 
 /** Standalone `/weapon/[hash]` route view: uses SSR seed when available, else shared index. */
 export function WeaponDetail({ hash, initialWeapon }: { hash: number; initialWeapon?: WeaponDoc }) {
-  const { weapon, loading } = useWeaponDetail(hash, initialWeapon);
+  const router = useRouter();
+  const [activeHash, setActiveHash] = useState(hash);
+  const { weapon, loading } = useWeaponDetail(
+    activeHash,
+    activeHash === hash ? initialWeapon : undefined,
+  );
   const { dpsByName } = useWeaponDps();
+
+  useEffect(() => {
+    setActiveHash(hash);
+  }, [hash]);
+
+  const handleSelectVersion = useCallback(
+    (nextHash: number) => {
+      setActiveHash(nextHash);
+      router.replace(`/weapon/${nextHash}`, { scroll: false });
+    },
+    [router],
+  );
 
   if (!weapon && loading) {
     return <div className="p-6 text-muted-foreground">Loading…</div>;
@@ -369,6 +447,7 @@ export function WeaponDetail({ hash, initialWeapon }: { hash: number; initialWea
         dps={dpsByName.get(weapon.name)}
         highlightedBuildPerks={dpsByName.get(weapon.name)?.buildPerks}
         viewSource="direct"
+        onSelectVersion={handleSelectVersion}
       />
     </div>
   );

@@ -17,6 +17,7 @@ export const RAID_SOURCE_LABELS = [
   "Crota's End",
   "Salvation's Edge",
   "The Desert Perpetual",
+  "Pantheon",
 ] as const;
 
 /** Canonical dungeon names shown in the Source filter. */
@@ -68,6 +69,7 @@ export const RAID_SOURCE_ALIASES: Readonly<Record<string, readonly string[]>> = 
   "Crota's End": ["crota"],
   "Salvation's Edge": ["salvation", "edge"],
   "The Desert Perpetual": ["desert", "perpetual", "tdp"],
+  Pantheon: ["panth"],
 };
 
 export const DUNGEON_SOURCE_ALIASES: Readonly<Record<string, readonly string[]>> = {

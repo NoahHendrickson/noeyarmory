@@ -23,6 +23,7 @@ export function WeaponDetailModal({
   loading,
   dps,
   highlightedBuildPerks,
+  onSelectVersion,
   onClose,
 }: {
   open: boolean;
@@ -30,6 +31,7 @@ export function WeaponDetailModal({
   loading: boolean;
   dps?: WeaponDpsEntry;
   highlightedBuildPerks?: readonly string[];
+  onSelectVersion: (hash: number) => void;
   onClose: () => void;
 }) {
   return (
@@ -84,6 +86,7 @@ export function WeaponDetailModal({
                 highlightedBuildPerks={highlightedBuildPerks}
                 viewSource="search"
                 skipInitialViewTrack
+                onSelectVersion={onSelectVersion}
               />
             ) : loading ? (
               <div className="grid min-h-[22rem] place-items-center px-10 py-16">

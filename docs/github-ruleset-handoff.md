@@ -40,7 +40,7 @@ Finish protecting `main` so GitHub stops flagging the repo as unprotected. Targe
 
 **Intentionally excluded from CI (for now):**
 
-- Root `pnpm typecheck` — fails on pre-existing `@repo/ui` Storybook type errors (`feedback-dialog.stories.tsx`)
+- Root `pnpm typecheck` — fails on pre-existing `@repo/ui` Storybook type errors
 - `@repo/ui` Vitest Storybook browser project — requires Playwright/Chromium; heavier than needed for merge gating
 
 **Verified:** CI `build` job passed on merge to `main` (run `27082276284`).
@@ -173,7 +173,6 @@ Do **not** commit ruleset JSON into the repo — GitHub rulesets are repository 
 - **Node:** 24 (`.nvmrc`, `engines.node >= 24`)
 - **Package manager:** pnpm 10 (`packageManager` in root `package.json` — do not pin conflicting version in `pnpm/action-setup`)
 - **Correctness gates:** `pnpm typecheck`, `pnpm build` (typecheck currently has known `@repo/ui` story failures)
-- **Other workflow:** `release-please.yml` runs on push to `main` (separate from CI `build` check)
 - **Vercel** also reports preview checks on PRs; ruleset only requires `build`, not Vercel
 
 ---

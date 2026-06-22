@@ -10,6 +10,36 @@ type WeaponWithColumns = {
   columns: readonly (InternedPerkColumn | PerkColumn)[];
 };
 
+type WeaponPerkPoolVersionCandidate = WeaponVersionCandidate &
+  Pick<WeaponSummary, "source" | "seasonName" | "adept"> &
+  WeaponWithColumns;
+
+const ADEPT_NAME_SUFFIX_RE = /\s*\((Adept|Timelost|Harrowed)\)\s*$/;
+
+/** Strip Adept/Harrowed/Timelost suffixes for detail version grouping. */
+export function weaponVersionFamilyName(name: string): string {
+  return name.replace(ADEPT_NAME_SUFFIX_RE, "").trim();
+}
+
+/** Every catalog summary sharing a weapon's version family (base + adept tiers). */
+export function weaponsInVersionFamily<T extends { name: string }>(
+  weapons: readonly T[],
+  name: string,
+): T[] {
+  const family = weaponVersionFamilyName(name);
+  return weapons.filter((weapon) => weaponVersionFamilyName(weapon.name) === family);
+}
+
+function adeptTierFromName(name: string): string | undefined {
+  return ADEPT_NAME_SUFFIX_RE.exec(name)?.[1];
+}
+
+export interface CurrentWeaponPerkPoolVersion<T extends WeaponPerkPoolVersionCandidate> {
+  weapon: T;
+  label: string;
+  hashes: number[];
+}
+
 function groupWeaponsByName(weapons: WeaponDoc[]): Map<string, WeaponDoc[]> {
   const byName = new Map<string, WeaponDoc[]>();
   for (const weapon of weapons) {
@@ -115,13 +145,8 @@ export function primaryCatalogWeaponForHash<T extends WeaponVersionCandidate>(
   return primaryWeaponVersion(versions);
 }
 
-/**
- * Collapse a ranked list to one visible row per exact weapon name.
- *
- * `byName` lets filtered searches display the newest catalog version even when
- * the variant that matched the filter is an older hash.
- */
-export function collapseWeaponVersions<T extends WeaponVersionCandidate>(
+/** Collapse a ranked list to one visible row per current same-name perk pool. */
+export function collapseWeaponVersions<T extends WeaponPerkPoolVersionCandidate>(
   weapons: readonly T[],
   byName?: ReadonlyMap<string, readonly T[]>,
 ): T[] {
@@ -132,10 +157,28 @@ export function collapseWeaponVersions<T extends WeaponVersionCandidate>(
     if (!isCatalogWeapon(weapon) || seenNames.has(weapon.name)) continue;
     seenNames.add(weapon.name);
 
-    const versions =
+    const allVersions =
       byName?.get(weapon.name) ?? weapons.filter((candidate) => candidate.name === weapon.name);
-    const primary = primaryWeaponVersion(versions);
-    if (primary) collapsed.push(primary);
+    const primary = primaryWeaponVersion(allVersions);
+    if (!primary) continue;
+
+    const filteredSameName = weapons.filter(
+      (candidate) => candidate.name === weapon.name && isCatalogWeapon(candidate),
+    );
+    const pools = currentWeaponPerkPoolVersions(allVersions);
+    const filteredPoolReps = new Set<number>();
+    for (const match of filteredSameName) {
+      const pool = weaponPerkPoolVersionForHash(pools, match.hash);
+      if (pool) filteredPoolReps.add(pool.weapon.hash);
+    }
+
+    const matchingPools = pools.filter((entry) => filteredPoolReps.has(entry.weapon.hash));
+    if (matchingPools.length > 0) {
+      collapsed.push(...matchingPools.map((entry) => entry.weapon));
+      continue;
+    }
+
+    collapsed.push(primary);
   }
 
   return collapsed;
@@ -143,6 +186,67 @@ export function collapseWeaponVersions<T extends WeaponVersionCandidate>(
 
 function resolvedColumn(column: InternedPerkColumn | PerkColumn): column is PerkColumn {
   return "perks" in column;
+}
+
+function columnPerkPoolFingerprint(column: InternedPerkColumn | PerkColumn): string {
+  const perkIds = resolvedColumn(column)
+    ? column.perks.map((perk) => `${perk.hash}:${perk.name.toLowerCase()}`)
+    : column.perkIndices.map((index) => String(index));
+  return `${column.kind}:${perkIds.sort().join(",")}`;
+}
+
+function weaponPerkPoolFingerprint(weapon: WeaponWithColumns): string {
+  return weapon.columns
+    .filter((column) => column.kind !== "Intrinsic")
+    .map(columnPerkPoolFingerprint)
+    .join("|");
+}
+
+function versionLabel<T extends WeaponPerkPoolVersionCandidate>(versions: readonly T[]): string {
+  const source = versions.find((weapon) => weapon.source)?.source;
+  const seasonName = versions.find((weapon) => weapon.seasonName)?.seasonName;
+  const base = source ?? seasonName ?? `Hash ${versions[0]!.hash}`;
+  const rep = versions[0]!;
+  if (rep.adept) {
+    const tier = adeptTierFromName(rep.name);
+    if (tier) return `${base} (${tier})`;
+  }
+  return base;
+}
+
+function weaponWithPoolSource<T extends WeaponPerkPoolVersionCandidate>(versions: readonly T[]): T {
+  const representative = versions[0]!;
+  const source = versions.find((weapon) => weapon.source)?.source;
+  if (representative.source || !source) return representative;
+  return { ...representative, source } as T;
+}
+
+/** Current, distinct perk pools for a same-name detail selector. */
+export function currentWeaponPerkPoolVersions<T extends WeaponPerkPoolVersionCandidate>(
+  weapons: readonly T[],
+): CurrentWeaponPerkPoolVersion<T>[] {
+  const byPool = new Map<string, T[]>();
+
+  for (const weapon of sortWeaponVersions(weapons)) {
+    const poolKey = `${weaponPerkPoolFingerprint(weapon)}|${weapon.adept ? "adept" : "normal"}`;
+    const versions = byPool.get(poolKey);
+    if (versions) versions.push(weapon);
+    else byPool.set(poolKey, [weapon]);
+  }
+
+  return [...byPool.values()].map((versions) => ({
+    weapon: weaponWithPoolSource(versions),
+    label: versionLabel(versions),
+    hashes: versions.map((weapon) => weapon.hash),
+  }));
+}
+
+/** Resolve which current perk-pool option contains a weapon hash. */
+export function weaponPerkPoolVersionForHash<T extends WeaponPerkPoolVersionCandidate>(
+  versions: readonly CurrentWeaponPerkPoolVersion<T>[],
+  hash: number,
+): CurrentWeaponPerkPoolVersion<T> | undefined {
+  return versions.find((version) => version.hashes.includes(hash));
 }
 
 function addUniqueName(target: string[], seen: Set<string>, name: string): void {

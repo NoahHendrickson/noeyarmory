@@ -17,8 +17,6 @@ export type {
   AmmoTypeRef,
   ArmorDoc,
   ArmorIndex,
-  NewArmorIndex,
-  NewArmorSetGroup,
   ArmorArchetypeRef,
   Armor30SetBonus,
   Armor30SetRef,
@@ -142,17 +140,6 @@ export {
 } from "./generated-data-manifest";
 export { buildNewWeaponIndex } from "./new-weapons";
 export {
-  ARMOR_CLASS_ORDER,
-  ARMOR_SLOT_ORDER,
-  armorSetElementId,
-  buildNewArmorActivityNav,
-  buildNewArmorIndex,
-  filterNewArmorSets,
-  groupNewArmorBySet,
-  type NewArmorActivityNav,
-  type NewArmorActivityNavLink,
-} from "./new-armor";
-export {
   filterArmor,
   sortArmor,
   createArmorFuse,
@@ -205,6 +192,7 @@ export {
 export { abbreviateWeaponType } from "./weapon-type-abbrev";
 export {
   collapseWeaponVersions,
+  currentWeaponPerkPoolVersions,
   isCatalogWeapon,
   originTraitNamesForWeapon,
   originTraitNamesForWeapons,
@@ -212,7 +200,11 @@ export {
   primaryWeaponVersion,
   reconcileCraftableTwins,
   sortWeaponVersions,
+  weaponPerkPoolVersionForHash,
+  weaponVersionFamilyName,
+  weaponsInVersionFamily,
   weaponVersionSortKey,
+  type CurrentWeaponPerkPoolVersion,
 } from "./weapon-variants";
 export { sampleWeapons } from "./fixtures/sample-weapons";
 export { sampleDamageTypes } from "./fixtures/sample-damage-types";

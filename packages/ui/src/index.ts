@@ -52,7 +52,6 @@ export {
   DialogBackdrop,
   DialogPopup,
 } from "./components/dialog";
-export { FeedbackDialog, type FeedbackDialogProps } from "./components/feedback-dialog";
 export { FrostedToolbarButton, type FrostedToolbarButtonProps } from "./components/frosted-toolbar-button";
 export {
   Popover,

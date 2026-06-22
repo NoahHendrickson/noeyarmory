@@ -3,12 +3,16 @@ import { describe, expect, it } from "vitest";
 import type { PerkRef, WeaponDoc } from "./types";
 import {
   collapseWeaponVersions,
+  currentWeaponPerkPoolVersions,
   isCatalogWeapon,
   originTraitNamesForWeapons,
   primaryCatalogWeaponForHash,
   primaryWeaponVersion,
   reconcileCraftableTwins,
   sortWeaponVersions,
+  weaponPerkPoolVersionForHash,
+  weaponsInVersionFamily,
+  weaponVersionFamilyName,
 } from "./weapon-variants";
 
 const perk = (name: string): PerkRef => ({
@@ -35,6 +39,47 @@ function weapon(hash: number, name: string, extra: Partial<WeaponDoc> = {}): Wea
     stats: [],
     ...extra,
   };
+}
+
+function recklessOracleGroup(): WeaponDoc[] {
+  return [
+    weapon(3385326721, "Reckless Oracle", {
+      source: "Garden of Salvation",
+      releaseIndex: 31_478,
+      columns: [
+        { kind: "Trait", perks: [perk("Auto-Loading Holster"), perk("Outlaw")] },
+        { kind: "Trait", perks: [perk("Kill Clip")] },
+      ],
+      perks: ["Auto-Loading Holster", "Outlaw", "Kill Clip"],
+    }),
+    weapon(1992309064, "Reckless Oracle", {
+      craftable: true,
+      source: "Garden of Salvation",
+      releaseIndex: 33_110,
+      columns: [
+        { kind: "Trait", perks: [perk("Keep Away"), perk("Rewind Rounds")] },
+        { kind: "Trait", perks: [perk("Destabilizing Rounds")] },
+      ],
+      perks: ["Keep Away", "Rewind Rounds", "Destabilizing Rounds"],
+    }),
+    weapon(4158265643, "Reckless Oracle", {
+      source: "Pantheon",
+      releaseIndex: 35_278,
+      columns: [
+        { kind: "Trait", perks: [perk("Subsistence"), perk("Repulsor Brace")] },
+        { kind: "Trait", perks: [perk("Paracausal Affinity")] },
+      ],
+      perks: ["Subsistence", "Repulsor Brace", "Paracausal Affinity"],
+    }),
+    weapon(1802315656, "Reckless Oracle", {
+      releaseIndex: 35_290,
+      columns: [
+        { kind: "Trait", perks: [perk("Repulsor Brace"), perk("Subsistence")] },
+        { kind: "Trait", perks: [perk("Paracausal Affinity")] },
+      ],
+      perks: ["Repulsor Brace", "Subsistence", "Paracausal Affinity"],
+    }),
+  ];
 }
 
 describe("reconcileCraftableTwins", () => {
@@ -129,6 +174,19 @@ describe("reconcileCraftableTwins", () => {
     expect(latest?.superseded).toBeUndefined();
     expect(latest?.source).toBe("Arena Ops");
   });
+
+  it("keeps current Garden and Pantheon Reckless Oracle pools catalog-visible", () => {
+    const result = reconcileCraftableTwins(recklessOracleGroup());
+
+    const oldGarden = result.find((w) => w.hash === 3385326721);
+    const garden = result.find((w) => w.hash === 1992309064);
+    const pantheonSourceful = result.find((w) => w.hash === 4158265643);
+    const pantheonLatest = result.find((w) => w.hash === 1802315656);
+    expect(oldGarden?.superseded).toBe(true);
+    expect(garden?.superseded).toBeUndefined();
+    expect(pantheonSourceful?.superseded).toBeUndefined();
+    expect(pantheonLatest?.superseded).toBeUndefined();
+  });
 });
 
 describe("isCatalogWeapon", () => {
@@ -139,6 +197,178 @@ describe("isCatalogWeapon", () => {
 });
 
 describe("weapon version grouping", () => {
+  it("excludes superseded historical perk pools from detail versions", () => {
+    const threatLevel = currentWeaponPerkPoolVersions([
+      weapon(1664372054, "Threat Level", {
+        superseded: true,
+        source: "Scourge of the Past",
+        releaseIndex: 29_444,
+        columns: [{ kind: "Trait", perks: [perk("Rampage")] }],
+        perks: ["Rampage"],
+      }),
+      weapon(950894542, "Threat Level", {
+        source: "Pantheon",
+        releaseIndex: 35_285,
+        columns: [{ kind: "Trait", perks: [perk("Bewildering Burst")] }],
+        perks: ["Bewildering Burst"],
+      }),
+    ]);
+    const kindledOrchid = currentWeaponPerkPoolVersions([
+      weapon(2575506895, "Kindled Orchid", {
+        superseded: true,
+        source: "Crafted in a Black Armory forge",
+        releaseIndex: 29_440,
+        columns: [{ kind: "Trait", perks: [perk("Rampage")] }],
+        perks: ["Rampage"],
+      }),
+      weapon(334964261, "Kindled Orchid", {
+        source: "Arena Ops",
+        releaseIndex: 35_490,
+        columns: [{ kind: "Trait", perks: [perk("Kill Clip")] }],
+        perks: ["Kill Clip"],
+      }),
+    ]);
+    const cynosure = currentWeaponPerkPoolVersions([
+      weapon(1, "Cynosure", {
+        superseded: true,
+        releaseIndex: 100,
+        columns: [{ kind: "Origin Trait", perks: [perk("Old Origin")] }],
+        perks: ["Old Origin"],
+      }),
+      weapon(3, "Cynosure", {
+        releaseIndex: 300,
+        columns: [{ kind: "Origin Trait", perks: [perk("Air-Cooled Core")] }],
+        perks: ["Air-Cooled Core"],
+      }),
+    ]);
+
+    expect(threatLevel.map((version) => version.weapon.hash)).toEqual([950894542]);
+    expect(kindledOrchid.map((version) => version.weapon.hash)).toEqual([334964261]);
+    expect(cynosure.map((version) => version.weapon.hash)).toEqual([3]);
+  });
+
+  it("keeps distinct active Zaouli's Bane pools and labels a source-less duplicate", () => {
+    const versions = currentWeaponPerkPoolVersions([
+      weapon(431721920, "Zaouli's Bane", {
+        craftable: true,
+        source: "King's Fall",
+        releaseIndex: 24_533,
+        columns: [
+          { kind: "Trait", perks: [perk("Ensemble"), perk("Explosive Payload")] },
+          { kind: "Trait", perks: [perk("Incandescent")] },
+        ],
+        perks: ["Ensemble", "Explosive Payload", "Incandescent"],
+      }),
+      weapon(3647341740, "Zaouli's Bane", {
+        source: "Pantheon",
+        releaseIndex: 35_276,
+        columns: [
+          { kind: "Trait", perks: [perk("Explosive Payload"), perk("Burning Ambition")] },
+          { kind: "Trait", perks: [perk("Chaos Reshaped")] },
+        ],
+        perks: ["Explosive Payload", "Burning Ambition", "Chaos Reshaped"],
+      }),
+      weapon(3066945855, "Zaouli's Bane", {
+        releaseIndex: 35_288,
+        columns: [
+          { kind: "Trait", perks: [perk("Burning Ambition"), perk("Explosive Payload")] },
+          { kind: "Trait", perks: [perk("Chaos Reshaped")] },
+        ],
+        perks: ["Burning Ambition", "Explosive Payload", "Chaos Reshaped"],
+      }),
+    ]);
+
+    expect(versions.map((version) => version.weapon.hash)).toEqual([3066945855, 431721920]);
+    expect(versions.map((version) => version.label)).toEqual(["Pantheon", "King's Fall"]);
+    expect(versions.map((version) => version.hashes)).toEqual([
+      [3066945855, 3647341740],
+      [431721920],
+    ]);
+  });
+
+  it("keeps distinct active Reckless Oracle pools and labels the Pantheon duplicate", () => {
+    const versions = currentWeaponPerkPoolVersions(reconcileCraftableTwins(recklessOracleGroup()));
+
+    expect(versions.map((version) => version.weapon.hash)).toEqual([1802315656, 1992309064]);
+    expect(versions.map((version) => version.label)).toEqual(["Pantheon", "Garden of Salvation"]);
+    expect(versions.map((version) => version.hashes)).toEqual([
+      [1802315656, 4158265643],
+      [1992309064],
+    ]);
+    expect(weaponPerkPoolVersionForHash(versions, 1802315656)?.label).toBe("Pantheon");
+    expect(weaponPerkPoolVersionForHash(versions, 4158265643)?.label).toBe("Pantheon");
+    expect(weaponPerkPoolVersionForHash(versions, 1992309064)?.label).toBe(
+      "Garden of Salvation",
+    );
+    expect(weaponPerkPoolVersionForHash(versions, 3385326721)).toBeUndefined();
+  });
+
+  it("resolves a weapon hash to its current perk-pool option", () => {
+    const zaoulis = [
+      weapon(431721920, "Zaouli's Bane", {
+        craftable: true,
+        source: "King's Fall",
+        releaseIndex: 24_533,
+        columns: [{ kind: "Trait", perks: [perk("Incandescent")] }],
+      }),
+      weapon(3066945855, "Zaouli's Bane", {
+        source: "Pantheon",
+        releaseIndex: 35_288,
+        columns: [{ kind: "Trait", perks: [perk("Chaos Reshaped")] }],
+      }),
+    ];
+    const pools = currentWeaponPerkPoolVersions(zaoulis);
+
+    expect(weaponPerkPoolVersionForHash(pools, 3066945855)?.label).toBe("Pantheon");
+    expect(weaponPerkPoolVersionForHash(pools, 431721920)?.label).toBe("King's Fall");
+    expect(weaponPerkPoolVersionForHash(pools, 999)).toBeUndefined();
+  });
+
+  it("groups adept tiers with their base weapon family for detail versions", () => {
+    const kingsFall = weapon(431721920, "Zaouli's Bane", {
+      craftable: true,
+      source: "King's Fall",
+      releaseIndex: 24_533,
+      columns: [
+        { kind: "Trait", perks: [perk("Ensemble"), perk("Explosive Payload")] },
+        { kind: "Trait", perks: [perk("Incandescent")] },
+      ],
+    });
+    const harrowed = weapon(291092617, "Zaouli's Bane (Harrowed)", {
+      craftable: true,
+      adept: true,
+      source: "King's Fall",
+      releaseIndex: 24_535,
+      columns: [
+        { kind: "Trait", perks: [perk("Ensemble"), perk("Explosive Payload")] },
+        { kind: "Trait", perks: [perk("Incandescent")] },
+      ],
+    });
+    const pantheon = weapon(3066945855, "Zaouli's Bane", {
+      source: "Pantheon",
+      releaseIndex: 35_288,
+      columns: [
+        { kind: "Trait", perks: [perk("Burning Ambition"), perk("Explosive Payload")] },
+        { kind: "Trait", perks: [perk("Chaos Reshaped")] },
+      ],
+    });
+    const family = weaponsInVersionFamily([kingsFall, harrowed, pantheon], harrowed.name);
+    const versions = currentWeaponPerkPoolVersions(family);
+
+    expect(weaponVersionFamilyName(harrowed.name)).toBe("Zaouli's Bane");
+    expect(family.map((entry) => entry.hash).sort()).toEqual([291092617, 3066945855, 431721920]);
+    expect(versions.map((version) => version.label)).toEqual([
+      "Pantheon",
+      "King's Fall (Harrowed)",
+      "King's Fall",
+    ]);
+    expect(versions.map((version) => version.weapon.hash)).toEqual([
+      3066945855, 291092617, 431721920,
+    ]);
+    expect(weaponPerkPoolVersionForHash(versions, 291092617)?.label).toBe("King's Fall (Harrowed)");
+    expect(weaponPerkPoolVersionForHash(versions, 431721920)?.label).toBe("King's Fall");
+  });
+
   it("sorts same-name catalog versions newest first", () => {
     const sorted = sortWeaponVersions([
       weapon(1, "Cynosure", { seasonNumber: 20, releaseIndex: 100 }),
@@ -182,7 +412,7 @@ describe("weapon version grouping", () => {
     expect(primary?.hash).toBe(2);
   });
 
-  it("collapses exact-name catalog versions to the latest primary", () => {
+  it("collapses exact-name catalog versions to one row per current perk pool", () => {
     const oldOrigin = weapon(1, "Uncivil Discourse", {
       seasonNumber: 24,
       releaseIndex: 100,
@@ -199,11 +429,11 @@ describe("weapon version grouping", () => {
     });
 
     expect(collapseWeaponVersions([oldOrigin, latestOrigin, adept]).map((w) => w.hash)).toEqual([
-      2, 3,
+      2, 1, 3,
     ]);
   });
 
-  it("uses the full name group primary when only an older matching variant is present", () => {
+  it("prefers the matched perk pool when a filter surfaces only an older catalog variant", () => {
     const oldOrigin = weapon(1, "Uncivil Discourse", {
       seasonNumber: 24,
       releaseIndex: 100,
@@ -216,7 +446,57 @@ describe("weapon version grouping", () => {
     });
     const byName = new Map([["Uncivil Discourse", [oldOrigin, latestOrigin]]]);
 
-    expect(collapseWeaponVersions([oldOrigin], byName).map((w) => w.hash)).toEqual([2]);
+    expect(collapseWeaponVersions([oldOrigin], byName).map((w) => w.hash)).toEqual([1]);
+  });
+
+  it("returns each current Zaouli's Bane perk pool and labels the source-less representative", () => {
+    const kingsFall = weapon(431721920, "Zaouli's Bane", {
+      craftable: true,
+      source: "King's Fall",
+      releaseIndex: 24_533,
+      columns: [
+        { kind: "Trait", perks: [perk("Ensemble"), perk("Explosive Payload")] },
+        { kind: "Trait", perks: [perk("Incandescent")] },
+      ],
+    });
+    const pantheonSourceful = weapon(3647341740, "Zaouli's Bane", {
+      source: "Pantheon",
+      releaseIndex: 35_276,
+      columns: [
+        { kind: "Trait", perks: [perk("Explosive Payload"), perk("Burning Ambition")] },
+        { kind: "Trait", perks: [perk("Chaos Reshaped")] },
+      ],
+    });
+    const pantheonLatest = weapon(3066945855, "Zaouli's Bane", {
+      releaseIndex: 35_288,
+      columns: [
+        { kind: "Trait", perks: [perk("Burning Ambition"), perk("Explosive Payload")] },
+        { kind: "Trait", perks: [perk("Chaos Reshaped")] },
+      ],
+    });
+    const byName = new Map([
+      ["Zaouli's Bane", [kingsFall, pantheonSourceful, pantheonLatest]],
+    ]);
+
+    expect(collapseWeaponVersions([kingsFall], byName).map((w) => w.hash)).toEqual([431721920]);
+    expect(collapseWeaponVersions([pantheonSourceful], byName).map((w) => w.hash)).toEqual([
+      3066945855,
+    ]);
+    expect(collapseWeaponVersions([pantheonSourceful], byName)[0]?.source).toBe("Pantheon");
+    expect(
+      collapseWeaponVersions([kingsFall, pantheonSourceful, pantheonLatest], byName).map(
+        (w) => w.hash,
+      ),
+    ).toEqual([3066945855, 431721920]);
+  });
+
+  it("returns each current Reckless Oracle perk pool and labels the Pantheon representative", () => {
+    const group = reconcileCraftableTwins(recklessOracleGroup());
+    const byName = new Map([["Reckless Oracle", group]]);
+    const collapsed = collapseWeaponVersions(group, byName);
+
+    expect(collapsed.map((w) => w.hash)).toEqual([1802315656, 1992309064]);
+    expect(collapsed.map((w) => w.source)).toEqual(["Pantheon", "Garden of Salvation"]);
   });
 
   it("maps a raw legacy hash to the primary catalog version for saved hash surfaces", () => {
@@ -254,7 +534,7 @@ describe("weapon version grouping", () => {
       columns: [{ kind: "Origin Trait", perks: [perk("Air-Cooled Core")] }],
     });
 
-    expect(collapseWeaponVersions([legacy, middle, latest]).map((w) => w.hash)).toEqual([3]);
+    expect(collapseWeaponVersions([legacy, middle, latest]).map((w) => w.hash)).toEqual([3, 2]);
     expect(originTraitNamesForWeapons(sortWeaponVersions([legacy, middle, latest]))).toEqual([
       "Air-Cooled Core",
       "Accelerated Assault",

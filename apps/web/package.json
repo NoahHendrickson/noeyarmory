@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node ../../scripts/sync-changelog.mjs && next dev --experimental-https -p 4111",
-    "build": "node ../../scripts/sync-changelog.mjs && next build",
+    "dev": "next dev --experimental-https -p 4111",
+    "build": "next build",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",

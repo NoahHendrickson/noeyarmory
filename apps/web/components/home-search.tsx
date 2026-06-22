@@ -779,6 +779,7 @@ export function HomeSearch({
         loading={selectedLoading && selectedHash != null}
         dps={selected ? dpsByName.get(selected.name) : undefined}
         highlightedBuildPerks={selected ? dpsByName.get(selected.name)?.buildPerks : undefined}
+        onSelectVersion={setSelectedHash}
         onClose={() => setSelectedHash(null)}
       />
     </div>

@@ -99,10 +99,12 @@ describe("raid source helpers", () => {
   test("canonicalRaidSource normalizes armor-style raid strings", () => {
     expect(canonicalRaidSource("Last Wish raid")).toBe("Last Wish");
     expect(canonicalRaidSource('Source: "Vault of Glass" Raid')).toBe("Vault of Glass");
+    expect(canonicalRaidSource("Source: Pantheon")).toBe("Pantheon");
   });
 
   test("isRaidSource recognizes canonical raid labels only", () => {
     expect(isRaidSource("Root of Nightmares")).toBe(true);
+    expect(isRaidSource("Pantheon")).toBe(true);
     expect(isRaidSource("Last Wish raid")).toBe(true);
     expect(isRaidSource("Prophecy")).toBe(false);
     expect(isRaidSource("Complete Crucible matches")).toBe(false);
@@ -118,6 +120,7 @@ describe("raid source helpers", () => {
     expect(raidSourceMatchesQuery("Root of Nightmares", "root")).toBe(true);
     expect(raidSourceMatchesQuery("Root of Nightmares", "ron")).toBe(true);
     expect(raidSourceMatchesQuery("Vault of Glass", "vog")).toBe(true);
+    expect(raidSourceMatchesQuery("Pantheon", "panth")).toBe(true);
   });
 });
 
@@ -132,6 +135,7 @@ describe("curated activity source helpers", () => {
   test("isCuratedActivitySource recognizes curated labels only", () => {
     expect(isCuratedActivitySource("Prophecy")).toBe(true);
     expect(isCuratedActivitySource("Solo Ops")).toBe(true);
+    expect(isCuratedActivitySource("Pantheon")).toBe(true);
     expect(isCuratedActivitySource("Sparrow Racing League")).toBe(true);
     expect(isCuratedActivitySource("Solstice")).toBe(false);
   });
@@ -140,6 +144,7 @@ describe("curated activity source helpers", () => {
     expect(activitySourceMatchesQuery("Fireteam Ops", "fireteam")).toBe(true);
     expect(activitySourceMatchesQuery("Solo Ops", "solo")).toBe(true);
     expect(activitySourceMatchesQuery("Grasp of Avarice", "goa")).toBe(true);
+    expect(activitySourceMatchesQuery("Pantheon", "panth")).toBe(true);
     expect(activitySourceMatchesQuery("Sparrow Racing League", "srl")).toBe(true);
   });
 });

@@ -1,7 +1,6 @@
 /**
  * Git prepare-commit-msg hook: prepend feat:/fix:/chore:/etc. when the message
- * isn't already conventional. Only feat and fix are intended for the changelog;
- * everything else defaults to chore unless you prefix manually.
+ * isn't already conventional. Everything else defaults to chore unless you prefix manually.
  */
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
@@ -29,11 +28,6 @@ const CONVENTIONAL =
   /^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9\-_, ]+\))?!?: .+/i;
 
 if (CONVENTIONAL.test(subject)) {
-  process.exit(0);
-}
-
-// release-please and similar automation
-if (/^chore(\([^)]+\))?!: release/i.test(subject)) {
   process.exit(0);
 }
 
@@ -85,14 +79,7 @@ function inferType(message, files) {
       return "test";
     }
 
-    if (
-      files.every(
-        (f) =>
-          f.startsWith(".github/") ||
-          f === "release-please-config.json" ||
-          f === ".release-please-manifest.json",
-      )
-    ) {
+    if (files.every((f) => f.startsWith(".github/"))) {
       return "ci";
     }
 
@@ -108,7 +95,6 @@ function inferType(message, files) {
     }
   }
 
-  // Internal work — not user-facing changelog material unless prefixed manually.
   return "chore";
 }
 
