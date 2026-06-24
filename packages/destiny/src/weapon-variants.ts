@@ -30,10 +30,6 @@ export function weaponsInVersionFamily<T extends { name: string }>(
   return weapons.filter((weapon) => weaponVersionFamilyName(weapon.name) === family);
 }
 
-function adeptTierFromName(name: string): string | undefined {
-  return ADEPT_NAME_SUFFIX_RE.exec(name)?.[1];
-}
-
 export interface CurrentWeaponPerkPoolVersion<T extends WeaponPerkPoolVersionCandidate> {
   weapon: T;
   label: string;
@@ -54,10 +50,7 @@ function copySourceFromLegacy(primary: WeaponDoc, legacy: readonly WeaponDoc[]):
   const donor = legacy.find((weapon) => weapon.source) ?? legacy[0];
   const source = primary.source ?? donor?.source;
   if (!source) return;
-  const sources = [
-    ...sourceLabels(primary),
-    ...legacy.flatMap((weapon) => sourceLabels(weapon)),
-  ];
+  const sources = [...sourceLabels(primary), ...legacy.flatMap((weapon) => sourceLabels(weapon))];
   Object.assign(primary, sourceFields(source, sources));
 }
 
@@ -97,6 +90,120 @@ export function reconcileCraftableTwins(weapons: WeaponDoc[]): WeaponDoc[] {
   return weapons.map((weapon) =>
     superseded.has(weapon.hash) ? { ...weapon, superseded: true } : weapon,
   );
+}
+
+function adeptTierPoolKey(weapon: Pick<WeaponDoc, "name" | "source">): string {
+  return `${weaponVersionFamilyName(weapon.name)}|${weapon.source ?? ""}`;
+}
+
+function mergePerkRefs(existing: PerkRef, incoming: PerkRef): PerkRef {
+  const alternateHashes = [
+    ...new Set([...(existing.alternateHashes ?? []), ...(incoming.alternateHashes ?? [])]),
+  ];
+  return {
+    ...existing,
+    icon: existing.icon ?? incoming.icon,
+    description: existing.description ?? incoming.description,
+    enhancedDescription: existing.enhancedDescription ?? incoming.enhancedDescription,
+    currentlyCanRoll: existing.currentlyCanRoll || incoming.currentlyCanRoll,
+    ...(alternateHashes.length > 0 ? { alternateHashes } : {}),
+  };
+}
+
+/**
+ * Union perks position-by-position across tier variants. Columns are matched by index and
+ * the merged column inherits the first variant's `kind` — this assumes tier variants share
+ * the same column order and socket layout (true for current weapons; a future manifest that
+ * shifts a socket between tiers would silently mis-merge two different pools here).
+ */
+function mergeColumnPerks(weaponColumns: readonly PerkColumn[][]): PerkColumn[] {
+  const maxColumns = Math.max(...weaponColumns.map((columns) => columns.length), 0);
+  const merged: PerkColumn[] = [];
+
+  for (let idx = 0; idx < maxColumns; idx += 1) {
+    const slots = weaponColumns
+      .map((columns) => columns[idx])
+      .filter((column): column is PerkColumn => column != null);
+    if (slots.length === 0) continue;
+
+    const byName = new Map<string, PerkRef>();
+    for (const slot of slots) {
+      for (const entry of slot.perks) {
+        const existing = byName.get(entry.name);
+        byName.set(entry.name, existing ? mergePerkRefs(existing, entry) : entry);
+      }
+    }
+
+    merged.push({
+      kind: slots[0]!.kind,
+      perks: [...byName.values()].sort((a, b) => a.name.localeCompare(b.name)),
+    });
+  }
+
+  return merged;
+}
+
+function flattenWeaponPerkFields(
+  columns: readonly PerkColumn[],
+): Pick<WeaponDoc, "perks" | "perkHashes"> {
+  const perkNames: string[] = [];
+  const perkHashes: number[] = [];
+  for (const column of columns) {
+    for (const entry of column.perks) {
+      if (entry.name) perkNames.push(entry.name);
+      perkHashes.push(entry.hash);
+      for (const alt of entry.alternateHashes ?? []) perkHashes.push(alt);
+    }
+  }
+  return {
+    perks: [...new Set(perkNames)],
+    perkHashes: [...new Set(perkHashes)],
+  };
+}
+
+/**
+ * Union roll columns across normal and Timelost/Adept/Harrowed defs that share a
+ * source within the same version family. Bungie now ships one roll pool per source;
+ * manifest defs can still differ slightly per tier.
+ *
+ * This deliberately bets that same-source tiers are consolidated: a perk on either tier is
+ * shown as rollable on both. If Bungie ever ships a same-source tier pair that was NOT
+ * consolidated, the normal weapon would surface perks it can't actually roll — an accepted
+ * simplification, matching the `craftable`/`adept` simplifications elsewhere in the index.
+ */
+export function reconcileAdeptTierPools(weapons: WeaponDoc[]): WeaponDoc[] {
+  const byPoolKey = new Map<string, WeaponDoc[]>();
+  for (const weapon of weapons) {
+    const key = adeptTierPoolKey(weapon);
+    const group = byPoolKey.get(key);
+    if (group) group.push(weapon);
+    else byPoolKey.set(key, [weapon]);
+  }
+
+  const mergedColumns = new Map<number, PerkColumn[]>();
+  const mergedPerkFields = new Map<number, Pick<WeaponDoc, "perks" | "perkHashes">>();
+
+  for (const group of byPoolKey.values()) {
+    const hasAdept = group.some((weapon) => weapon.adept);
+    const hasNormal = group.some((weapon) => !weapon.adept);
+    if (!hasAdept || !hasNormal) continue;
+
+    const columns = mergeColumnPerks(group.map((weapon) => weapon.columns));
+    const perkFields = flattenWeaponPerkFields(columns);
+    for (const weapon of group) {
+      mergedColumns.set(weapon.hash, columns);
+      mergedPerkFields.set(weapon.hash, perkFields);
+    }
+  }
+
+  if (mergedColumns.size === 0) return weapons;
+
+  return weapons.map((weapon) => {
+    const columns = mergedColumns.get(weapon.hash);
+    const perkFields = mergedPerkFields.get(weapon.hash);
+    if (!columns || !perkFields) return weapon;
+    return { ...weapon, columns, ...perkFields };
+  });
 }
 
 /** Browse/search surfaces should ignore manifest legacy duplicates. */
@@ -199,23 +306,40 @@ function weaponPerkPoolFingerprint(weapon: WeaponWithColumns): string {
   return weapon.columns
     .filter((column) => column.kind !== "Intrinsic")
     .map(columnPerkPoolFingerprint)
+    .sort()
     .join("|");
 }
 
+function tierVersionLabel(name: string, adept: boolean): string {
+  if (!adept) return "Standard";
+  return ADEPT_NAME_SUFFIX_RE.exec(name)?.[1] ?? "Standard";
+}
+
+function poolIsTierVariantSplit(versions: readonly WeaponPerkPoolVersionCandidate[]): boolean {
+  if (versions.length < 2) return false;
+  const sources = new Set(versions.map((weapon) => weapon.source ?? ""));
+  if (sources.size !== 1) return false;
+  return versions.some((weapon) => weapon.adept) && versions.some((weapon) => !weapon.adept);
+}
+
+function sortTierVersions<T extends WeaponPerkPoolVersionCandidate>(versions: readonly T[]): T[] {
+  return [...versions].sort(
+    (a, b) =>
+      Number(a.adept) - Number(b.adept) ||
+      weaponVersionSortKey(b) - weaponVersionSortKey(a) ||
+      b.hash - a.hash,
+  );
+}
+
 function versionLabel<T extends WeaponPerkPoolVersionCandidate>(versions: readonly T[]): string {
+  const rep = versions.find((weapon) => !weapon.adept) ?? versions[0]!;
   const source = versions.find((weapon) => weapon.source)?.source;
   const seasonName = versions.find((weapon) => weapon.seasonName)?.seasonName;
-  const base = source ?? seasonName ?? `Hash ${versions[0]!.hash}`;
-  const rep = versions[0]!;
-  if (rep.adept) {
-    const tier = adeptTierFromName(rep.name);
-    if (tier) return `${base} (${tier})`;
-  }
-  return base;
+  return source ?? seasonName ?? `Hash ${rep.hash}`;
 }
 
 function weaponWithPoolSource<T extends WeaponPerkPoolVersionCandidate>(versions: readonly T[]): T {
-  const representative = versions[0]!;
+  const representative = versions.find((weapon) => !weapon.adept) ?? versions[0]!;
   const source = versions.find((weapon) => weapon.source)?.source;
   if (representative.source || !source) return representative;
   return { ...representative, source } as T;
@@ -228,17 +352,29 @@ export function currentWeaponPerkPoolVersions<T extends WeaponPerkPoolVersionCan
   const byPool = new Map<string, T[]>();
 
   for (const weapon of sortWeaponVersions(weapons)) {
-    const poolKey = `${weaponPerkPoolFingerprint(weapon)}|${weapon.adept ? "adept" : "normal"}`;
+    const poolKey = weaponPerkPoolFingerprint(weapon);
     const versions = byPool.get(poolKey);
     if (versions) versions.push(weapon);
     else byPool.set(poolKey, [weapon]);
   }
 
-  return [...byPool.values()].map((versions) => ({
-    weapon: weaponWithPoolSource(versions),
-    label: versionLabel(versions),
-    hashes: versions.map((weapon) => weapon.hash),
-  }));
+  return [...byPool.values()].flatMap((versions) => {
+    if (poolIsTierVariantSplit(versions)) {
+      return sortTierVersions(versions).map((weapon) => ({
+        weapon: weaponWithPoolSource([weapon]),
+        label: tierVersionLabel(weapon.name, weapon.adept),
+        hashes: [weapon.hash],
+      }));
+    }
+
+    return [
+      {
+        weapon: weaponWithPoolSource(versions),
+        label: versionLabel(versions),
+        hashes: versions.map((weapon) => weapon.hash),
+      },
+    ];
+  });
 }
 
 /** Resolve which current perk-pool option contains a weapon hash. */

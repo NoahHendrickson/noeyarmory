@@ -31,8 +31,10 @@ import { ElementIcon } from "./element-icon";
 import { weaponTypeLabel } from "./weapon-result-row";
 import { PerkColumnView } from "./perk-column";
 import { StatBars } from "./stat-bars";
+import { WeaponMasterworkSelector } from "./weapon-masterwork-selector";
 import { WeaponShareButton } from "./weapon-share-button";
 import { WeaponDpsMetricTooltip } from "./weapon-dps-label";
+import { WeaponSearchPalette, type WeaponSearchSelectionSource } from "./weapon-search-palette";
 
 const EMPTY_SELECTED_PERK_HASHES: number[] = [];
 
@@ -46,10 +48,7 @@ function WeaponVersionSelector({
   onValueChange: (value: string) => void;
 }) {
   return (
-    <div className="mt-3 flex flex-wrap items-center gap-2">
-      <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-        Version
-      </span>
+    <div className="mb-3 flex flex-wrap items-center gap-2">
       <PillSelect
         variant="ghost"
         aria-label="Weapon version"
@@ -169,6 +168,7 @@ export function WeaponDetailView({
     columnIndex: number;
     perk: PerkRef;
   } | null>(null);
+  const [selectedMasterworkStatHash, setSelectedMasterworkStatHash] = useState<number | null>(null);
   const dpsEntry = dps ?? dpsByName.get(weapon.name);
 
   const clearHoverPreview = useCallback(() => setHoverPreview(null), []);
@@ -190,6 +190,10 @@ export function WeaponDetailView({
     setHoverPreview(null);
   }, [weapon.hash]);
 
+  useEffect(() => {
+    setSelectedMasterworkStatHash(null);
+  }, [weapon.hash]);
+
   const elementIconPath = useMemo(
     () => damageTypes.find((damageType) => damageType.name === weapon.element)?.icon,
     [damageTypes, weapon.element],
@@ -208,7 +212,20 @@ export function WeaponDetailView({
 
   const selectedPerkHashes = interactive ? build.selectedPerkHashes : EMPTY_SELECTED_PERK_HASHES;
 
+  const masterworkStatMods = useMemo(() => {
+    if (!interactive || selectedMasterworkStatHash == null) return [];
+    const option = weapon.masterworkOptions?.find(
+      (entry) => entry.statHash === selectedMasterworkStatHash,
+    );
+    return option?.statMods ?? [];
+  }, [interactive, selectedMasterworkStatHash, weapon.masterworkOptions]);
+
   const { stats: currentStats } = useMemo(
+    () => computeWeaponStats(weapon, selectedPerkHashes, statGroups, masterworkStatMods),
+    [weapon, selectedPerkHashes, statGroups, masterworkStatMods],
+  );
+
+  const { stats: statsWithoutMasterwork } = useMemo(
     () => computeWeaponStats(weapon, selectedPerkHashes, statGroups),
     [weapon, selectedPerkHashes, statGroups],
   );
@@ -221,18 +238,22 @@ export function WeaponDetailView({
   }, [hoverPreview, build.selectedByColumn, selectedPerkHashes]);
 
   const { stats: previewStats } = useMemo(
-    () => computeWeaponStats(weapon, previewPerkHashes, statGroups),
-    [weapon, previewPerkHashes, statGroups],
+    () => computeWeaponStats(weapon, previewPerkHashes, statGroups, masterworkStatMods),
+    [weapon, previewPerkHashes, statGroups, masterworkStatMods],
   );
 
   const hoverChangesStats = hoverPreview != null && statsDiffer(previewStats, currentStats);
+  const masterworkChangesStats =
+    !hoverChangesStats &&
+    masterworkStatMods.length > 0 &&
+    statsDiffer(currentStats, statsWithoutMasterwork);
   const displayStats = hoverChangesStats ? previewStats : currentStats;
-  const showDeltas = hoverChangesStats;
-  const deltaBaseStats = currentStats;
+  const showDeltas = hoverChangesStats || masterworkChangesStats;
+  const deltaBaseStats = hoverChangesStats ? currentStats : statsWithoutMasterwork;
 
   return (
     <div className="mx-auto w-fit max-w-full">
-      <header className="-mx-4 -mt-4 flex items-start gap-3 border-b border-border/50 bg-black/[0.03] px-4 pt-4 pb-4 backdrop-blur-sm sm:-mx-6 sm:-mt-6 sm:px-6 sm:pt-6 sm:pb-5">
+      <header className="-mx-4 -mt-4 flex items-start gap-3 border-b border-border/50 px-4 pt-4 pb-4 sm:-mx-6 sm:-mt-6 sm:px-6 sm:pt-6 sm:pb-5">
         <WeaponThumbnail weapon={weapon} />
         <div className="min-w-0 flex-1">
           <h2 className="text-lg font-bold tracking-tight sm:text-xl">{weapon.name}</h2>
@@ -267,14 +288,21 @@ export function WeaponDetailView({
             </span>
             <span>{weaponTypeLabel(weapon.type, weapon.frame)}</span>
           </div>
-          {versionSelector}
         </div>
         <WeaponShareButton weaponHash={weapon.hash} />
       </header>
 
-      <div className="grid w-fit max-w-full grid-cols-1 gap-6 pt-6 md:grid-cols-[minmax(220px,280px)_max-content]">
+      <div className="grid w-fit max-w-full grid-cols-1 gap-8 pt-6 md:grid-cols-[minmax(220px,280px)_max-content] md:gap-x-12 md:gap-y-6">
         <div className="space-y-3 self-start">
           {dpsEntry && <WeaponDpsSummary entry={dpsEntry} />}
+          {weapon.masterworkOptions?.length ? (
+            <WeaponMasterworkSelector
+              options={weapon.masterworkOptions}
+              selectedStatHash={interactive ? selectedMasterworkStatHash : null}
+              onSelect={setSelectedMasterworkStatHash}
+              disabled={!interactive}
+            />
+          ) : null}
           <StatBars
             stats={displayStats}
             baseStats={showDeltas ? deltaBaseStats : undefined}
@@ -284,6 +312,7 @@ export function WeaponDetailView({
 
         <div className="min-w-0">
           <section>
+            {versionSelector}
             {weapon.columns.length > 0 ? (
               <div className="inline-grid auto-cols-max grid-flow-col items-start gap-x-2.5 overflow-x-auto px-1.5 py-1">
                 {weapon.columns.map((column, columnIndex) => {
@@ -399,6 +428,36 @@ export function WeaponDetailWithVersions({
   );
 }
 
+function WeaponDetailAppHeader({
+  onSelectWeapon,
+}: {
+  onSelectWeapon: (hash: number, source: WeaponSearchSelectionSource) => void;
+}) {
+  return (
+    <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background px-[max(1rem,env(safe-area-inset-right))] py-2 pl-[max(1rem,env(safe-area-inset-left))]">
+      <div className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-2 sm:grid-cols-[1fr_minmax(0,28rem)_1fr] sm:items-center">
+        <Link
+          href="/"
+          className="font-pixel justify-self-center text-sm font-bold sm:justify-self-start sm:text-left"
+        >
+          moonfang armory
+        </Link>
+        <div className="min-w-0 sm:col-start-2 sm:row-start-1">
+          <WeaponSearchPalette
+            onSelectWeapon={onSelectWeapon}
+            className="mx-auto max-w-md sm:w-full"
+            paletteClassName="mx-0 max-w-none sm:w-full"
+            floatingPanel
+            size="compact"
+            restoreSession
+            autoOpenRestoredSession={false}
+          />
+        </div>
+      </div>
+    </header>
+  );
+}
+
 /** Standalone `/weapon/[hash]` route view: uses SSR seed when available, else shared index. */
 export function WeaponDetail({ hash, initialWeapon }: { hash: number; initialWeapon?: WeaponDoc }) {
   const router = useRouter();
@@ -421,34 +480,48 @@ export function WeaponDetail({ hash, initialWeapon }: { hash: number; initialWea
     [router],
   );
 
+  const handleSearchSelectWeapon = useCallback(
+    (nextHash: number, source: WeaponSearchSelectionSource) => {
+      trackWeaponView(nextHash, source);
+      setActiveHash(nextHash);
+      router.push(`/weapon/${nextHash}`, { scroll: false });
+    },
+    [router],
+  );
+
   if (!weapon && loading) {
-    return <div className="p-6 text-muted-foreground">Loading…</div>;
+    return (
+      <div className="min-h-screen bg-background">
+        <WeaponDetailAppHeader onSelectWeapon={handleSearchSelectWeapon} />
+        <div className="p-6 text-muted-foreground">Loading…</div>
+      </div>
+    );
   }
 
   if (!weapon) {
     return (
-      <div className="space-y-2 p-6">
-        <p>Weapon not found.</p>
-        <Link href="/" className="text-sm underline">
-          ← Back to search
-        </Link>
+      <div className="min-h-screen bg-background">
+        <WeaponDetailAppHeader onSelectWeapon={handleSearchSelectWeapon} />
+        <div className="space-y-2 p-6">
+          <p>Weapon not found.</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 p-4 md:p-6">
-      <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">
-        ← Back to search
-      </Link>
-      <WeaponDetailWithVersions
-        weapon={weapon}
-        linkPerks={false}
-        dps={dpsByName.get(weapon.name)}
-        highlightedBuildPerks={dpsByName.get(weapon.name)?.buildPerks}
-        viewSource="direct"
-        onSelectVersion={handleSelectVersion}
-      />
+    <div className="min-h-screen bg-background">
+      <WeaponDetailAppHeader onSelectWeapon={handleSearchSelectWeapon} />
+      <main className="mx-auto max-w-5xl space-y-6 p-4 md:p-6">
+        <WeaponDetailWithVersions
+          weapon={weapon}
+          linkPerks={false}
+          dps={dpsByName.get(weapon.name)}
+          highlightedBuildPerks={dpsByName.get(weapon.name)?.buildPerks}
+          viewSource="direct"
+          onSelectVersion={handleSelectVersion}
+        />
+      </main>
     </div>
   );
 }

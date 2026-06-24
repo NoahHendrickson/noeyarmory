@@ -46,6 +46,20 @@ export const sampleWeapons: WeaponDoc[] = [
       { hash: 3, name: "Stability", value: 50 },
       { hash: 4, name: "Handling", value: 30 },
     ],
+    masterworkOptions: [
+      {
+        statHash: 2,
+        statName: "Range",
+        icon: "/common/destiny2_content/icons/mw-range.png",
+        statMods: [{ hash: 2, value: 10 }],
+      },
+      {
+        statHash: 3,
+        statName: "Stability",
+        icon: "/common/destiny2_content/icons/mw-stability.png",
+        statMods: [{ hash: 3, value: 10 }],
+      },
+    ],
     columns: [
       { kind: "Intrinsic", perks: [p(100, "Adaptive Frame", false)] },
       {

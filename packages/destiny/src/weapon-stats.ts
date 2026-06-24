@@ -144,6 +144,7 @@ export function computeWeaponStats(
   weapon: WeaponDoc,
   selectedPerkHashes: readonly number[],
   statGroups: Record<string, StatGroupRef> | undefined,
+  extraStatMods: readonly StatMod[] = [],
 ): ComputedWeaponStats {
   const fallbackBase = weapon.stats;
   const investmentStats = weapon.investmentStats;
@@ -167,7 +168,11 @@ export function computeWeaponStats(
     .filter((perk): perk is PerkRef => perk != null);
 
   const baseInvestment = sumInvestmentStats(investmentStats);
-  const withPerksInvestment = sumInvestmentStats(investmentStats, collectStatMods(selectedPerks));
+  const withPerksInvestment = sumInvestmentStats(
+    investmentStats,
+    collectStatMods(selectedPerks),
+    [...extraStatMods],
+  );
 
   const baseDisplay = scaleInvestmentStats(baseInvestment, statGroup);
   const computedDisplay = scaleInvestmentStats(withPerksInvestment, statGroup);

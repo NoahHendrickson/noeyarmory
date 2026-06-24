@@ -57,4 +57,26 @@ describe("computeWeaponStats", () => {
     expect(stats).toEqual(weapon.stats);
     expect(baseStats).toEqual(weapon.stats);
   });
+
+  it("applies masterwork stat mods", () => {
+    const { stats, baseStats } = computeWeaponStats(
+      fatebringer,
+      [],
+      statGroups,
+      [{ hash: 3, value: 10 }],
+    );
+    expect(baseStats.find((s) => s.name === "Stability")?.value).toBe(50);
+    expect(stats.find((s) => s.name === "Stability")?.value).toBe(60);
+  });
+
+  it("stacks masterwork mods with selected perk mods", () => {
+    const { stats } = computeWeaponStats(
+      fatebringer,
+      [101, 103],
+      statGroups,
+      [{ hash: 2, value: 10 }],
+    );
+    // Fluted: -5 range, Accurized: +10 range, masterwork range: +10 → net +15 from base 46
+    expect(stats.find((s) => s.name === "Range")?.value).toBe(61);
+  });
 });

@@ -4,13 +4,12 @@ import { describe, expect, it } from "vitest";
 import {
   buildAmmoTypeCatalog,
   buildColumnPerks,
-  collectSocketPlugCandidates,
   deriveAttunementSourceOverrides,
-  plugSetEntryCanRoll,
   buildDamageTypeCatalog,
   buildWeaponTypeCatalog,
 } from "./build-index";
 import type { ManifestDefs } from "./manifest";
+import { collectSocketPlugCandidates, plugSetEntryCanRoll } from "./socket-plug-candidates";
 function traitPlug(
   hash: number,
   name: string,
@@ -47,7 +46,8 @@ describe("buildAmmoTypeCatalog", () => {
       },
       5: {
         hash: 5,
-        foreground: "/common/destiny2_content/icons/25544plugs_armor_mods_head_ammo_drop_special_000_000.v2.png",
+        foreground:
+          "/common/destiny2_content/icons/25544plugs_armor_mods_head_ammo_drop_special_000_000.v2.png",
       },
     };
 
@@ -162,9 +162,7 @@ describe("deriveAttunementSourceOverrides", () => {
       },
     } as unknown as ManifestDefs;
 
-    expect(deriveAttunementSourceOverrides(defs)).toEqual(
-      new Map([[2827141087, "Fireteam Ops"]]),
-    );
+    expect(deriveAttunementSourceOverrides(defs)).toEqual(new Map([[2827141087, "Fireteam Ops"]]));
   });
 });
 
@@ -193,15 +191,51 @@ describe("collectSocketPlugCandidates", () => {
         ],
       },
     };
-    expect(
-      collectSocketPlugCandidates({ reusablePlugSetHash: 10 }, plugSets),
-    ).toEqual([{ hash: 1, canRoll: true }]);
+    expect(collectSocketPlugCandidates({ reusablePlugSetHash: 10 }, plugSets)).toEqual([
+      { hash: 1, canRoll: true },
+    ]);
   });
 
   it("treats singleInitialItemHash plugs as rollable for display (fixed origin traits)", () => {
+    expect(collectSocketPlugCandidates({ singleInitialItemHash: 99 }, {})).toEqual([
+      { hash: 99, canRoll: true },
+    ]);
+  });
+
+  it("merges singleInitialItemHash when a reusable plug set only has an empty crafting socket", () => {
+    const plugSets = {
+      10: {
+        reusablePlugItems: [{ plugItemHash: 1, currentlyCanRoll: true }],
+      },
+    };
     expect(
-      collectSocketPlugCandidates({ singleInitialItemHash: 99 }, {}),
-    ).toEqual([{ hash: 99, canRoll: true }]);
+      collectSocketPlugCandidates({ reusablePlugSetHash: 10, singleInitialItemHash: 99 }, plugSets),
+    ).toEqual([
+      { hash: 1, canRoll: true },
+      { hash: 99, canRoll: true },
+    ]);
+
+    const items: Record<number, DestinyInventoryItemDefinition> = {
+      1: {
+        hash: 1,
+        displayProperties: { name: "Empty Origins Socket", icon: "" },
+        plug: { plugCategoryIdentifier: "crafting.recipes.empty_socket" },
+      } as DestinyInventoryItemDefinition,
+      99: {
+        hash: 99,
+        displayProperties: { name: "Runneth Over", icon: "" },
+        inventory: { tierType: 2 },
+        plug: { plugCategoryIdentifier: "origins" },
+      } as DestinyInventoryItemDefinition,
+    };
+
+    const { perks } = buildColumnPerks(
+      collectSocketPlugCandidates({ reusablePlugSetHash: 10, singleInitialItemHash: 99 }, plugSets),
+      items,
+    );
+    expect(perks).toEqual([
+      expect.objectContaining({ hash: 99, name: "Runneth Over", currentlyCanRoll: true }),
+    ]);
   });
 });
 
@@ -253,7 +287,10 @@ describe("buildColumnPerks", () => {
     };
 
     const { perks } = buildColumnPerks(
-      [{ hash: 10, canRoll: true }, { hash: 11, canRoll: true }],
+      [
+        { hash: 10, canRoll: true },
+        { hash: 11, canRoll: true },
+      ],
       items,
     );
 
@@ -277,7 +314,10 @@ describe("buildColumnPerks", () => {
     };
 
     const { perks } = buildColumnPerks(
-      [{ hash: 10, canRoll: true }, { hash: 11, canRoll: false }],
+      [
+        { hash: 10, canRoll: true },
+        { hash: 11, canRoll: false },
+      ],
       items,
     );
 

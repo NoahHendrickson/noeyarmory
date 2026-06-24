@@ -104,6 +104,15 @@ export interface StatGroupRef {
   scaledStats: StatGroupScaledStat[];
 }
 
+/** One selectable masterwork stat option (full tier / +10 investment). */
+export interface MasterworkOption {
+  statHash: number;
+  statName: string;
+  /** Bungie icon path from the completed masterwork plug. */
+  icon?: string;
+  statMods: StatMod[];
+}
+
 /** Detail fields stored separately and loaded on demand. */
 export interface WeaponDetailFields {
   hash: number;
@@ -113,6 +122,8 @@ export interface WeaponDetailFields {
   /** Base investment stats (pre stat-group scaling). */
   investmentStats?: WeaponStat[];
   statGroupHash?: number;
+  /** Selectable full-tier masterwork stats for this weapon. */
+  masterworkOptions?: MasterworkOption[];
 }
 
 /** Full weapon with resolved columns — merged from summary + detail at runtime. */
@@ -122,6 +133,7 @@ export interface WeaponDoc extends Omit<WeaponSummary, "columns" | "perksLower">
   stats: WeaponStat[];
   investmentStats?: WeaponStat[];
   statGroupHash?: number;
+  masterworkOptions?: MasterworkOption[];
   columns: PerkColumn[];
 }
 

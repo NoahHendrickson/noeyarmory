@@ -14,10 +14,7 @@ import type { PerkRef, WeaponDpsEntry, WeaponSort, WeaponSummary } from "@repo/d
 import type { PaletteResultsMode } from "../lib/palette/results-mode";
 import type { OwnedArmorItem } from "../lib/armor-types";
 import type { CustomWeaponFilter } from "../lib/use-custom-weapon-filters";
-import {
-  CUSTOM_FILTER_DRAFT_CATEGORY_ID,
-  DAMAGE_PERKS_VALUE_ID,
-} from "../lib/palette/constants";
+import { CUSTOM_FILTER_DRAFT_CATEGORY_ID, DAMAGE_PERKS_VALUE_ID } from "../lib/palette/constants";
 import { isWeaponPerkFilterCategory } from "../lib/palette/weapon-categories";
 import { trackPerkCommit } from "../lib/track-perk-commit";
 import { useArmorSearchResults } from "./use-armor-search-results";
@@ -36,55 +33,51 @@ function draftPerkChips(perkNames: string[]): PaletteChip[] {
   }));
 }
 
-export interface UseHomeSearchPaletteStateParams {
-  mode: "weapon" | "armor";
+export interface PaletteInitialState {
+  query?: string;
+  chips?: PaletteChip[];
+  paletteOpen?: boolean;
+}
+
+type PaletteSearchMode = "weapon" | "armor";
+
+type RecordPaletteSearch = (
+  mode: PaletteSearchMode,
+  query: string,
+  chips: Array<{
+    categoryId: string;
+    categoryLabel: string;
+    value: string;
+    valueId: string;
+  }>,
+) => void;
+
+interface UsePaletteSearchStateCoreParams {
+  mode: PaletteSearchMode;
   weapons: WeaponSummary[];
-  perks: PerkRef[];
-  owned: OwnedArmorItem[];
-  customFilters: CustomWeaponFilter[];
-  weaponCategories: PaletteCategory[];
   categories: PaletteCategory[];
   composingCustomFilter: boolean;
   draftPerkNames: string[];
-  sort: WeaponSort;
-  dpsByName: ReadonlyMap<string, WeaponDpsEntry>;
-  showAllResults: boolean;
-  resultsMode: PaletteResultsMode | null;
   recentValues: ReadonlySet<string>;
-  recordSearch: (
-    mode: "weapon" | "armor",
-    query: string,
-    chips: Array<{
-      categoryId: string;
-      categoryLabel: string;
-      value: string;
-      valueId: string;
-    }>,
-  ) => void;
+  recordSearch: RecordPaletteSearch;
   setResultsMode: Dispatch<SetStateAction<PaletteResultsMode | null>>;
+  initialState?: PaletteInitialState;
 }
 
-export function useHomeSearchPaletteState({
+function usePaletteSearchStateCore({
   mode,
   weapons,
-  perks,
-  owned,
-  customFilters,
-  weaponCategories,
   categories,
   composingCustomFilter,
   draftPerkNames,
-  sort,
-  dpsByName,
-  showAllResults,
-  resultsMode,
   recentValues,
   recordSearch,
   setResultsMode,
-}: UseHomeSearchPaletteStateParams) {
-  const [query, setQuery] = useState("");
-  const [chips, setChips] = useState<PaletteChip[]>([]);
-  const [paletteOpen, setPaletteOpen] = useState(false);
+  initialState,
+}: UsePaletteSearchStateCoreParams) {
+  const [query, setQuery] = useState(() => initialState?.query ?? "");
+  const [chips, setChips] = useState<PaletteChip[]>(() => initialState?.chips ?? []);
+  const [paletteOpen, setPaletteOpen] = useState(() => initialState?.paletteOpen ?? false);
   const [previewsReady, setPreviewsReady] = useState(false);
   const [panelState, setPanelState] = useState<PalettePanelState>({
     panel: "closed",
@@ -150,46 +143,6 @@ export function useHomeSearchPaletteState({
     return valueSuggestionsToChipItems(inlineSuggestions, categories);
   }, [suggestionScanEnabled, inlineSuggestions, categories]);
 
-  const {
-    weaponShown,
-    weaponPreviewWeapons,
-    resultCount: weaponResultCount,
-    shownCount: weaponShownCount,
-  } = useWeaponSearchResults({
-    weapons,
-    perks,
-    chips,
-    customFilters,
-    query,
-    panelState,
-    weaponCategories,
-    sort,
-    dpsByName,
-    showAllResults,
-    composingCustomFilter,
-    mode,
-    resultsMode,
-    paletteOpen,
-    previewsEnabled: previewsReady,
-    inlineSuggestions,
-  });
-
-  const {
-    armorShown,
-    armorPreviewItems,
-    armorDuplicateDiffs,
-    resultCount: armorResultCount,
-    shownCount: armorShownCount,
-  } = useArmorSearchResults({
-    owned,
-    chips,
-    query,
-    showAllResults,
-    paletteOpen,
-    previewsEnabled: previewsReady,
-    inlineSuggestions,
-  });
-
   const { ghostCompletion, ghostSuffix: ghostSuffixText } = usePaletteGhostCompletion({
     enabled: suggestionScanEnabled,
     query,
@@ -225,10 +178,139 @@ export function useHomeSearchPaletteState({
     handleSubmit,
     addChip,
     paletteChips,
+    panelState,
+    inlineSuggestions,
+  };
+}
+
+export interface UseWeaponSearchPaletteStateParams {
+  weapons: WeaponSummary[];
+  perks: PerkRef[];
+  customFilters: CustomWeaponFilter[];
+  weaponCategories: PaletteCategory[];
+  categories: PaletteCategory[];
+  composingCustomFilter: boolean;
+  draftPerkNames: string[];
+  sort: WeaponSort;
+  dpsByName: ReadonlyMap<string, WeaponDpsEntry>;
+  showAllResults: boolean;
+  resultsMode: PaletteResultsMode | null;
+  recentValues: ReadonlySet<string>;
+  recordSearch: RecordPaletteSearch;
+  setResultsMode: Dispatch<SetStateAction<PaletteResultsMode | null>>;
+  initialState?: PaletteInitialState;
+}
+
+export function useWeaponSearchPaletteState({
+  weapons,
+  perks,
+  customFilters,
+  weaponCategories,
+  categories,
+  composingCustomFilter,
+  draftPerkNames,
+  sort,
+  dpsByName,
+  showAllResults,
+  resultsMode,
+  recentValues,
+  recordSearch,
+  setResultsMode,
+  initialState,
+}: UseWeaponSearchPaletteStateParams) {
+  const core = usePaletteSearchStateCore({
+    mode: "weapon",
+    weapons,
+    categories,
+    composingCustomFilter,
+    draftPerkNames,
+    recentValues,
+    recordSearch,
+    setResultsMode,
+    initialState,
+  });
+
+  const {
+    weaponShown,
+    weaponPreviewWeapons,
+    resultCount: weaponResultCount,
+    shownCount: weaponShownCount,
+  } = useWeaponSearchResults({
+    weapons,
+    perks,
+    chips: core.chips,
+    customFilters,
+    query: core.query,
+    panelState: core.panelState,
+    weaponCategories,
+    sort,
+    dpsByName,
+    showAllResults,
+    composingCustomFilter,
+    resultsMode,
+    paletteOpen: core.paletteOpen,
+    previewsEnabled: core.previewsReady,
+    inlineSuggestions: core.inlineSuggestions,
+  });
+
+  return {
+    ...core,
     weaponShown,
     weaponPreviewWeapons,
     weaponResultCount,
     weaponShownCount,
+  };
+}
+
+export interface UseArmorSearchPaletteStateParams {
+  owned: OwnedArmorItem[];
+  categories: PaletteCategory[];
+  showAllResults: boolean;
+  recentValues: ReadonlySet<string>;
+  recordSearch: RecordPaletteSearch;
+  setResultsMode: Dispatch<SetStateAction<PaletteResultsMode | null>>;
+  initialState?: PaletteInitialState;
+}
+
+export function useArmorSearchPaletteState({
+  owned,
+  categories,
+  showAllResults,
+  recentValues,
+  recordSearch,
+  setResultsMode,
+  initialState,
+}: UseArmorSearchPaletteStateParams) {
+  const core = usePaletteSearchStateCore({
+    mode: "armor",
+    weapons: [],
+    categories,
+    composingCustomFilter: false,
+    draftPerkNames: [],
+    recentValues,
+    recordSearch,
+    setResultsMode,
+    initialState,
+  });
+
+  const {
+    armorShown,
+    armorPreviewItems,
+    armorDuplicateDiffs,
+    resultCount: armorResultCount,
+    shownCount: armorShownCount,
+  } = useArmorSearchResults({
+    owned,
+    chips: core.chips,
+    query: core.query,
+    showAllResults,
+    paletteOpen: core.paletteOpen,
+    previewsEnabled: core.previewsReady,
+    inlineSuggestions: core.inlineSuggestions,
+  });
+
+  return {
+    ...core,
     armorShown,
     armorPreviewItems,
     armorDuplicateDiffs,

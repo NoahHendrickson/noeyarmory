@@ -1,6 +1,6 @@
 import "server-only";
 
-import { readFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 
 import {
   buildWeaponIndexLookups,
@@ -16,12 +16,30 @@ import {
 import { generatedDataFilePath } from "./generated-data-server";
 
 let cache: WeaponIndexLookups | null = null;
+let cacheKey: string | undefined;
 let detailCache: Map<number, WeaponDetailFields> | null = null;
+let detailCacheVersion: string | undefined;
+
+/**
+ * Cheap freshness key for a generated data file — its mtime. Lets us detect a
+ * regenerated index without parsing the (large) JSON on every call; we only read
+ * and parse when the file has actually changed on disk.
+ */
+function fileVersionTag(file: string): string {
+  try {
+    return String(statSync(file).mtimeMs);
+  } catch {
+    return "missing";
+  }
+}
 
 function loadWeaponDetails(): Map<number, WeaponDetailFields> {
-  if (detailCache) return detailCache;
+  const file = generatedDataFilePath("weaponDetails");
+  const tag = fileVersionTag(file);
+  if (detailCache && detailCacheVersion === tag) {
+    return detailCache;
+  }
   try {
-    const file = generatedDataFilePath("weaponDetails");
     const index = JSON.parse(readFileSync(file, "utf8")) as WeaponDetailIndex;
     detailCache = new Map(
       Object.entries(index.details).map(([hash, detail]) => [Number(hash), detail]),
@@ -29,15 +47,22 @@ function loadWeaponDetails(): Map<number, WeaponDetailFields> {
   } catch {
     detailCache = new Map();
   }
+  detailCacheVersion = tag;
   return detailCache;
 }
 
 /** Load and cache the generated weapon browse index (server-only). */
 export function getWeaponIndex(): WeaponIndexLookups {
-  if (cache) return cache;
   const file = generatedDataFilePath("weapons");
+  const key = fileVersionTag(file);
+  if (cache && cacheKey === key) {
+    return cache;
+  }
   const index = JSON.parse(readFileSync(file, "utf8")) as WeaponIndex;
   cache = buildWeaponIndexLookups(index);
+  cacheKey = key;
+  detailCache = null;
+  detailCacheVersion = undefined;
   return cache;
 }
 
@@ -65,8 +90,7 @@ export function getWeaponsForPerkHash(hash: number): {
   perkName: string | undefined;
   matches: WeaponSummary[];
 } {
-  const { perkMap, weaponsByPerkName, weapons, weaponsByPerkNameRecord, byHash } =
-    getWeaponIndex();
+  const { perkMap, weaponsByPerkName, weapons, weaponsByPerkNameRecord, byHash } = getWeaponIndex();
   const perk = perkMap.get(hash);
   if (perk) {
     const key = perk.name.toLowerCase();

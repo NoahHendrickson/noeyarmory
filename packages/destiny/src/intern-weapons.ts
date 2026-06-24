@@ -67,6 +67,7 @@ export function expandWeapon(
     stats: detail?.stats ?? [],
     investmentStats: detail?.investmentStats,
     statGroupHash: detail?.statGroupHash,
+    masterworkOptions: detail?.masterworkOptions,
     columns: resolveInternedColumns(columns, perks),
   };
 }
@@ -205,6 +206,7 @@ export function internWeaponCatalog(
       stats: weapon.stats,
       investmentStats: weapon.investmentStats,
       statGroupHash: weapon.statGroupHash,
+      ...(weapon.masterworkOptions?.length ? { masterworkOptions: weapon.masterworkOptions } : {}),
     };
   }
 
@@ -288,6 +290,7 @@ export function buildDetailIndexFromDocs(
       stats: weapon.stats,
       investmentStats: weapon.investmentStats,
       statGroupHash: weapon.statGroupHash,
+      ...(weapon.masterworkOptions?.length ? { masterworkOptions: weapon.masterworkOptions } : {}),
     };
   }
   return { version, details, statGroups };

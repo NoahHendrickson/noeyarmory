@@ -30,6 +30,7 @@ export {
   type PaletteResultItem,
   type PalettePanelState,
   type PaletteItem,
+  type PaletteSize,
   PANEL_TRANSITION_MS,
   searchValueSuggestions,
   valueSuggestionsToChipItems,

@@ -1,4 +1,4 @@
-import { buildColumnPerks, collectSocketPlugCandidates, extractPlugStatMods } from "./build-index";
+import { buildColumnPerks } from "./build-index";
 import { isArmor30ItemDef } from "./armor-instance";
 import {
   ARMOR3_STAT_NAME_BY_HASH,
@@ -7,6 +7,7 @@ import {
   PLUG_CATEGORY_ARMOR3_MASTERWORKS,
 } from "./armor30-constants";
 import type { ManifestDefs } from "./manifest";
+import { collectSocketPlugCandidates, extractPlugStatMods } from "./socket-plug-candidates";
 import { resolveWeaponSeason, resolveWeaponSources } from "./weapon-provenance";
 import type {
   Armor30SetBonus,
@@ -117,8 +118,7 @@ export function buildArmorIndex(defs: ManifestDefs, version: string): ArmorIndex
     const slot = BUCKET_SLOT[item.inventory?.bucketTypeHash ?? 0];
     if (!slot) continue;
 
-    const classType =
-      item.classType != null ? (CLASS_NAMES[item.classType] ?? "Any") : "Any";
+    const classType = item.classType != null ? (CLASS_NAMES[item.classType] ?? "Any") : "Any";
 
     const columns: PerkColumn[] = [];
     for (const cat of item.sockets.socketCategories ?? []) {

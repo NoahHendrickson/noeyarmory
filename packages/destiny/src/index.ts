@@ -24,6 +24,7 @@ export type {
   StatGroupRef,
   StatGroupScaledStat,
   StatInterpolationPoint,
+  MasterworkOption,
 } from "./types";
 export {
   PLUG_CATEGORY_ARMOR_ARCHETYPES,
@@ -198,6 +199,7 @@ export {
   originTraitNamesForWeapons,
   primaryCatalogWeaponForHash,
   primaryWeaponVersion,
+  reconcileAdeptTierPools,
   reconcileCraftableTwins,
   sortWeaponVersions,
   weaponPerkPoolVersionForHash,
@@ -221,6 +223,10 @@ export {
   SAMPLE_STAT_GROUP_HASH,
   type ComputedWeaponStats,
 } from "./weapon-stats";
+export {
+  buildWeaponMasterworkOptions,
+  WEAPON_MASTERWORK_SOCKET_TYPE_HASH,
+} from "./weapon-masterwork";
 export {
   buildWeaponDpsIndex,
   extractTraitPerksFromRow,

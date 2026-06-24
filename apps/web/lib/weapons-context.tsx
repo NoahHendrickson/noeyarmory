@@ -74,11 +74,22 @@ const defaultState: WeaponsState = {
 const WeaponsContext = createContext<WeaponsState>(defaultState);
 
 let moduleCache: WeaponIndexLookups | null = null;
+let moduleCacheKey: string | undefined;
 let detailCache: Map<number, WeaponDetailFields> | null = null;
 let statGroupsCache: Record<string, StatGroupRef> | undefined;
 let loadPromise: Promise<WeaponIndexLookups> | null = null;
 let detailLoadPromise: Promise<Map<number, WeaponDetailFields>> | null = null;
 let isSampleCache = false;
+
+function weaponIndexCacheKey(index: WeaponIndex): string {
+  return `${index.version}:${index.generatedAt}`;
+}
+
+function invalidateDetailCache(): void {
+  detailCache = null;
+  detailLoadPromise = null;
+  statGroupsCache = undefined;
+}
 
 const DETAIL_PRELOAD_DELAY_MS = 1500;
 
@@ -164,15 +175,18 @@ function lookupsToState(
 }
 
 async function fetchWeaponIndex(): Promise<{ lookups: WeaponIndexLookups; isSample: boolean }> {
-  if (moduleCache) return { lookups: moduleCache, isSample: isSampleCache };
-
   if (!loadPromise) {
     loadPromise = (async () => {
       try {
         const index = await fetchGeneratedDataFile<WeaponIndex>("weapons");
-        const lookups = buildWeaponIndexLookups(index);
-        moduleCache = lookups;
+        const key = weaponIndexCacheKey(index);
+        if (moduleCache && moduleCacheKey === key) {
+          return moduleCache;
+        }
+        moduleCache = buildWeaponIndexLookups(index);
+        moduleCacheKey = key;
         isSampleCache = false;
+        invalidateDetailCache();
         return moduleCache;
       } catch {
         const { sampleWeapons } = await import("@repo/destiny");
@@ -188,6 +202,7 @@ async function fetchWeaponIndex(): Promise<{ lookups: WeaponIndexLookups; isSamp
           ammoTypes: sampleAmmoTypes,
         });
         moduleCache = lookups;
+        moduleCacheKey = weaponIndexCacheKey(index);
         isSampleCache = true;
         enrichSummariesIfReady();
         return moduleCache;
@@ -265,7 +280,7 @@ export function useWeaponDetail(
   hash: number | null,
   initial?: WeaponDoc,
 ): { weapon: WeaponDoc | undefined; loading: boolean } {
-  const { getWeaponDoc } = useWeapons();
+  const { getWeaponDoc, version } = useWeapons();
   const [weapon, setWeapon] = useState<WeaponDoc | undefined>(initial);
   const [loading, setLoading] = useState(initial == null && hash != null);
 
@@ -275,24 +290,26 @@ export function useWeaponDetail(
       setLoading(false);
       return;
     }
+
     if (initial && initial.hash === hash) {
       setWeapon(initial);
-      setLoading(false);
-      return;
     }
 
     let active = true;
-    setLoading(true);
+    if (!initial || initial.hash !== hash) {
+      setLoading(true);
+    }
+
     void getWeaponDoc(hash).then((doc) => {
-      if (active) {
-        setWeapon(doc);
-        setLoading(false);
-      }
+      if (!active) return;
+      setWeapon(doc ?? (initial?.hash === hash ? initial : undefined));
+      setLoading(false);
     });
+
     return () => {
       active = false;
     };
-  }, [hash, initial, getWeaponDoc]);
+  }, [hash, initial, getWeaponDoc, version]);
 
   return { weapon, loading };
 }
