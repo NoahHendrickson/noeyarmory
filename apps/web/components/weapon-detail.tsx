@@ -493,7 +493,7 @@ export function WeaponDetail({ hash, initialWeapon }: { hash: number; initialWea
     return (
       <div className="min-h-screen bg-background">
         <WeaponDetailAppHeader onSelectWeapon={handleSearchSelectWeapon} />
-        <div className="p-6 text-muted-foreground">Loading...</div>
+        <div className="p-6 text-muted-foreground">Loading…</div>
       </div>
     );
   }

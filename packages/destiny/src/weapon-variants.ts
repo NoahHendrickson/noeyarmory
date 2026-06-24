@@ -30,7 +30,6 @@ export function weaponsInVersionFamily<T extends { name: string }>(
   return weapons.filter((weapon) => weaponVersionFamilyName(weapon.name) === family);
 }
 
-
 export interface CurrentWeaponPerkPoolVersion<T extends WeaponPerkPoolVersionCandidate> {
   weapon: T;
   label: string;
@@ -51,10 +50,7 @@ function copySourceFromLegacy(primary: WeaponDoc, legacy: readonly WeaponDoc[]):
   const donor = legacy.find((weapon) => weapon.source) ?? legacy[0];
   const source = primary.source ?? donor?.source;
   if (!source) return;
-  const sources = [
-    ...sourceLabels(primary),
-    ...legacy.flatMap((weapon) => sourceLabels(weapon)),
-  ];
+  const sources = [...sourceLabels(primary), ...legacy.flatMap((weapon) => sourceLabels(weapon))];
   Object.assign(primary, sourceFields(source, sources));
 }
 
@@ -114,6 +110,12 @@ function mergePerkRefs(existing: PerkRef, incoming: PerkRef): PerkRef {
   };
 }
 
+/**
+ * Union perks position-by-position across tier variants. Columns are matched by index and
+ * the merged column inherits the first variant's `kind` — this assumes tier variants share
+ * the same column order and socket layout (true for current weapons; a future manifest that
+ * shifts a socket between tiers would silently mis-merge two different pools here).
+ */
 function mergeColumnPerks(weaponColumns: readonly PerkColumn[][]): PerkColumn[] {
   const maxColumns = Math.max(...weaponColumns.map((columns) => columns.length), 0);
   const merged: PerkColumn[] = [];
@@ -141,7 +143,9 @@ function mergeColumnPerks(weaponColumns: readonly PerkColumn[][]): PerkColumn[] 
   return merged;
 }
 
-function flattenWeaponPerkFields(columns: readonly PerkColumn[]): Pick<WeaponDoc, "perks" | "perkHashes"> {
+function flattenWeaponPerkFields(
+  columns: readonly PerkColumn[],
+): Pick<WeaponDoc, "perks" | "perkHashes"> {
   const perkNames: string[] = [];
   const perkHashes: number[] = [];
   for (const column of columns) {
@@ -161,6 +165,11 @@ function flattenWeaponPerkFields(columns: readonly PerkColumn[]): Pick<WeaponDoc
  * Union roll columns across normal and Timelost/Adept/Harrowed defs that share a
  * source within the same version family. Bungie now ships one roll pool per source;
  * manifest defs can still differ slightly per tier.
+ *
+ * This deliberately bets that same-source tiers are consolidated: a perk on either tier is
+ * shown as rollable on both. If Bungie ever ships a same-source tier pair that was NOT
+ * consolidated, the normal weapon would surface perks it can't actually roll — an accepted
+ * simplification, matching the `craftable`/`adept` simplifications elsewhere in the index.
  */
 export function reconcileAdeptTierPools(weapons: WeaponDoc[]): WeaponDoc[] {
   const byPoolKey = new Map<string, WeaponDoc[]>();

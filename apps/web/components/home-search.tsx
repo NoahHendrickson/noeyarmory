@@ -165,15 +165,13 @@ function ArmorSearchHome({ signedIn, modeControl }: { signedIn: boolean; modeCon
 
   const armorOverlay = !signedIn ? (
     <a href={ARMOR_LOGIN_URL} className="inline-flex">
-      <Badge variant="warning">Reconnect your bungie account -&gt;</Badge>
+      <Badge variant="warning">Reconnect your bungie account ↗</Badge>
     </a>
   ) : armorLoadError ? (
     <span className="text-sm text-destructive">{armorLoadError}</span>
   ) : undefined;
 
-  const placeholder = armorLoading
-    ? "Loading your armor..."
-    : "Search armor by class, set, or stats";
+  const placeholder = armorLoading ? "Loading your armor…" : "Search armor by class, set, or stats";
   const resultCount = armorResultCount;
   const shownCount = armorShownCount;
 
@@ -235,12 +233,12 @@ function ArmorSearchHome({ signedIn, modeControl }: { signedIn: boolean; modeCon
       />
 
       {signedIn && armorLoading ? (
-        <p className="mt-3 text-center text-xs text-muted-foreground">Loading your armor...</p>
+        <p className="mt-3 text-center text-xs text-muted-foreground">Loading your armor…</p>
       ) : null}
 
       {signedIn && !armorLoading && !armorLoadError && owned.length === 0 ? (
         <p className="mt-3 text-center text-xs text-muted-foreground">
-          No armor found - run <code>pnpm setup:bungie</code> to generate the armor index.
+          No armor found — run <code>pnpm setup:bungie</code> to generate the armor index.
         </p>
       ) : null}
     </div>

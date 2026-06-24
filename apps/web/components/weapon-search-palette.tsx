@@ -66,7 +66,7 @@ import { PopularWeapons } from "./popular-weapons";
 import { WeaponResultRow } from "./weapon-result-row";
 
 const WEAPON_SORT_OPTIONS: PillSelectOption<WeaponSort>[] = [
-  { value: "name", label: "A-Z", direction: "asc" },
+  { value: "name", label: "A–Z", direction: "asc" },
   { value: "dps-desc", label: "DPS", direction: "desc" },
   { value: "ammo-gen-desc", label: "Ammo gen", direction: "desc" },
   { value: "season-desc", label: "Newest", direction: "desc" },
@@ -429,7 +429,7 @@ export function WeaponSearchPalette({
 
   const placeholder = composingCustomFilter
     ? customFilterComposer?.perkNames.length
-      ? "Add more perks..."
+      ? "Add more perks…"
       : "Search trait perks"
     : "Search weapons, perks, or names";
 
@@ -584,7 +584,7 @@ export function WeaponSearchPalette({
 
       {showSampleNotice && !hasFilters && !isFiltering && isSample ? (
         <p className="mt-3 text-center text-xs text-muted-foreground">
-          Sample data - run <code>pnpm setup:bungie</code> for the full index.
+          Sample data — run <code>pnpm setup:bungie</code> for the full index.
         </p>
       ) : null}
     </div>
