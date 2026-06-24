@@ -1,7 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { cn, PillSelect, type PillSelectOption } from "@repo/ui";
@@ -34,7 +33,8 @@ import { StatBars } from "./stat-bars";
 import { WeaponMasterworkSelector } from "./weapon-masterwork-selector";
 import { WeaponShareButton } from "./weapon-share-button";
 import { WeaponDpsMetricTooltip } from "./weapon-dps-label";
-import { WeaponSearchPalette, type WeaponSearchSelectionSource } from "./weapon-search-palette";
+import { WeaponDetailPageShell } from "./weapon-detail-page-shell";
+import type { WeaponSearchSelectionSource } from "./weapon-search-palette";
 
 const EMPTY_SELECTED_PERK_HASHES: number[] = [];
 
@@ -428,36 +428,6 @@ export function WeaponDetailWithVersions({
   );
 }
 
-function WeaponDetailAppHeader({
-  onSelectWeapon,
-}: {
-  onSelectWeapon: (hash: number, source: WeaponSearchSelectionSource) => void;
-}) {
-  return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background px-[max(1rem,env(safe-area-inset-right))] py-2 pl-[max(1rem,env(safe-area-inset-left))]">
-      <div className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-2 sm:grid-cols-[1fr_minmax(0,28rem)_1fr] sm:items-center">
-        <Link
-          href="/"
-          className="font-pixel justify-self-center text-sm font-bold sm:justify-self-start sm:text-left"
-        >
-          moonfang armory
-        </Link>
-        <div className="min-w-0 sm:col-start-2 sm:row-start-1">
-          <WeaponSearchPalette
-            onSelectWeapon={onSelectWeapon}
-            className="mx-auto max-w-md sm:w-full"
-            paletteClassName="mx-0 max-w-none sm:w-full"
-            floatingPanel
-            size="compact"
-            restoreSession
-            autoOpenRestoredSession={false}
-          />
-        </div>
-      </div>
-    </header>
-  );
-}
-
 /** Standalone `/weapon/[hash]` route view: uses SSR seed when available, else shared index. */
 export function WeaponDetail({ hash, initialWeapon }: { hash: number; initialWeapon?: WeaponDoc }) {
   const router = useRouter();
@@ -475,6 +445,7 @@ export function WeaponDetail({ hash, initialWeapon }: { hash: number; initialWea
   const handleSelectVersion = useCallback(
     (nextHash: number) => {
       setActiveHash(nextHash);
+      // Version swap: replace URL so back button skips intermediate versions.
       router.replace(`/weapon/${nextHash}`, { scroll: false });
     },
     [router],
@@ -484,6 +455,7 @@ export function WeaponDetail({ hash, initialWeapon }: { hash: number; initialWea
     (nextHash: number, source: WeaponSearchSelectionSource) => {
       trackWeaponView(nextHash, source);
       setActiveHash(nextHash);
+      // Search navigation: push so back returns to previous weapon.
       router.push(`/weapon/${nextHash}`, { scroll: false });
     },
     [router],
@@ -491,27 +463,24 @@ export function WeaponDetail({ hash, initialWeapon }: { hash: number; initialWea
 
   if (!weapon && loading) {
     return (
-      <div className="min-h-screen bg-background">
-        <WeaponDetailAppHeader onSelectWeapon={handleSearchSelectWeapon} />
+      <WeaponDetailPageShell onSelectWeapon={handleSearchSelectWeapon}>
         <div className="p-6 text-muted-foreground">Loading…</div>
-      </div>
+      </WeaponDetailPageShell>
     );
   }
 
   if (!weapon) {
     return (
-      <div className="min-h-screen bg-background">
-        <WeaponDetailAppHeader onSelectWeapon={handleSearchSelectWeapon} />
+      <WeaponDetailPageShell onSelectWeapon={handleSearchSelectWeapon}>
         <div className="space-y-2 p-6">
           <p>Weapon not found.</p>
         </div>
-      </div>
+      </WeaponDetailPageShell>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <WeaponDetailAppHeader onSelectWeapon={handleSearchSelectWeapon} />
+    <WeaponDetailPageShell onSelectWeapon={handleSearchSelectWeapon}>
       <main className="mx-auto max-w-5xl space-y-6 p-4 md:p-6">
         <WeaponDetailWithVersions
           weapon={weapon}
@@ -522,6 +491,6 @@ export function WeaponDetail({ hash, initialWeapon }: { hash: number; initialWea
           onSelectVersion={handleSelectVersion}
         />
       </main>
-    </div>
+    </WeaponDetailPageShell>
   );
 }
