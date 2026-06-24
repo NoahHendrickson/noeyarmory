@@ -28,6 +28,7 @@ import {
 import type { PaletteResultsMode } from "../lib/palette/results-mode";
 import { MAX_RESULTS, MAX_SHOW_ALL } from "../lib/palette/constants";
 import { chipsToWeaponFilters, withHypotheticalChip } from "../lib/palette/weapon-filters";
+import type { CustomWeaponFilter } from "../lib/use-custom-weapon-filters";
 import { useSearchPopularity } from "../lib/use-search-popularity";
 import { useWeapons } from "../lib/weapons-context";
 import { usePalettePreviewInput } from "./use-palette-preview-input";
@@ -36,7 +37,7 @@ export interface UseWeaponSearchResultsParams {
   weapons: WeaponSummary[];
   perks: PerkRef[];
   chips: PaletteChip[];
-  customFilters: import("../lib/use-custom-weapon-filters").CustomWeaponFilter[];
+  customFilters: CustomWeaponFilter[];
   query: string;
   panelState: PalettePanelState;
   weaponCategories: PaletteCategory[];
@@ -44,7 +45,6 @@ export interface UseWeaponSearchResultsParams {
   dpsByName: ReadonlyMap<string, WeaponDpsEntry>;
   showAllResults: boolean;
   composingCustomFilter: boolean;
-  mode: "weapon" | "armor";
   resultsMode: PaletteResultsMode | null;
   paletteOpen: boolean;
   /** When set, gates preview computation separately from `paletteOpen` (draft-query open deferral). */
@@ -86,7 +86,6 @@ export function useWeaponSearchResults({
   dpsByName,
   showAllResults,
   composingCustomFilter,
-  mode,
   resultsMode,
   paletteOpen,
   previewsEnabled = paletteOpen,
@@ -149,7 +148,7 @@ export function useWeaponSearchResults({
   const weaponShown = weaponResults.slice(0, resultLimit);
 
   const weaponPreviewWeapons = useMemo(() => {
-    if (!previewsEnabled || mode !== "weapon" || composingCustomFilter) return [];
+    if (!previewsEnabled || composingCustomFilter) return [];
 
     const base = chipsToWeaponFilters(chips, customFilters);
     const seen = new Set<number>();
@@ -222,7 +221,6 @@ export function useWeaponSearchResults({
     return collapseWeaponVersions(ranked, nameIndex.byName).slice(0, previewResultLimit);
   }, [
     previewsEnabled,
-    mode,
     composingCustomFilter,
     chips,
     customFilters,

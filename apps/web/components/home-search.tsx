@@ -5,37 +5,23 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
   type CSSProperties,
   type ReactNode,
 } from "react";
-import {
-  Badge,
-  CommandPalette,
-  PANEL_TRANSITION_MS,
-  PillSelect,
-  type PaletteCategory,
-  type PaletteRecentItem,
-  type PillSelectOption,
-} from "@repo/ui";
-import type { WeaponDpsEntry, WeaponSort } from "@repo/destiny";
+import { Badge, CommandPalette, PillSelect, type PillSelectOption } from "@repo/ui";
 
 import { useArmorActions } from "../hooks/use-armor-actions";
-import { useHomeSearchPaletteState } from "../hooks/use-home-search-palette-state";
+import { useArmorSearchPaletteState } from "../hooks/use-home-search-palette-state";
+import {
+  usePaletteSearchChrome,
+  usePaletteSearchRecents,
+} from "../hooks/use-palette-search-chrome";
 import type { OwnedArmorItem } from "../lib/armor-types";
 import { ARMOR_LOGIN_URL } from "../lib/palette/constants";
 import { buildArmorCategories } from "../lib/palette/armor-categories";
 import type { PaletteResultsMode } from "../lib/palette/results-mode";
 import { useOwnedArmor } from "../lib/use-owned-armor";
-import type { CustomWeaponFilter } from "../lib/use-custom-weapon-filters";
-import {
-  excludeCurrentRecentSearch,
-  filterRecentSearches,
-  formatRecentSearchLabel,
-  useRecentSearches,
-} from "../lib/use-recent-searches";
-import { useWeapons } from "../lib/weapons-context";
 import { trackWeaponView } from "../lib/track-weapon-view";
 import { ArmorResultRow } from "./armor-result-row";
 import { WeaponModeIcon } from "./icons/weapon-mode-icon";
@@ -56,10 +42,6 @@ const MODES: PillSelectOption<Mode>[] = [
 ];
 
 const EMPTY_ARMOR: OwnedArmorItem[] = [];
-const EMPTY_CUSTOM_FILTERS: CustomWeaponFilter[] = [];
-const EMPTY_WEAPON_CATEGORIES: PaletteCategory[] = [];
-const EMPTY_DPS_BY_NAME: ReadonlyMap<string, WeaponDpsEntry> = new Map();
-const ARMOR_SORT: WeaponSort = "season-desc";
 
 function ModeControl({ mode, onModeChange }: { mode: Mode; onModeChange: (mode: Mode) => void }) {
   return (
@@ -73,7 +55,6 @@ function ModeControl({ mode, onModeChange }: { mode: Mode; onModeChange: (mode: 
 }
 
 function ArmorSearchHome({ signedIn, modeControl }: { signedIn: boolean; modeControl: ReactNode }) {
-  const { weapons, perks } = useWeapons();
   const {
     armor: owned,
     loading: armorLoading,
@@ -81,23 +62,11 @@ function ArmorSearchHome({ signedIn, modeControl }: { signedIn: boolean; modeCon
     refetch: refetchArmor,
   } = useOwnedArmor(signedIn);
   const { armorAction, runArmorAction, clearArmorAction } = useArmorActions(refetchArmor);
-  const { recordSearch, getRecentForMode, findById, removeRecent, clearRecentForMode } =
-    useRecentSearches();
   const [showAllResults, setShowAllResults] = useState(false);
   const [resultsMode, setResultsMode] = useState<PaletteResultsMode | null>(null);
 
   const categories = useMemo(() => buildArmorCategories(owned), [owned]);
-  const recentValues = useMemo(() => {
-    const values = new Set<string>();
-    for (const search of getRecentForMode("armor")) {
-      for (const chip of search.chips) {
-        values.add(chip.value.toLowerCase());
-      }
-      const trimmed = search.query.trim();
-      if (trimmed) values.add(trimmed.toLowerCase());
-    }
-    return values;
-  }, [getRecentForMode]);
+  const paletteRecents = usePaletteSearchRecents("armor");
 
   const {
     query,
@@ -120,23 +89,26 @@ function ArmorSearchHome({ signedIn, modeControl }: { signedIn: boolean; modeCon
     armorDuplicateDiffs,
     armorResultCount,
     armorShownCount,
-  } = useHomeSearchPaletteState({
-    mode: "armor",
-    weapons,
-    perks,
+  } = useArmorSearchPaletteState({
     owned: signedIn ? owned : EMPTY_ARMOR,
-    customFilters: EMPTY_CUSTOM_FILTERS,
-    weaponCategories: EMPTY_WEAPON_CATEGORIES,
     categories,
-    composingCustomFilter: false,
-    draftPerkNames: [],
-    sort: ARMOR_SORT,
-    dpsByName: EMPTY_DPS_BY_NAME,
     showAllResults,
-    resultsMode,
-    recentValues,
-    recordSearch,
+    recentValues: paletteRecents.recentValues,
+    recordSearch: paletteRecents.recordSearch,
     setResultsMode,
+  });
+
+  const paletteChrome = usePaletteSearchChrome({
+    mode: "armor",
+    recents: paletteRecents,
+    query,
+    chips,
+    paletteChips,
+    paletteOpen,
+    setQuery,
+    setChips,
+    setPaletteOpen,
+    resultsMode,
   });
 
   const armorPreviewIds = useMemo(
@@ -177,44 +149,6 @@ function ArmorSearchHome({ signedIn, modeControl }: { signedIn: boolean; modeCon
     [armorById, armorPreviewById, armorDuplicateDiffs, armorAction, runArmorAction],
   );
 
-  const recordCurrentSearch = useCallback(() => {
-    if (chips.length === 0 && !query.trim()) return;
-    recordSearch(
-      "armor",
-      query,
-      chips.map((chip) => ({
-        categoryId: chip.categoryId,
-        categoryLabel: chip.categoryLabel,
-        value: chip.value,
-        valueId: chip.valueId,
-      })),
-    );
-  }, [chips, query, recordSearch]);
-
-  const recordSearchTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
-
-  useEffect(() => () => clearTimeout(recordSearchTimerRef.current), []);
-
-  const handleSelectRecent = useCallback(
-    (id: string) => {
-      const recent = findById(id);
-      if (!recent) return;
-      setChips(
-        recent.chips.map((chip) => ({
-          id: `${chip.categoryId}:${chip.valueId}`,
-          categoryId: chip.categoryId,
-          categoryLabel: chip.categoryLabel,
-          value: chip.value,
-          valueId: chip.valueId,
-        })),
-      );
-      setQuery(recent.query);
-    },
-    [findById, setChips, setQuery],
-  );
-
-  const handleClearRecent = useCallback(() => clearRecentForMode("armor"), [clearRecentForMode]);
-
   useEffect(() => {
     setShowAllResults(false);
   }, [chips, query]);
@@ -229,16 +163,6 @@ function ArmorSearchHome({ signedIn, modeControl }: { signedIn: boolean; modeCon
     clearArmorAction();
   }, [clearArmorAction]);
 
-  const recentPaletteItems = useMemo<PaletteRecentItem[]>(() => {
-    const recents = query.trim()
-      ? filterRecentSearches(getRecentForMode("armor"), query)
-      : getRecentForMode("armor");
-    return excludeCurrentRecentSearch(recents, "armor", query, chips).map((search) => ({
-      id: search.id,
-      label: formatRecentSearchLabel(search.chips, search.query),
-    }));
-  }, [getRecentForMode, query, chips]);
-
   const armorOverlay = !signedIn ? (
     <a href={ARMOR_LOGIN_URL} className="inline-flex">
       <Badge variant="warning">Reconnect your bungie account -&gt;</Badge>
@@ -250,12 +174,6 @@ function ArmorSearchHome({ signedIn, modeControl }: { signedIn: boolean; modeCon
   const placeholder = armorLoading
     ? "Loading your armor..."
     : "Search armor by class, set, or stats";
-  const hasFilters = paletteChips.length > 0;
-  const isFiltering = query.trim().length > 0;
-  const showFilterResults = hasFilters && !isFiltering;
-  const showTextResults = resultsMode === "text" && isFiltering;
-  const showResults = showFilterResults || showTextResults;
-  const resultsWhileFiltering = showTextResults;
   const resultCount = armorResultCount;
   const shownCount = armorShownCount;
 
@@ -273,40 +191,25 @@ function ArmorSearchHome({ signedIn, modeControl }: { signedIn: boolean; modeCon
         className="mx-0"
         placeholder={placeholder}
         categories={categories}
-        chips={paletteChips}
-        open={paletteOpen}
-        onOpenChange={(open) => {
-          if (!open) {
-            clearTimeout(recordSearchTimerRef.current);
-            recordSearchTimerRef.current = setTimeout(recordCurrentSearch, PANEL_TRANSITION_MS);
-          }
-          setPaletteOpen(open);
-        }}
-        recentItems={recentPaletteItems}
-        onSelectRecent={handleSelectRecent}
-        onRemoveRecent={removeRecent}
-        onClearRecent={handleClearRecent}
+        {...paletteChrome.paletteProps}
         onAddChip={addChip}
         onRemoveChip={(chipId) => setChips((prev) => prev.filter((chip) => chip.id !== chipId))}
         onClearChips={() => setChips([])}
-        query={query}
-        onQueryChange={setQuery}
         onSubmit={handleSubmit}
         onPanelStateChange={handlePanelStateChange}
         onPreviewsReadyChange={setPreviewsReady}
-        showResults={showResults}
-        resultsWhileFiltering={resultsWhileFiltering}
         ghostCompletion={paletteOpen ? ghostCompletion : undefined}
         ghostSuffix={paletteOpen ? ghostSuffixText : undefined}
-        recentValues={recentValues}
         chipSuggestions={chipSuggestions}
-        previewResults={previewsReady && !showResults ? armorPreviewResults : undefined}
+        previewResults={
+          previewsReady && !paletteChrome.showResults ? armorPreviewResults : undefined
+        }
         previewSectionLabel="Results"
         results={armorResults}
         renderResult={renderArmorResult}
         resultsEmpty="Go farm!"
         resultsHeader={
-          showResults ? (
+          paletteChrome.showResults ? (
             <div className="text-xs tracking-body text-muted-foreground">
               {resultCount} {resultCount === 1 ? "result" : "results"}
             </div>

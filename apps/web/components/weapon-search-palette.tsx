@@ -14,11 +14,9 @@ import {
   cn,
   CommandPalette,
   Input,
-  PANEL_TRANSITION_MS,
   PillSelect,
   type PaletteAction,
   type PaletteCategory,
-  type PaletteRecentItem,
   type PaletteSize,
   type PaletteValueOption,
   type PillSelectOption,
@@ -32,7 +30,11 @@ import {
   type WeaponSummary,
 } from "@repo/destiny";
 
-import { useHomeSearchPaletteState } from "../hooks/use-home-search-palette-state";
+import { useWeaponSearchPaletteState } from "../hooks/use-home-search-palette-state";
+import {
+  usePaletteSearchChrome,
+  usePaletteSearchRecents,
+} from "../hooks/use-palette-search-chrome";
 import { useWeaponSearchPins } from "../hooks/use-weapon-search-pins";
 import { getFilterChipAppearance } from "../lib/filter-chip-appearance";
 import {
@@ -48,12 +50,6 @@ import {
 import type { PaletteResultsMode } from "../lib/palette/results-mode";
 import { useCustomWeaponFilters } from "../lib/use-custom-weapon-filters";
 import { useIsFirefox } from "../lib/use-is-firefox";
-import {
-  excludeCurrentRecentSearch,
-  filterRecentSearches,
-  formatRecentSearchLabel,
-  useRecentSearches,
-} from "../lib/use-recent-searches";
 import { useWeaponDps } from "../lib/use-weapon-dps";
 import { useWeaponIconMaps } from "../lib/use-weapon-icon-maps";
 import {
@@ -120,8 +116,7 @@ export function WeaponSearchPalette({
   const { elementIconMap, typeIconMap, ammoIconMap } = useWeaponIconMaps();
   const { dpsByName } = useWeaponDps();
   const { filters: customFilters, createFilter } = useCustomWeaponFilters();
-  const { recordSearch, getRecentForMode, findById, removeRecent, clearRecentForMode } =
-    useRecentSearches();
+  const paletteRecents = usePaletteSearchRecents("weapon");
   const firefoxPalettePerf = useIsFirefox();
   const [sort, setSort] = useState<WeaponSort>(() => restoredSession?.sort ?? "season-desc");
   const [showAllResults, setShowAllResults] = useState(false);
@@ -162,18 +157,6 @@ export function WeaponSearchPalette({
     ? composerCategories
     : weaponCategories;
 
-  const recentValues = useMemo(() => {
-    const values = new Set<string>();
-    for (const search of getRecentForMode("weapon")) {
-      for (const chip of search.chips) {
-        values.add(chip.value.toLowerCase());
-      }
-      const trimmed = search.query.trim();
-      if (trimmed) values.add(trimmed.toLowerCase());
-    }
-    return values;
-  }, [getRecentForMode]);
-
   const {
     query,
     setQuery,
@@ -194,11 +177,9 @@ export function WeaponSearchPalette({
     weaponPreviewWeapons,
     weaponResultCount,
     weaponShownCount,
-  } = useHomeSearchPaletteState({
-    mode: "weapon",
+  } = useWeaponSearchPaletteState({
     weapons,
     perks,
-    owned: [],
     customFilters,
     weaponCategories,
     categories,
@@ -208,17 +189,33 @@ export function WeaponSearchPalette({
     dpsByName,
     showAllResults,
     resultsMode,
-    recentValues,
-    recordSearch,
+    recentValues: paletteRecents.recentValues,
+    recordSearch: paletteRecents.recordSearch,
     setResultsMode,
     initialState: restoredSession
       ? {
           query: restoredSession.query,
           chips: snapshotChipsToPaletteChips(restoredSession.chips),
-          paletteOpen:
-            autoOpenRestoredSession && hasActiveWeaponSearch(restoredSession),
+          paletteOpen: autoOpenRestoredSession && hasActiveWeaponSearch(restoredSession),
         }
       : undefined,
+  });
+
+  const paletteChrome = usePaletteSearchChrome({
+    mode: "weapon",
+    recents: paletteRecents,
+    query,
+    chips,
+    paletteChips,
+    paletteOpen,
+    setQuery,
+    setChips,
+    setPaletteOpen,
+    resultsMode,
+    suppressRecent: composingCustomFilter,
+    suppressResults: composingCustomFilter,
+    onBeforeSelectRecent: () => setCustomFilterComposer(null),
+    onBeforeClose: () => setCustomFilterComposer(null),
   });
 
   const {
@@ -359,25 +356,6 @@ export function WeaponSearchPalette({
     customFilterComposer.name.trim().length > 0 &&
     customFilterComposer.perkNames.length > 0;
 
-  const recordCurrentSearch = useCallback(() => {
-    if (composingCustomFilter) return;
-    if (chips.length === 0 && !query.trim()) return;
-    recordSearch(
-      "weapon",
-      query,
-      chips.map((chip) => ({
-        categoryId: chip.categoryId,
-        categoryLabel: chip.categoryLabel,
-        value: chip.value,
-        valueId: chip.valueId,
-      })),
-    );
-  }, [composingCustomFilter, chips, query, recordSearch]);
-
-  const recordSearchTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
-
-  useEffect(() => () => clearTimeout(recordSearchTimerRef.current), []);
-
   useEffect(() => {
     if (!restoreSession) return;
     writeWeaponSearchSession({
@@ -390,29 +368,16 @@ export function WeaponSearchPalette({
 
   useEffect(() => {
     if (!firefoxPalettePerf) return;
+    const previousBrowser = document.documentElement.dataset.browser;
     document.documentElement.dataset.browser = "firefox";
+    return () => {
+      if (previousBrowser) {
+        document.documentElement.dataset.browser = previousBrowser;
+      } else {
+        delete document.documentElement.dataset.browser;
+      }
+    };
   }, [firefoxPalettePerf]);
-
-  const handleSelectRecent = useCallback(
-    (id: string) => {
-      const recent = findById(id);
-      if (!recent) return;
-      setCustomFilterComposer(null);
-      setChips(
-        recent.chips.map((chip) => ({
-          id: `${chip.categoryId}:${chip.valueId}`,
-          categoryId: chip.categoryId,
-          categoryLabel: chip.categoryLabel,
-          value: chip.value,
-          valueId: chip.valueId,
-        })),
-      );
-      setQuery(recent.query);
-    },
-    [findById, setChips, setQuery],
-  );
-
-  const handleClearRecent = useCallback(() => clearRecentForMode("weapon"), [clearRecentForMode]);
 
   const categoryActions = useMemo<PaletteAction[]>(() => {
     if (composingCustomFilter) {
@@ -462,17 +427,6 @@ export function WeaponSearchPalette({
     }
   }, [query, chips]);
 
-  const recentPaletteItems = useMemo<PaletteRecentItem[]>(() => {
-    if (composingCustomFilter) return [];
-    const recents = query.trim()
-      ? filterRecentSearches(getRecentForMode("weapon"), query)
-      : getRecentForMode("weapon");
-    return excludeCurrentRecentSearch(recents, "weapon", query, chips).map((search) => ({
-      id: search.id,
-      label: formatRecentSearchLabel(search.chips, search.query),
-    }));
-  }, [composingCustomFilter, getRecentForMode, query, chips]);
-
   const placeholder = composingCustomFilter
     ? customFilterComposer?.perkNames.length
       ? "Add more perks..."
@@ -485,12 +439,7 @@ export function WeaponSearchPalette({
     [weaponPreviewIds],
   );
 
-  const hasFilters = paletteChips.length > 0;
-  const isFiltering = query.trim().length > 0;
-  const showFilterResults = hasFilters && !isFiltering && !composingCustomFilter;
-  const showTextResults = resultsMode === "text" && isFiltering && !composingCustomFilter;
-  const showResults = showFilterResults || showTextResults;
-  const resultsWhileFiltering = showTextResults;
+  const { hasFilters, isFiltering, showResults } = paletteChrome;
   const showToolbar = toolbarTrailing != null || (showPinnedFilters && pinnedFilters.length > 0);
 
   return (
@@ -528,20 +477,7 @@ export function WeaponSearchPalette({
           placeholder={placeholder}
           categories={categories}
           categoryActions={categoryActions}
-          chips={paletteChips}
-          open={paletteOpen}
-          onOpenChange={(open) => {
-            if (!open) {
-              clearTimeout(recordSearchTimerRef.current);
-              recordSearchTimerRef.current = setTimeout(recordCurrentSearch, PANEL_TRANSITION_MS);
-              setCustomFilterComposer(null);
-            }
-            setPaletteOpen(open);
-          }}
-          recentItems={recentPaletteItems}
-          onSelectRecent={handleSelectRecent}
-          onRemoveRecent={removeRecent}
-          onClearRecent={handleClearRecent}
+          {...paletteChrome.paletteProps}
           onAddChip={handleAddChip}
           onRemoveChip={handleRemoveChip}
           onClearChips={handleClearChips}
@@ -581,24 +517,19 @@ export function WeaponSearchPalette({
               </div>
             ) : undefined
           }
-          query={query}
-          onQueryChange={setQuery}
           onSubmit={handleSubmit}
           onPanelStateChange={handlePanelStateChange}
           onPreviewsReadyChange={setPreviewsReady}
           renderValueTrailing={renderValueTrailing}
-          showResults={showResults}
-          resultsWhileFiltering={resultsWhileFiltering}
           ghostCompletion={paletteOpen ? ghostCompletion : undefined}
           ghostSuffix={paletteOpen ? ghostSuffixText : undefined}
-          recentValues={recentValues}
           chipSuggestions={chipSuggestions}
           previewResults={previewsReady && !showResults ? weaponPreviewResults : undefined}
           previewSectionLabel="Results"
           results={weaponResults}
           renderResult={renderWeaponResult}
           onSelectResult={(id) => {
-            recordCurrentSearch();
+            paletteChrome.recordCurrentSearch();
             const weapon = byHash.get(Number(id));
             if (weapon) {
               setPaletteOpen(false);

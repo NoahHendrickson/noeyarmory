@@ -1,7 +1,7 @@
 import type { DestinyInventoryItemDefinition } from "bungie-api-ts/destiny2";
 
-import { collectSocketPlugCandidates, extractPlugStatMods } from "./build-index";
 import type { ManifestDefs } from "./manifest";
+import { collectSocketPlugCandidates, extractPlugStatMods } from "./socket-plug-candidates";
 import type { MasterworkOption } from "./types";
 
 /** Y2+ weapon masterwork socket type hash (stat selection). */
@@ -49,8 +49,7 @@ export function buildWeaponMasterworkOptions(
     if (!primaryMod || !displayStatHashes.has(primaryMod.hash)) continue;
     if (byStatHash.has(primaryMod.hash)) continue;
 
-    const statName =
-      stats[primaryMod.hash]?.displayProperties?.name ?? `Stat ${primaryMod.hash}`;
+    const statName = stats[primaryMod.hash]?.displayProperties?.name ?? `Stat ${primaryMod.hash}`;
 
     byStatHash.set(primaryMod.hash, {
       statHash: primaryMod.hash,
