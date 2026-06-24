@@ -86,6 +86,8 @@ export interface PaletteAction {
   onSelect: () => void;
 }
 
+export type PaletteSize = "default" | "compact";
+
 export interface CommandPaletteProps {
   placeholder?: string;
   /** Placeholder when the panel is closed with no chips or query. */
@@ -177,6 +179,12 @@ export interface CommandPaletteProps {
   instantPreviewExpand?: boolean;
   /** Use `size` instead of `field-sizing:content` on the main input — Firefox perf. */
   instantInputSizing?: boolean;
+  /** Render the list in an overlaid panel below the input instead of growing the palette shell. */
+  floatingPanel?: boolean;
+  /** Optional className for the overlaid list wrapper when `floatingPanel` is enabled. */
+  floatingPanelClassName?: string;
+  /** Smaller input bar and shell radius — for embedded headers. */
+  size?: PaletteSize;
   className?: string;
 }
 

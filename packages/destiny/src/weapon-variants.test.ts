@@ -8,6 +8,7 @@ import {
   originTraitNamesForWeapons,
   primaryCatalogWeaponForHash,
   primaryWeaponVersion,
+  reconcileAdeptTierPools,
   reconcileCraftableTwins,
   sortWeaponVersions,
   weaponPerkPoolVersionForHash,
@@ -357,16 +358,103 @@ describe("weapon version grouping", () => {
 
     expect(weaponVersionFamilyName(harrowed.name)).toBe("Zaouli's Bane");
     expect(family.map((entry) => entry.hash).sort()).toEqual([291092617, 3066945855, 431721920]);
-    expect(versions.map((version) => version.label)).toEqual([
-      "Pantheon",
-      "King's Fall (Harrowed)",
-      "King's Fall",
+    expect(versions.map((version) => version.label)).toEqual(["Pantheon", "Standard", "Harrowed"]);
+    expect(versions.map((version) => version.weapon.hash)).toEqual([3066945855, 431721920, 291092617]);
+    expect(versions.map((version) => version.hashes)).toEqual([[3066945855], [431721920], [291092617]]);
+    expect(weaponPerkPoolVersionForHash(versions, 291092617)?.label).toBe("Harrowed");
+    expect(weaponPerkPoolVersionForHash(versions, 431721920)?.label).toBe("Standard");
+  });
+
+  it("labels unified normal and Timelost pools as Standard and Timelost", () => {
+    const fatebringer = weapon(1, "Fatebringer", {
+      source: "Vault of Glass",
+      releaseIndex: 100,
+      columns: [
+        { kind: "Trait", perks: [perk("Firefly"), perk("Explosive Payload")] },
+        { kind: "Trait", perks: [perk("Frenzy"), perk("Opening Shot")] },
+      ],
+    });
+    const timelost = weapon(2, "Fatebringer (Timelost)", {
+      adept: true,
+      source: "Vault of Glass",
+      releaseIndex: 200,
+      columns: [
+        { kind: "Trait", perks: [perk("Explosive Payload"), perk("Firefly")] },
+        { kind: "Trait", perks: [perk("Opening Shot"), perk("Frenzy")] },
+      ],
+    });
+    const family = weaponsInVersionFamily([fatebringer, timelost], timelost.name);
+    const versions = currentWeaponPerkPoolVersions(family);
+
+    expect(versions.map((version) => version.label)).toEqual(["Standard", "Timelost"]);
+    expect(versions.map((version) => version.weapon.hash)).toEqual([1, 2]);
+    expect(weaponPerkPoolVersionForHash(versions, 2)?.label).toBe("Timelost");
+  });
+
+  it("unions adept-tier perk columns within the same source", () => {
+    const normal = weapon(1, "Praedyth's Revenge", {
+      source: "Vault of Glass",
+      releaseIndex: 100,
+      columns: [
+        { kind: "Trait", perks: [perk("Bewildering Burst"), perk("Firefly")] },
+        { kind: "Trait", perks: [perk("Frenzy")] },
+      ],
+      perks: ["Bewildering Burst", "Firefly", "Frenzy"],
+    });
+    const timelost = weapon(2, "Praedyth's Revenge (Timelost)", {
+      adept: true,
+      source: "Vault of Glass",
+      releaseIndex: 200,
+      columns: [
+        { kind: "Trait", perks: [perk("Aggregate Charge"), perk("Firefly")] },
+        { kind: "Trait", perks: [perk("Frenzy")] },
+      ],
+      perks: ["Aggregate Charge", "Firefly", "Frenzy"],
+    });
+
+    const merged = reconcileAdeptTierPools([normal, timelost]);
+    const normalMerged = merged.find((weapon) => weapon.hash === 1)!;
+    const timelostMerged = merged.find((weapon) => weapon.hash === 2)!;
+
+    expect(normalMerged.perks).toEqual(
+      expect.arrayContaining(["Bewildering Burst", "Aggregate Charge", "Firefly", "Frenzy"]),
+    );
+    expect(timelostMerged.perks).toEqual(normalMerged.perks);
+    expect(currentWeaponPerkPoolVersions(merged).map((version) => version.label)).toEqual([
+      "Standard",
+      "Timelost",
     ]);
-    expect(versions.map((version) => version.weapon.hash)).toEqual([
-      3066945855, 291092617, 431721920,
-    ]);
-    expect(weaponPerkPoolVersionForHash(versions, 291092617)?.label).toBe("King's Fall (Harrowed)");
-    expect(weaponPerkPoolVersionForHash(versions, 431721920)?.label).toBe("King's Fall");
+  });
+
+  it("merges adept tiers only within the same source", () => {
+    const vow = weapon(613334176, "Forbearance", {
+      source: "Vow of the Disciple",
+      releaseIndex: 100,
+      columns: [{ kind: "Trait", perks: [perk("Turnabout")] }],
+      perks: ["Turnabout"],
+    });
+    const vowAdept = weapon(4038592169, "Forbearance (Adept)", {
+      adept: true,
+      source: "Vow of the Disciple",
+      releaseIndex: 110,
+      columns: [{ kind: "Trait", perks: [perk("Frenzy")] }],
+      perks: ["Frenzy"],
+    });
+    const intoTheLight = weapon(568611921, "Forbearance", {
+      source: "Into the Light",
+      releaseIndex: 200,
+      columns: [{ kind: "Trait", perks: [perk("Adrenaline Junkie")] }],
+      perks: ["Adrenaline Junkie"],
+    });
+
+    const merged = reconcileAdeptTierPools([vow, vowAdept, intoTheLight]);
+    const vowMerged = merged.find((weapon) => weapon.hash === 613334176)!;
+    const adeptMerged = merged.find((weapon) => weapon.hash === 4038592169)!;
+    const lightMerged = merged.find((weapon) => weapon.hash === 568611921)!;
+
+    expect(vowMerged.perks).toEqual(expect.arrayContaining(["Turnabout", "Frenzy"]));
+    expect(adeptMerged.perks).toEqual(vowMerged.perks);
+    expect(lightMerged.perks).toEqual(["Adrenaline Junkie"]);
   });
 
   it("sorts same-name catalog versions newest first", () => {

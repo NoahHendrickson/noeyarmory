@@ -49,6 +49,7 @@ export type {
   PalettePanelState,
   PaletteRecentItem,
   PaletteResultItem,
+  PaletteSize,
   PaletteValueOption,
 } from "./types";
 
@@ -114,6 +115,9 @@ export function CommandPalette({
   renderValueTrailing,
   instantPreviewExpand = false,
   instantInputSizing = false,
+  floatingPanel = false,
+  floatingPanelClassName,
+  size = "default",
   className,
   renderResult,
 }: CommandPaletteProps) {
@@ -596,6 +600,74 @@ export function CommandPalette({
   const paletteWidthStyle = {
     "--chip-count": chips.length,
   } as React.CSSProperties;
+  const shellRadius = size === "compact" ? "rounded-[14px]" : "rounded-[20px]";
+  const inputShellSurface = size === "compact" ? "rim" : "shell";
+  const inputBar = (
+    <PaletteInputBar
+      open={open}
+      disabled={disabled}
+      renderBarOverlay={renderBarOverlay}
+      leftAdornment={leftAdornment}
+      rightAdornment={rightAdornment}
+      chips={chips}
+      onRemoveChip={onRemoveChip}
+      getChipAppearance={getChipAppearance}
+      drilling={drilling}
+      activeCategory={activeCategory}
+      inputRef={inputRef}
+      valueQuery={state.valueQuery}
+      onValueQueryChange={(value) => dispatch({ type: "setValueQuery", value })}
+      onDrillBack={() => dispatch({ type: "back" })}
+      handleKeyDown={handleKeyDown}
+      comboboxProps={comboboxProps}
+      onOpenPanel={openPanel}
+      showAddMore={showAddMore}
+      onShowFilterCategories={showFilterCategories}
+      effectivePlaceholder={effectivePlaceholder}
+      inputValue={inputValue}
+      inputSize={inputSize}
+      onQueryChange={onQueryChange}
+      displayIndex={displayIndex}
+      items={items}
+      ghostSuffix={ghostSuffix}
+      instantInputSizing={instantInputSizing}
+      size={size}
+      showClearButton={showClearButton}
+      clearBarLabel={clearBarLabel}
+      onClearBar={handleClearBar}
+    />
+  );
+  const paletteList = (
+    <PaletteList
+      open={open}
+      renderMode={renderMode}
+      renderItems={renderItems}
+      listId={listId}
+      optionId={optionId}
+      displayIndex={displayIndex}
+      activeIndex={activeIndex}
+      keyboardFocus={keyboardFocus}
+      results={results}
+      resultsHeader={resultsHeader}
+      panelHeader={panelHeader}
+      plainPanelHeader={plainPanelHeader}
+      resultsEmpty={resultsEmpty}
+      resultsFooter={resultsFooter}
+      panelFooter={panelFooter}
+      panelClosing={panelClosing}
+      scrollRef={scrollRef}
+      listScrollingRef={listScrollingRef}
+      onScroll={handleListScroll}
+      onHoverIndex={setHoverIndex}
+      onClearHover={() => setHoverIndex(-1)}
+      onSetActive={(index) => dispatch({ type: "setActive", index })}
+      onSelectItem={selectItem}
+      renderResult={renderResult}
+      activeCategory={activeCategory}
+      renderValueTrailing={renderValueTrailing}
+      instantPreviewExpand={instantPreviewExpand}
+    />
+  );
 
   return (
     <div
@@ -608,71 +680,32 @@ export function CommandPalette({
         className,
       )}
     >
-      <FrostedShell className="rounded-[20px]">
-        <div className="flex flex-col">
-          <PaletteInputBar
-            open={open}
-            disabled={disabled}
-            renderBarOverlay={renderBarOverlay}
-            leftAdornment={leftAdornment}
-            rightAdornment={rightAdornment}
-            chips={chips}
-            onRemoveChip={onRemoveChip}
-            getChipAppearance={getChipAppearance}
-            drilling={drilling}
-            activeCategory={activeCategory}
-            inputRef={inputRef}
-            valueQuery={state.valueQuery}
-            onValueQueryChange={(value) => dispatch({ type: "setValueQuery", value })}
-            onDrillBack={() => dispatch({ type: "back" })}
-            handleKeyDown={handleKeyDown}
-            comboboxProps={comboboxProps}
-            onOpenPanel={openPanel}
-            showAddMore={showAddMore}
-            onShowFilterCategories={showFilterCategories}
-            effectivePlaceholder={effectivePlaceholder}
-            inputValue={inputValue}
-            inputSize={inputSize}
-            onQueryChange={onQueryChange}
-            displayIndex={displayIndex}
-            items={items}
-            ghostSuffix={ghostSuffix}
-            instantInputSizing={instantInputSizing}
-            showClearButton={showClearButton}
-            clearBarLabel={clearBarLabel}
-            onClearBar={handleClearBar}
-          />
-          <PaletteList
-            open={open}
-            renderMode={renderMode}
-            renderItems={renderItems}
-            listId={listId}
-            optionId={optionId}
-            displayIndex={displayIndex}
-            activeIndex={activeIndex}
-            keyboardFocus={keyboardFocus}
-            results={results}
-            resultsHeader={resultsHeader}
-            panelHeader={panelHeader}
-            plainPanelHeader={plainPanelHeader}
-            resultsEmpty={resultsEmpty}
-            resultsFooter={resultsFooter}
-            panelFooter={panelFooter}
-            panelClosing={panelClosing}
-            scrollRef={scrollRef}
-            listScrollingRef={listScrollingRef}
-            onScroll={handleListScroll}
-            onHoverIndex={setHoverIndex}
-            onClearHover={() => setHoverIndex(-1)}
-            onSetActive={(index) => dispatch({ type: "setActive", index })}
-            onSelectItem={selectItem}
-            renderResult={renderResult}
-            activeCategory={activeCategory}
-            renderValueTrailing={renderValueTrailing}
-            instantPreviewExpand={instantPreviewExpand}
-          />
+      {floatingPanel ? (
+        <div className="relative">
+          <FrostedShell className={shellRadius} surface={inputShellSurface}>
+            {inputBar}
+          </FrostedShell>
+          {(open || panelClosing) && (
+            <div
+              className={cn(
+                "absolute top-full left-1/2 z-50 mt-2 w-[min(calc(100vw-2rem),640px)] -translate-x-1/2",
+                floatingPanelClassName,
+              )}
+            >
+              <FrostedShell className={shellRadius} bar="barDense">
+                {paletteList}
+              </FrostedShell>
+            </div>
+          )}
         </div>
-      </FrostedShell>
+      ) : (
+        <FrostedShell className={shellRadius}>
+          <div className="flex flex-col">
+            {inputBar}
+            {paletteList}
+          </div>
+        </FrostedShell>
+      )}
     </div>
   );
 }

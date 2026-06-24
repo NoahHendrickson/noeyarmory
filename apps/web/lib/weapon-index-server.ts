@@ -16,28 +16,40 @@ import {
 import { generatedDataFilePath } from "./generated-data-server";
 
 let cache: WeaponIndexLookups | null = null;
+let cacheKey: string | undefined;
 let detailCache: Map<number, WeaponDetailFields> | null = null;
+let detailCacheVersion: string | undefined;
 
 function loadWeaponDetails(): Map<number, WeaponDetailFields> {
-  if (detailCache) return detailCache;
   try {
     const file = generatedDataFilePath("weaponDetails");
     const index = JSON.parse(readFileSync(file, "utf8")) as WeaponDetailIndex;
+    if (detailCache && detailCacheVersion === index.version) {
+      return detailCache;
+    }
     detailCache = new Map(
       Object.entries(index.details).map(([hash, detail]) => [Number(hash), detail]),
     );
+    detailCacheVersion = index.version;
   } catch {
     detailCache = new Map();
+    detailCacheVersion = undefined;
   }
   return detailCache;
 }
 
 /** Load and cache the generated weapon browse index (server-only). */
 export function getWeaponIndex(): WeaponIndexLookups {
-  if (cache) return cache;
   const file = generatedDataFilePath("weapons");
   const index = JSON.parse(readFileSync(file, "utf8")) as WeaponIndex;
+  const key = `${index.version}:${index.generatedAt}`;
+  if (cache && cacheKey === key) {
+    return cache;
+  }
   cache = buildWeaponIndexLookups(index);
+  cacheKey = key;
+  detailCache = null;
+  detailCacheVersion = undefined;
   return cache;
 }
 

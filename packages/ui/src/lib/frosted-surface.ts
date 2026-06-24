@@ -12,8 +12,12 @@ export const frostedSurfaceTokens = {
   panel: "border border-white/16 bg-card/35 shadow-lg shadow-black/25 backdrop-blur-xl",
   /** Palette bar, sticky headers, list chrome — 62% card fill. */
   bar: "bg-card/62 backdrop-blur-xl",
+  /** Floating palette lists over page content — heavier fill and blur for legibility. */
+  barDense: "bg-card/94 backdrop-blur-2xl",
   /** Sticky section headers with bottom border. */
   barBordered: "border-b border-white/16 bg-card/62 backdrop-blur-xl",
+  /** Sticky headers on floating palette lists. */
+  barDenseBordered: "border-b border-white/16 bg-card/94 backdrop-blur-2xl",
   /** Panel footers and other chrome with a top border only. */
   barTop: "border-t border-white/16 bg-card/62 backdrop-blur-xl",
   /** Single-layer pill (e.g. modal back) when shell+bar layering is impractical. */

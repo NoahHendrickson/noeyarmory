@@ -203,6 +203,45 @@ describe("collectSocketPlugCandidates", () => {
       collectSocketPlugCandidates({ singleInitialItemHash: 99 }, {}),
     ).toEqual([{ hash: 99, canRoll: true }]);
   });
+
+  it("merges singleInitialItemHash when a reusable plug set only has an empty crafting socket", () => {
+    const plugSets = {
+      10: {
+        reusablePlugItems: [{ plugItemHash: 1, currentlyCanRoll: true }],
+      },
+    };
+    expect(
+      collectSocketPlugCandidates({ reusablePlugSetHash: 10, singleInitialItemHash: 99 }, plugSets),
+    ).toEqual([
+      { hash: 1, canRoll: true },
+      { hash: 99, canRoll: true },
+    ]);
+
+    const items: Record<number, DestinyInventoryItemDefinition> = {
+      1: {
+        hash: 1,
+        displayProperties: { name: "Empty Origins Socket", icon: "" },
+        plug: { plugCategoryIdentifier: "crafting.recipes.empty_socket" },
+      } as DestinyInventoryItemDefinition,
+      99: {
+        hash: 99,
+        displayProperties: { name: "Runneth Over", icon: "" },
+        inventory: { tierType: 2 },
+        plug: { plugCategoryIdentifier: "origins" },
+      } as DestinyInventoryItemDefinition,
+    };
+
+    const { perks } = buildColumnPerks(
+      collectSocketPlugCandidates(
+        { reusablePlugSetHash: 10, singleInitialItemHash: 99 },
+        plugSets,
+      ),
+      items,
+    );
+    expect(perks).toEqual([
+      expect.objectContaining({ hash: 99, name: "Runneth Over", currentlyCanRoll: true }),
+    ]);
+  });
 });
 
 describe("buildColumnPerks", () => {

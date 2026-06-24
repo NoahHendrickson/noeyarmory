@@ -6,16 +6,34 @@ import { Button } from "../button";
 import { FilterChip, type FilterChipProps } from "../filter-chip";
 import { Kbd } from "../kbd";
 import { whisperForActiveItem } from "./palette-reducer";
-import type { PaletteCategory, PaletteChip, PaletteItem } from "./types";
+import type { PaletteCategory, PaletteChip, PaletteItem, PaletteSize } from "./types";
+
+const INPUT_BAR_SIZE: Record<
+  PaletteSize,
+  { bar: string; icon: string; text: string; ghostText: string }
+> = {
+  default: {
+    bar: "min-h-12 sm:h-14 gap-2 sm:gap-3 pl-3 sm:pl-[18px]",
+    icon: "size-4",
+    text: "text-base",
+    ghostText: "text-base",
+  },
+  compact: {
+    bar: "min-h-9 sm:h-9 gap-2 pl-2.5 sm:pl-3",
+    icon: "size-3.5",
+    text: "text-sm",
+    ghostText: "text-sm",
+  },
+};
 
 /** Visible Tab keycap hint — rendered inline after the ghost suffix, outside the width sizer. */
 function GhostTabHint() {
   return (
-    <span className="text-muted-foreground/35 ml-1.5 inline-flex shrink-0 items-center gap-0.5 text-[11px] leading-none">
+    <span className="ml-1.5 inline-flex shrink-0 items-center gap-0.5 text-[11px] leading-none text-muted-foreground/35">
       Tab
       <Kbd
         variant="keycap"
-        className="text-muted-foreground/50 h-3.5 min-w-3.5 rounded-[3px] px-0 text-[10px]"
+        className="h-3.5 min-w-3.5 rounded-[3px] px-0 text-[10px] text-muted-foreground/50"
       >
         <ArrowRight className="size-2.5" aria-hidden />
       </Kbd>
@@ -54,6 +72,7 @@ export interface PaletteInputBarProps {
   ghostSuffix?: string;
   /** Use `size` instead of `field-sizing:content` — avoids per-keystroke layout in Firefox. */
   instantInputSizing?: boolean;
+  size?: PaletteSize;
   showClearButton: boolean;
   clearBarLabel: string;
   onClearBar: () => void;
@@ -87,10 +106,12 @@ export function PaletteInputBar({
   items,
   ghostSuffix,
   instantInputSizing = false,
+  size = "default",
   showClearButton,
   clearBarLabel,
   onClearBar,
 }: PaletteInputBarProps) {
+  const sizeStyles = INPUT_BAR_SIZE[size];
   const showGhostSizer = Boolean(ghostSuffix && inputValue.length > 0 && !instantInputSizing);
   const showGhostHint = open && showGhostSizer;
   const useInputSize = instantInputSizing || !showGhostSizer;
@@ -103,15 +124,27 @@ export function PaletteInputBar({
     // eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events
     <div
       className={cn(
-        "flex min-h-12 items-center justify-between gap-2 border-b pl-3 transition-[border-color] duration-200 ease-out motion-reduce:transition-none sm:h-14 sm:gap-3 sm:pl-[18px]",
-        showClearButton ? "pr-6" : "pr-[18px]",
+        "flex items-center justify-between border-b transition-[border-color] duration-200 ease-out motion-reduce:transition-none",
+        sizeStyles.bar,
+        showClearButton ? (size === "compact" ? "pr-4" : "pr-6") : size === "compact" ? "pr-3" : "pr-[18px]",
         open ? "border-white/16" : "border-transparent",
       )}
-      onClick={() => !disabled && !renderBarOverlay && inputRef.current?.focus()}
+      onClick={() => {
+        if (disabled || renderBarOverlay) return;
+        inputRef.current?.focus();
+        onOpenPanel();
+      }}
     >
       <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-2.5 overflow-x-auto">
-        <span className="text-muted-foreground flex size-4 shrink-0 items-center justify-center">
-          {leftAdornment ?? <MagnifyingGlass className="size-4" weight="duotone" />}
+        <span
+          className={cn(
+            "flex shrink-0 items-center justify-center text-muted-foreground",
+            sizeStyles.icon,
+          )}
+        >
+          {leftAdornment ?? (
+            <MagnifyingGlass className={sizeStyles.icon} weight="duotone" />
+          )}
         </span>
 
         {renderBarOverlay ?? (
@@ -148,7 +181,7 @@ export function PaletteInputBar({
                     type="button"
                     variant="ghost"
                     size="iconRound"
-                    className="bg-white text-card hover:bg-white/90 hover:text-card shrink-0"
+                    className="shrink-0 bg-white text-card hover:bg-white/90 hover:text-card"
                     aria-label="Browse filter categories"
                     disabled={disabled}
                     onClick={(e) => {
@@ -163,21 +196,29 @@ export function PaletteInputBar({
                   <div
                     className={cn(
                       "relative shrink-0",
-                      showGhostSizer ? "inline-grid min-w-0" : "inline-flex min-w-[8ch] items-center",
+                      showGhostSizer
+                        ? "inline-grid min-w-0"
+                        : "inline-flex min-w-[8ch] items-center",
                     )}
                   >
                     {showGhostSizer && (
                       <>
                         <span
                           aria-hidden
-                          className="invisible col-start-1 row-start-1 whitespace-pre text-base tracking-body"
+                          className={cn(
+                            "invisible col-start-1 row-start-1 tracking-body whitespace-pre",
+                            sizeStyles.ghostText,
+                          )}
                         >
                           {inputValue}
                           {ghostSuffix}
                         </span>
                         <span
                           aria-hidden
-                          className="pointer-events-none col-start-1 row-start-1 flex items-center whitespace-pre text-base tracking-body"
+                          className={cn(
+                            "pointer-events-none col-start-1 row-start-1 flex items-center tracking-body whitespace-pre",
+                            sizeStyles.ghostText,
+                          )}
                         >
                           <span className="invisible">{inputValue}</span>
                           <span className="text-muted-foreground/50">{ghostSuffix}</span>
@@ -190,8 +231,9 @@ export function PaletteInputBar({
                       type="text"
                       {...(useInputSize ? { size: inputSize } : {})}
                       className={cn(
-                        "placeholder:text-muted-foreground col-start-1 row-start-1 bg-transparent text-base tracking-body outline-none disabled:cursor-not-allowed",
-                        showGhostSizer ? "min-w-0 w-full" : "min-w-[8ch]",
+                        "col-start-1 row-start-1 bg-transparent tracking-body outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed",
+                        sizeStyles.text,
+                        showGhostSizer ? "w-full min-w-0" : "min-w-[8ch]",
                         !instantInputSizing && !showGhostSizer && "[field-sizing:content]",
                       )}
                       placeholder={effectivePlaceholder}
@@ -213,6 +255,7 @@ export function PaletteInputBar({
       {(rightAdornment != null || showClearButton) && (
         <div className="flex shrink-0 items-center gap-2">
           {rightAdornment != null && (
+            // eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events
             <div
               data-palette-ignore-close
               className="flex cursor-pointer items-center"

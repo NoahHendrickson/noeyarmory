@@ -36,6 +36,12 @@ function draftPerkChips(perkNames: string[]): PaletteChip[] {
   }));
 }
 
+export interface PaletteInitialState {
+  query?: string;
+  chips?: PaletteChip[];
+  paletteOpen?: boolean;
+}
+
 export interface UseHomeSearchPaletteStateParams {
   mode: "weapon" | "armor";
   weapons: WeaponSummary[];
@@ -62,6 +68,7 @@ export interface UseHomeSearchPaletteStateParams {
     }>,
   ) => void;
   setResultsMode: Dispatch<SetStateAction<PaletteResultsMode | null>>;
+  initialState?: PaletteInitialState;
 }
 
 export function useHomeSearchPaletteState({
@@ -81,10 +88,11 @@ export function useHomeSearchPaletteState({
   recentValues,
   recordSearch,
   setResultsMode,
+  initialState,
 }: UseHomeSearchPaletteStateParams) {
-  const [query, setQuery] = useState("");
-  const [chips, setChips] = useState<PaletteChip[]>([]);
-  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [query, setQuery] = useState(() => initialState?.query ?? "");
+  const [chips, setChips] = useState<PaletteChip[]>(() => initialState?.chips ?? []);
+  const [paletteOpen, setPaletteOpen] = useState(() => initialState?.paletteOpen ?? false);
   const [previewsReady, setPreviewsReady] = useState(false);
   const [panelState, setPanelState] = useState<PalettePanelState>({
     panel: "closed",

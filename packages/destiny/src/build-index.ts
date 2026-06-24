@@ -8,7 +8,8 @@ import {
   sourceFields,
   sourceLabels,
 } from "./weapon-provenance";
-import { reconcileCraftableTwins } from "./weapon-variants";
+import { buildWeaponMasterworkOptions } from "./weapon-masterwork";
+import { reconcileAdeptTierPools, reconcileCraftableTwins } from "./weapon-variants";
 import { GENERIC_WEAPON_TYPE_ICONS } from "./weapon-type-icon-paths";
 import type {
   AmmoTypeRef,
@@ -128,9 +129,15 @@ export function collectSocketPlugCandidates(
       const existing = byHash.get(plug.plugItemHash);
       byHash.set(plug.plugItemHash, existing == null ? canRoll : existing || canRoll);
     }
-  } else if (socketEntry.singleInitialItemHash) {
-    // Fixed socket plug (e.g. origin trait) — not random, but not retired either.
-    byHash.set(socketEntry.singleInitialItemHash, true);
+  }
+  if (socketEntry.singleInitialItemHash) {
+    // Fixed socket plug (e.g. origin trait). Older raid weapons also list a crafting
+    // empty-socket plug set on the same socket — merge this in regardless.
+    const existing = byHash.get(socketEntry.singleInitialItemHash);
+    byHash.set(
+      socketEntry.singleInitialItemHash,
+      existing == null ? true : existing || true,
+    );
   }
 
   return [...byHash.entries()].map(([hash, canRoll]) => ({ hash, canRoll }));
@@ -400,6 +407,7 @@ export function buildWeaponIndex(
 
     const investmentStats = weaponInvestmentStats(item, stats);
     const statGroupHash = item.stats?.statGroupHash ?? undefined;
+    const masterworkOptions = buildWeaponMasterworkOptions(item, items, plugSets, stats);
 
     const element =
       (item.defaultDamageTypeHash != null
@@ -452,6 +460,7 @@ export function buildWeaponIndex(
       stats: weaponStats,
       investmentStats: investmentStats.length > 0 ? investmentStats : undefined,
       statGroupHash,
+      ...(masterworkOptions?.length ? { masterworkOptions } : {}),
       columns,
       perks: [...new Set(perkNames)],
       perkHashes: [...new Set(perkHashes)],
@@ -459,7 +468,7 @@ export function buildWeaponIndex(
   }
 
   weapons.sort((a, b) => a.name.localeCompare(b.name));
-  const reconciled = reconcileCraftableTwins(weapons);
+  const reconciled = reconcileAdeptTierPools(reconcileCraftableTwins(weapons));
   const { index, detailIndex } = internWeaponCatalog(reconciled, version);
   const statGroupHashes = new Set<number>();
   for (const weapon of weapons) {

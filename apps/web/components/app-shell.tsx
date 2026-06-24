@@ -12,13 +12,14 @@ import { MoonfangScreensaver } from "./moonfang-screensaver";
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const showSiteTitle = pathname === "/";
+  const isWeaponDetailPage = pathname.startsWith("/weapon/");
 
   return (
     <TooltipProvider delay={300}>
       <WeaponsProvider>
         <ClarityProvider>
-          <AppBackground />
-          <MoonfangScreensaver />
+          {!isWeaponDetailPage ? <AppBackground /> : null}
+          {!isWeaponDetailPage ? <MoonfangScreensaver /> : null}
           <div className="relative z-10">
             {showSiteTitle ? (
               <header className="sticky top-0 z-50 flex justify-center px-[max(0.75rem,env(safe-area-inset-right))] pt-[max(0.75rem,env(safe-area-inset-top))] pb-2 pl-[max(0.75rem,env(safe-area-inset-left))]">
