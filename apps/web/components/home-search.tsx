@@ -13,6 +13,7 @@ import { Badge, CommandPalette, PillSelect, type PillSelectOption } from "@repo/
 
 import { useArmorActions } from "../hooks/use-armor-actions";
 import { useArmorSearchPaletteState } from "../hooks/use-home-search-palette-state";
+import { usePaletteResultList } from "../hooks/use-palette-result-list";
 import {
   usePaletteSearchChrome,
   usePaletteSearchRecents,
@@ -111,47 +112,27 @@ function ArmorSearchHome({ signedIn, modeControl }: { signedIn: boolean; modeCon
     resultsMode,
   });
 
-  const armorPreviewIds = useMemo(
-    () => armorPreviewItems.map((armor) => armor.instanceId),
-    [armorPreviewItems],
-  );
-  const armorPreviewResults = useMemo(
-    () => armorPreviewIds.map((id) => ({ id })),
-    [armorPreviewIds],
-  );
-  const armorResultIds = useMemo(() => armorShown.map((armor) => armor.instanceId), [armorShown]);
-  const armorResults = useMemo(() => armorResultIds.map((id) => ({ id })), [armorResultIds]);
-  const armorById = useMemo(
-    () => new Map(armorShown.map((armor) => [armor.instanceId, armor] as const)),
-    [armorShown],
-  );
-  const armorPreviewById = useMemo(
-    () => new Map(armorPreviewItems.map((armor) => [armor.instanceId, armor] as const)),
-    [armorPreviewItems],
-  );
-
-  const renderArmorResult = useCallback(
-    (id: string) => {
-      const armor = armorById.get(id) ?? armorPreviewById.get(id);
-      if (!armor) return null;
-      return (
-        <ArmorResultRow
-          armor={armor}
-          duplicateDiff={armorDuplicateDiffs.get(armor.instanceId)}
-          actionState={armorAction}
-          onEquip={() => void runArmorAction(armor.instanceId, "equip", "/api/armor/equip")}
-          onMoveToCharacter={() =>
-            void runArmorAction(armor.instanceId, "transfer", "/api/armor/transfer")
-          }
-        />
-      );
-    },
-    [armorById, armorPreviewById, armorDuplicateDiffs, armorAction, runArmorAction],
-  );
-
-  useEffect(() => {
-    setShowAllResults(false);
-  }, [chips, query]);
+  const armorResultList = usePaletteResultList({
+    shown: armorShown,
+    previewItems: armorPreviewItems,
+    resultCount: armorResultCount,
+    shownCount: armorShownCount,
+    getId: (armor) => armor.instanceId,
+    renderRow: (armor) => (
+      <ArmorResultRow
+        armor={armor}
+        duplicateDiff={armorDuplicateDiffs.get(armor.instanceId)}
+        actionState={armorAction}
+        onEquip={() => void runArmorAction(armor.instanceId, "equip", "/api/armor/equip")}
+        onMoveToCharacter={() =>
+          void runArmorAction(armor.instanceId, "transfer", "/api/armor/transfer")
+        }
+      />
+    ),
+    resetPaginationDeps: [chips, query],
+    showAllResults,
+    setShowAllResults,
+  });
 
   useEffect(() => {
     if (!query.trim() || chips.length > 0) {
@@ -173,7 +154,6 @@ function ArmorSearchHome({ signedIn, modeControl }: { signedIn: boolean; modeCon
 
   const placeholder = armorLoading ? "Loading your armor…" : "Search armor by class, set, or stats";
   const resultCount = armorResultCount;
-  const shownCount = armorShownCount;
 
   return (
     <div
@@ -200,11 +180,11 @@ function ArmorSearchHome({ signedIn, modeControl }: { signedIn: boolean; modeCon
         ghostSuffix={paletteOpen ? ghostSuffixText : undefined}
         chipSuggestions={chipSuggestions}
         previewResults={
-          previewsReady && !paletteChrome.showResults ? armorPreviewResults : undefined
+          previewsReady && !paletteChrome.showResults ? armorResultList.previewResults : undefined
         }
         previewSectionLabel="Results"
-        results={armorResults}
-        renderResult={renderArmorResult}
+        results={armorResultList.results}
+        renderResult={armorResultList.renderResult}
         resultsEmpty="Go farm!"
         resultsHeader={
           paletteChrome.showResults ? (
@@ -213,21 +193,7 @@ function ArmorSearchHome({ signedIn, modeControl }: { signedIn: boolean; modeCon
             </div>
           ) : undefined
         }
-        resultsFooter={
-          resultCount > shownCount ? (
-            <button
-              type="button"
-              data-palette-ignore-close
-              className="w-full cursor-pointer transition-colors hover:text-foreground"
-              onClick={(event) => {
-                event.stopPropagation();
-                setShowAllResults(true);
-              }}
-            >
-              Showing {shownCount} of {resultCount}
-            </button>
-          ) : undefined
-        }
+        resultsFooter={armorResultList.resultsFooter}
         disabled={!signedIn}
         renderBarOverlay={armorOverlay}
       />

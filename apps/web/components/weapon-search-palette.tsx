@@ -5,7 +5,6 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
   type CSSProperties,
   type ReactNode,
@@ -31,6 +30,7 @@ import {
 } from "@repo/destiny";
 
 import { useWeaponSearchPaletteState } from "../hooks/use-home-search-palette-state";
+import { usePaletteResultList } from "../hooks/use-palette-result-list";
 import {
   usePaletteSearchChrome,
   usePaletteSearchRecents,
@@ -238,54 +238,26 @@ export function WeaponSearchPalette({
     setPaletteOpen,
   });
 
-  const weaponResultIds = useMemo(
-    () => weaponShown.map((weapon) => String(weapon.hash)),
-    [weaponShown],
-  );
-  const weaponPreviewIds = useMemo(
-    () => weaponPreviewWeapons.map((weapon) => String(weapon.hash)),
-    [weaponPreviewWeapons],
-  );
-  const weaponById = useMemo(
-    () => new Map(weaponShown.map((weapon) => [String(weapon.hash), weapon] as const)),
-    [weaponShown],
-  );
-  const weaponPreviewById = useMemo(
-    () => new Map(weaponPreviewWeapons.map((weapon) => [String(weapon.hash), weapon] as const)),
-    [weaponPreviewWeapons],
-  );
-  const lastWeaponPreviewByIdRef = useRef<ReadonlyMap<string, WeaponSummary>>(new Map());
-
-  useEffect(() => {
-    if (weaponPreviewById.size > 0) {
-      lastWeaponPreviewByIdRef.current = weaponPreviewById;
-    }
-  }, [weaponPreviewById]);
-
-  const renderWeaponResult = useCallback(
-    (id: string) => {
-      const weapon =
-        weaponById.get(id) ?? weaponPreviewById.get(id) ?? lastWeaponPreviewByIdRef.current.get(id);
-      if (!weapon) return null;
-      return (
-        <WeaponResultRow
-          weapon={weapon}
-          elementIconPath={elementIconMap.get(weapon.element)}
-          dps={dpsByName.get(weapon.name)}
-          pinned={pinnedWeaponHashSet.has(weapon.hash)}
-          onTogglePin={() => toggleWeaponHash(weapon.hash)}
-        />
-      );
-    },
-    [
-      weaponById,
-      weaponPreviewById,
-      elementIconMap,
-      dpsByName,
-      pinnedWeaponHashSet,
-      toggleWeaponHash,
-    ],
-  );
+  const weaponResultList = usePaletteResultList({
+    shown: weaponShown,
+    previewItems: weaponPreviewWeapons,
+    resultCount: weaponResultCount,
+    shownCount: weaponShownCount,
+    getId: (weapon) => String(weapon.hash),
+    renderRow: (weapon) => (
+      <WeaponResultRow
+        weapon={weapon}
+        elementIconPath={elementIconMap.get(weapon.element)}
+        dps={dpsByName.get(weapon.name)}
+        pinned={pinnedWeaponHashSet.has(weapon.hash)}
+        onTogglePin={() => toggleWeaponHash(weapon.hash)}
+      />
+    ),
+    stickyPreview: true,
+    resetPaginationDeps: [chips, query, sort],
+    showAllResults,
+    setShowAllResults,
+  });
 
   const addComposerPerk = useCallback((categoryId: string, option: PaletteValueOption) => {
     if (!CUSTOM_FILTER_TRAIT_CATEGORY_IDS.has(categoryId)) return;
@@ -418,10 +390,6 @@ export function WeaponSearchPalette({
   }, [composingCustomFilter, canCreateCustomFilter, handleCreateCustomFilter]);
 
   useEffect(() => {
-    setShowAllResults(false);
-  }, [chips, query, sort]);
-
-  useEffect(() => {
     if (!query.trim() || chips.length > 0) {
       setResultsMode(null);
     }
@@ -432,12 +400,6 @@ export function WeaponSearchPalette({
       ? "Add more perks…"
       : "Search trait perks"
     : "Search weapons, perks, or names";
-
-  const weaponResults = useMemo(() => weaponResultIds.map((id) => ({ id })), [weaponResultIds]);
-  const weaponPreviewResults = useMemo(
-    () => weaponPreviewIds.map((id) => ({ id })),
-    [weaponPreviewIds],
-  );
 
   const { hasFilters, isFiltering, showResults } = paletteChrome;
   const showToolbar = toolbarTrailing != null || (showPinnedFilters && pinnedFilters.length > 0);
@@ -524,10 +486,12 @@ export function WeaponSearchPalette({
           ghostCompletion={paletteOpen ? ghostCompletion : undefined}
           ghostSuffix={paletteOpen ? ghostSuffixText : undefined}
           chipSuggestions={chipSuggestions}
-          previewResults={previewsReady && !showResults ? weaponPreviewResults : undefined}
+          previewResults={
+            previewsReady && !showResults ? weaponResultList.previewResults : undefined
+          }
           previewSectionLabel="Results"
-          results={weaponResults}
-          renderResult={renderWeaponResult}
+          results={weaponResultList.results}
+          renderResult={weaponResultList.renderResult}
           onSelectResult={(id) => {
             paletteChrome.recordCurrentSearch();
             const weapon = byHash.get(Number(id));
@@ -553,21 +517,7 @@ export function WeaponSearchPalette({
               </div>
             ) : undefined
           }
-          resultsFooter={
-            weaponResultCount > weaponShownCount ? (
-              <button
-                type="button"
-                data-palette-ignore-close
-                className="w-full cursor-pointer transition-colors hover:text-foreground"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  setShowAllResults(true);
-                }}
-              >
-                Showing {weaponShownCount} of {weaponResultCount}
-              </button>
-            ) : undefined
-          }
+          resultsFooter={weaponResultList.resultsFooter}
         />
         {showPinnedWeapons ? (
           <PinnedWeaponsRail
