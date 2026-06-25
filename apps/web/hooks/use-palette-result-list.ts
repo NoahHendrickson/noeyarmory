@@ -27,7 +27,6 @@ export interface UsePaletteResultListParams<T> {
   stickyPreview?: boolean;
   /** Reset pagination when search inputs change. */
   resetPaginationDeps: readonly unknown[];
-  showAllResults: boolean;
   setShowAllResults: (value: boolean) => void;
 }
 

@@ -21,7 +21,6 @@ describe("usePaletteResultList", () => {
         getId: (item) => item.id,
         renderRow: (item) => item.label,
         resetPaginationDeps: [],
-        showAllResults: false,
         setShowAllResults: vi.fn(),
       }),
     );
@@ -39,7 +38,6 @@ describe("usePaletteResultList", () => {
         getId: (item) => item.id,
         renderRow: (item) => item.label,
         resetPaginationDeps: [],
-        showAllResults: false,
         setShowAllResults,
       }),
     );
@@ -58,7 +56,6 @@ describe("usePaletteResultList", () => {
           getId: (item: Item) => item.id,
           renderRow: (item: Item) => item.label,
           resetPaginationDeps: deps,
-          showAllResults: true,
           setShowAllResults,
         }),
       { initialProps: { deps: ["q1"] as readonly unknown[] } },

@@ -130,7 +130,6 @@ function ArmorSearchHome({ signedIn, modeControl }: { signedIn: boolean; modeCon
       />
     ),
     resetPaginationDeps: [chips, query],
-    showAllResults,
     setShowAllResults,
   });
 

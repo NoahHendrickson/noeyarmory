@@ -3,7 +3,6 @@
 import {
   useEffect,
   useMemo,
-  useRef,
   useState,
   type CSSProperties,
   type ReactNode,
@@ -12,9 +11,7 @@ import {
   cn,
   CommandPalette,
   PillSelect,
-  type PaletteChip,
   type PaletteSize,
-  type PaletteValueOption,
   type PillSelectOption,
 } from "@repo/ui";
 import {
@@ -27,7 +24,6 @@ import {
 } from "@repo/destiny";
 
 import { useWeaponSearchPaletteState } from "../hooks/use-home-search-palette-state";
-import { useCustomFilterComposer } from "../hooks/use-custom-filter-composer";
 import { usePaletteResultList } from "../hooks/use-palette-result-list";
 import {
   usePaletteSearchChrome,
@@ -107,9 +103,6 @@ export function WeaponSearchPalette({
   const [resultsMode, setResultsMode] = useState<PaletteResultsMode | null>(
     () => restoredSession?.resultsMode ?? null,
   );
-  const addChipRef = useRef<(categoryId: string, option: PaletteValueOption) => void>(() => {});
-  const setQueryRef = useRef<(query: string) => void>(() => {});
-  const setChipsRef = useRef<(updater: (chips: PaletteChip[]) => PaletteChip[]) => void>(() => {});
   const weaponColumnPerks = useMemo(() => collectColumnPerks(weapons, perks), [weapons, perks]);
   const facets = useMemo(() => collectFacets(weapons), [weapons]);
   const perkFuse = useMemo(
@@ -131,16 +124,6 @@ export function WeaponSearchPalette({
     [weapons, weaponColumnPerks, customFilters, facets, perkFuse, damagePerkNames],
   );
 
-  const composer = useCustomFilterComposer({
-    weaponColumnPerks,
-    perkFuse,
-    weaponCategories,
-    createFilter,
-    addChip: (categoryId, option) => addChipRef.current(categoryId, option),
-    setQuery: (query) => setQueryRef.current(query),
-    setChips: (updater) => setChipsRef.current(updater),
-  });
-
   const {
     query,
     setQuery,
@@ -157,6 +140,17 @@ export function WeaponSearchPalette({
     handleSubmit,
     addChip,
     paletteChips,
+    composing,
+    categories,
+    placeholder,
+    categoryActions,
+    panelHeader,
+    handleAddChip,
+    handleRemoveChip,
+    handleClearChips,
+    onBeforePaletteClose,
+    onBeforeSelectRecent,
+    getChipAppearanceOverride,
     weaponShown,
     weaponPreviewWeapons,
     weaponResultCount,
@@ -166,9 +160,9 @@ export function WeaponSearchPalette({
     perks,
     customFilters,
     weaponCategories,
-    categories: composer.categories,
-    composingCustomFilter: composer.composing,
-    draftPerkNames: composer.draftPerkNames,
+    weaponColumnPerks,
+    perkFuse,
+    createFilter,
     sort,
     dpsByName,
     showAllResults,
@@ -184,9 +178,6 @@ export function WeaponSearchPalette({
         }
       : undefined,
   });
-  addChipRef.current = addChip;
-  setQueryRef.current = setQuery;
-  setChipsRef.current = setChips;
 
   const paletteChrome = usePaletteSearchChrome({
     mode: "weapon",
@@ -199,10 +190,10 @@ export function WeaponSearchPalette({
     setChips,
     setPaletteOpen,
     resultsMode,
-    suppressRecent: composer.suppressPaletteChrome,
-    suppressResults: composer.suppressPaletteChrome,
-    onBeforeSelectRecent: composer.onBeforeSelectRecent,
-    onBeforeClose: composer.onBeforePaletteClose,
+    suppressRecent: composing,
+    suppressResults: composing,
+    onBeforeSelectRecent,
+    onBeforeClose: onBeforePaletteClose,
   });
 
   const {
@@ -216,7 +207,7 @@ export function WeaponSearchPalette({
     renderValueTrailing,
   } = useWeaponSearchPins({
     mode: "weapon",
-    composingCustomFilter: composer.composing,
+    composingCustomFilter: composing,
     weaponCategories,
     weaponByHash: byHash,
     weaponNameIndex: nameIndex,
@@ -242,7 +233,6 @@ export function WeaponSearchPalette({
     ),
     stickyPreview: true,
     resetPaginationDeps: [chips, query, sort],
-    showAllResults,
     setShowAllResults,
   });
 
@@ -310,15 +300,15 @@ export function WeaponSearchPalette({
           floatingPanel={floatingPanel}
           floatingPanelClassName={floatingPanelClassName}
           size={size}
-          placeholder={composer.placeholder}
-          categories={composer.categories}
-          categoryActions={composer.categoryActions}
+          placeholder={placeholder}
+          categories={categories}
+          categoryActions={categoryActions}
           {...paletteChrome.paletteProps}
-          onAddChip={composer.handleAddChip}
-          onRemoveChip={composer.handleRemoveChip}
-          onClearChips={composer.handleClearChips}
+          onAddChip={handleAddChip}
+          onRemoveChip={handleRemoveChip}
+          onClearChips={handleClearChips}
           getChipAppearance={(chip) => {
-            const composerAppearance = composer.getChipAppearanceOverride(chip);
+            const composerAppearance = getChipAppearanceOverride(chip);
             if (composerAppearance) return composerAppearance;
             return getFilterChipAppearance(chip.categoryId, chip.value, {
               elementIcons: elementIconMap,
@@ -326,9 +316,9 @@ export function WeaponSearchPalette({
               ammoIcons: ammoIconMap,
             });
           }}
-          hideCategoryList={composer.hideCategoryList}
-          plainPanelHeader={composer.plainPanelHeader}
-          panelHeader={composer.panelHeader}
+          hideCategoryList={composing}
+          plainPanelHeader={composing}
+          panelHeader={panelHeader}
           onSubmit={handleSubmit}
           onPanelStateChange={handlePanelStateChange}
           onPreviewsReadyChange={setPreviewsReady}
