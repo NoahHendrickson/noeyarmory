@@ -1,11 +1,8 @@
 "use client";
 
-import { ListFilterPlus } from "lucide-react";
 import {
-  useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
   type CSSProperties,
   type ReactNode,
@@ -13,12 +10,8 @@ import {
 import {
   cn,
   CommandPalette,
-  Input,
   PillSelect,
-  type PaletteAction,
-  type PaletteCategory,
   type PaletteSize,
-  type PaletteValueOption,
   type PillSelectOption,
 } from "@repo/ui";
 import {
@@ -31,22 +24,14 @@ import {
 } from "@repo/destiny";
 
 import { useWeaponSearchPaletteState } from "../hooks/use-home-search-palette-state";
+import { usePaletteResultList } from "../hooks/use-palette-result-list";
 import {
   usePaletteSearchChrome,
   usePaletteSearchRecents,
 } from "../hooks/use-palette-search-chrome";
 import { useWeaponSearchPins } from "../hooks/use-weapon-search-pins";
 import { getFilterChipAppearance } from "../lib/filter-chip-appearance";
-import {
-  CUSTOM_FILTER_CATEGORY_ID,
-  CUSTOM_FILTER_DRAFT_CATEGORY_ID,
-  CUSTOM_FILTER_TRAIT_CATEGORY_IDS,
-} from "../lib/palette/constants";
-import {
-  allPerkNames,
-  buildComposerCategories,
-  buildWeaponCategories,
-} from "../lib/palette/weapon-categories";
+import { allPerkNames, buildWeaponCategories } from "../lib/palette/weapon-categories";
 import type { PaletteResultsMode } from "../lib/palette/results-mode";
 import { useCustomWeaponFilters } from "../lib/use-custom-weapon-filters";
 import { useIsFirefox } from "../lib/use-is-firefox";
@@ -72,11 +57,6 @@ const WEAPON_SORT_OPTIONS: PillSelectOption<WeaponSort>[] = [
   { value: "season-desc", label: "Newest", direction: "desc" },
   { value: "season-asc", label: "Oldest", direction: "asc" },
 ];
-
-interface CustomFilterComposer {
-  name: string;
-  perkNames: string[];
-}
 
 export type WeaponSearchSelectionSource = "search" | "popular";
 
@@ -123,10 +103,6 @@ export function WeaponSearchPalette({
   const [resultsMode, setResultsMode] = useState<PaletteResultsMode | null>(
     () => restoredSession?.resultsMode ?? null,
   );
-  const [customFilterComposer, setCustomFilterComposer] = useState<CustomFilterComposer | null>(
-    null,
-  );
-
   const weaponColumnPerks = useMemo(() => collectColumnPerks(weapons, perks), [weapons, perks]);
   const facets = useMemo(() => collectFacets(weapons), [weapons]);
   const perkFuse = useMemo(
@@ -148,15 +124,6 @@ export function WeaponSearchPalette({
     [weapons, weaponColumnPerks, customFilters, facets, perkFuse, damagePerkNames],
   );
 
-  const composingCustomFilter = customFilterComposer != null;
-  const composerCategories = useMemo(
-    () => buildComposerCategories(weaponColumnPerks, perkFuse),
-    [weaponColumnPerks, perkFuse],
-  );
-  const categories: PaletteCategory[] = composingCustomFilter
-    ? composerCategories
-    : weaponCategories;
-
   const {
     query,
     setQuery,
@@ -173,6 +140,17 @@ export function WeaponSearchPalette({
     handleSubmit,
     addChip,
     paletteChips,
+    composing,
+    categories,
+    placeholder,
+    categoryActions,
+    panelHeader,
+    handleAddChip,
+    handleRemoveChip,
+    handleClearChips,
+    onBeforePaletteClose,
+    onBeforeSelectRecent,
+    getChipAppearanceOverride,
     weaponShown,
     weaponPreviewWeapons,
     weaponResultCount,
@@ -182,9 +160,9 @@ export function WeaponSearchPalette({
     perks,
     customFilters,
     weaponCategories,
-    categories,
-    composingCustomFilter,
-    draftPerkNames: customFilterComposer?.perkNames ?? [],
+    weaponColumnPerks,
+    perkFuse,
+    createFilter,
     sort,
     dpsByName,
     showAllResults,
@@ -212,10 +190,10 @@ export function WeaponSearchPalette({
     setChips,
     setPaletteOpen,
     resultsMode,
-    suppressRecent: composingCustomFilter,
-    suppressResults: composingCustomFilter,
-    onBeforeSelectRecent: () => setCustomFilterComposer(null),
-    onBeforeClose: () => setCustomFilterComposer(null),
+    suppressRecent: composing,
+    suppressResults: composing,
+    onBeforeSelectRecent,
+    onBeforeClose: onBeforePaletteClose,
   });
 
   const {
@@ -229,7 +207,7 @@ export function WeaponSearchPalette({
     renderValueTrailing,
   } = useWeaponSearchPins({
     mode: "weapon",
-    composingCustomFilter,
+    composingCustomFilter: composing,
     weaponCategories,
     weaponByHash: byHash,
     weaponNameIndex: nameIndex,
@@ -238,123 +216,25 @@ export function WeaponSearchPalette({
     setPaletteOpen,
   });
 
-  const weaponResultIds = useMemo(
-    () => weaponShown.map((weapon) => String(weapon.hash)),
-    [weaponShown],
-  );
-  const weaponPreviewIds = useMemo(
-    () => weaponPreviewWeapons.map((weapon) => String(weapon.hash)),
-    [weaponPreviewWeapons],
-  );
-  const weaponById = useMemo(
-    () => new Map(weaponShown.map((weapon) => [String(weapon.hash), weapon] as const)),
-    [weaponShown],
-  );
-  const weaponPreviewById = useMemo(
-    () => new Map(weaponPreviewWeapons.map((weapon) => [String(weapon.hash), weapon] as const)),
-    [weaponPreviewWeapons],
-  );
-  const lastWeaponPreviewByIdRef = useRef<ReadonlyMap<string, WeaponSummary>>(new Map());
-
-  useEffect(() => {
-    if (weaponPreviewById.size > 0) {
-      lastWeaponPreviewByIdRef.current = weaponPreviewById;
-    }
-  }, [weaponPreviewById]);
-
-  const renderWeaponResult = useCallback(
-    (id: string) => {
-      const weapon =
-        weaponById.get(id) ?? weaponPreviewById.get(id) ?? lastWeaponPreviewByIdRef.current.get(id);
-      if (!weapon) return null;
-      return (
-        <WeaponResultRow
-          weapon={weapon}
-          elementIconPath={elementIconMap.get(weapon.element)}
-          dps={dpsByName.get(weapon.name)}
-          pinned={pinnedWeaponHashSet.has(weapon.hash)}
-          onTogglePin={() => toggleWeaponHash(weapon.hash)}
-        />
-      );
-    },
-    [
-      weaponById,
-      weaponPreviewById,
-      elementIconMap,
-      dpsByName,
-      pinnedWeaponHashSet,
-      toggleWeaponHash,
-    ],
-  );
-
-  const addComposerPerk = useCallback((categoryId: string, option: PaletteValueOption) => {
-    if (!CUSTOM_FILTER_TRAIT_CATEGORY_IDS.has(categoryId)) return;
-    setCustomFilterComposer((prev) => {
-      if (!prev) return prev;
-      if (prev.perkNames.some((perk) => perk.toLowerCase() === option.id)) return prev;
-      return { ...prev, perkNames: [...prev.perkNames, option.label] };
-    });
-  }, []);
-
-  const handleAddChip = useCallback(
-    (categoryId: string, option: PaletteValueOption) => {
-      if (composingCustomFilter) {
-        addComposerPerk(categoryId, option);
-        return;
-      }
-      addChip(categoryId, option);
-    },
-    [composingCustomFilter, addComposerPerk, addChip],
-  );
-
-  const handleRemoveChip = useCallback(
-    (chipId: string) => {
-      if (composingCustomFilter) {
-        setCustomFilterComposer((prev) => {
-          if (!prev) return prev;
-          const perkKey = chipId.replace(/^draft:/, "");
-          return {
-            ...prev,
-            perkNames: prev.perkNames.filter((perk) => perk.toLowerCase() !== perkKey),
-          };
-        });
-        return;
-      }
-      setChips((prev) => prev.filter((chip) => chip.id !== chipId));
-    },
-    [composingCustomFilter, setChips],
-  );
-
-  const handleClearChips = useCallback(() => {
-    if (composingCustomFilter) {
-      setCustomFilterComposer((prev) => (prev ? { ...prev, perkNames: [] } : null));
-      return;
-    }
-    setChips([]);
-  }, [composingCustomFilter, setChips]);
-
-  const handleCreateCustomFilter = useCallback(() => {
-    if (!customFilterComposer) return;
-    const name = customFilterComposer.name.trim();
-    if (!name || customFilterComposer.perkNames.length === 0) return;
-
-    const created = createFilter({ name, perkNames: customFilterComposer.perkNames });
-    if (!created) return;
-
-    const category = weaponCategories.find(
-      (candidate) => candidate.id === CUSTOM_FILTER_CATEGORY_ID,
-    );
-    if (category) {
-      addChip(CUSTOM_FILTER_CATEGORY_ID, { id: created.id, label: created.name });
-    }
-    setCustomFilterComposer(null);
-    setQuery("");
-  }, [customFilterComposer, createFilter, weaponCategories, addChip, setQuery]);
-
-  const canCreateCustomFilter =
-    customFilterComposer != null &&
-    customFilterComposer.name.trim().length > 0 &&
-    customFilterComposer.perkNames.length > 0;
+  const weaponResultList = usePaletteResultList({
+    shown: weaponShown,
+    previewItems: weaponPreviewWeapons,
+    resultCount: weaponResultCount,
+    shownCount: weaponShownCount,
+    getId: (weapon) => String(weapon.hash),
+    renderRow: (weapon) => (
+      <WeaponResultRow
+        weapon={weapon}
+        elementIconPath={elementIconMap.get(weapon.element)}
+        dps={dpsByName.get(weapon.name)}
+        pinned={pinnedWeaponHashSet.has(weapon.hash)}
+        onTogglePin={() => toggleWeaponHash(weapon.hash)}
+      />
+    ),
+    stickyPreview: true,
+    resetPaginationDeps: [chips, query, sort],
+    setShowAllResults,
+  });
 
   useEffect(() => {
     if (!restoreSession) return;
@@ -379,65 +259,11 @@ export function WeaponSearchPalette({
     };
   }, [firefoxPalettePerf]);
 
-  const categoryActions = useMemo<PaletteAction[]>(() => {
-    if (composingCustomFilter) {
-      return [
-        {
-          id: "create-custom-filter-save",
-          label: "Create filter",
-          hint: canCreateCustomFilter ? undefined : "Add a name and at least one perk",
-          variant: "primary",
-          alwaysShow: true,
-          keepPanelOpen: true,
-          disabled: !canCreateCustomFilter,
-          hideKeyboardHint: true,
-          onSelect: handleCreateCustomFilter,
-        },
-        {
-          id: "cancel-custom-filter",
-          label: "Cancel",
-          hint: "Discard this filter",
-          alwaysShow: true,
-          keepPanelOpen: true,
-          hideKeyboardHint: true,
-          onSelect: () => setCustomFilterComposer(null),
-        },
-      ];
-    }
-    return [
-      {
-        id: "create-custom-filter",
-        label: "Create custom filter",
-        hint: "Group perks into a reusable filter",
-        icon: <ListFilterPlus className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />,
-        hideKeyboardHint: true,
-        keepPanelOpen: true,
-        onSelect: () => setCustomFilterComposer({ name: "", perkNames: [] }),
-      },
-    ];
-  }, [composingCustomFilter, canCreateCustomFilter, handleCreateCustomFilter]);
-
-  useEffect(() => {
-    setShowAllResults(false);
-  }, [chips, query, sort]);
-
   useEffect(() => {
     if (!query.trim() || chips.length > 0) {
       setResultsMode(null);
     }
   }, [query, chips]);
-
-  const placeholder = composingCustomFilter
-    ? customFilterComposer?.perkNames.length
-      ? "Add more perks…"
-      : "Search trait perks"
-    : "Search weapons, perks, or names";
-
-  const weaponResults = useMemo(() => weaponResultIds.map((id) => ({ id })), [weaponResultIds]);
-  const weaponPreviewResults = useMemo(
-    () => weaponPreviewIds.map((id) => ({ id })),
-    [weaponPreviewIds],
-  );
 
   const { hasFilters, isFiltering, showResults } = paletteChrome;
   const showToolbar = toolbarTrailing != null || (showPinnedFilters && pinnedFilters.length > 0);
@@ -482,41 +308,17 @@ export function WeaponSearchPalette({
           onRemoveChip={handleRemoveChip}
           onClearChips={handleClearChips}
           getChipAppearance={(chip) => {
-            if (chip.categoryId === CUSTOM_FILTER_DRAFT_CATEGORY_ID) {
-              return { tone: "trait", hideLabel: true };
-            }
+            const composerAppearance = getChipAppearanceOverride(chip);
+            if (composerAppearance) return composerAppearance;
             return getFilterChipAppearance(chip.categoryId, chip.value, {
               elementIcons: elementIconMap,
               weaponTypeIcons: typeIconMap,
               ammoIcons: ammoIconMap,
             });
           }}
-          hideCategoryList={composingCustomFilter}
-          plainPanelHeader={composingCustomFilter}
-          panelHeader={
-            customFilterComposer ? (
-              <div className="space-y-3 py-3" data-palette-ignore-close>
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-white">New custom filter</p>
-                  <p className="text-xs text-muted-foreground">
-                    Combine different perks to create a custom filter.
-                  </p>
-                </div>
-                <Input
-                  id="custom-filter-name"
-                  value={customFilterComposer.name}
-                  onChange={(event) =>
-                    setCustomFilterComposer((prev) =>
-                      prev ? { ...prev, name: event.target.value } : prev,
-                    )
-                  }
-                  placeholder="Name your custom filter, e.g. reload perks"
-                  className="h-8 rounded-[8px] text-xs"
-                  aria-label="Filter name"
-                />
-              </div>
-            ) : undefined
-          }
+          hideCategoryList={composing}
+          plainPanelHeader={composing}
+          panelHeader={panelHeader}
           onSubmit={handleSubmit}
           onPanelStateChange={handlePanelStateChange}
           onPreviewsReadyChange={setPreviewsReady}
@@ -524,10 +326,12 @@ export function WeaponSearchPalette({
           ghostCompletion={paletteOpen ? ghostCompletion : undefined}
           ghostSuffix={paletteOpen ? ghostSuffixText : undefined}
           chipSuggestions={chipSuggestions}
-          previewResults={previewsReady && !showResults ? weaponPreviewResults : undefined}
+          previewResults={
+            previewsReady && !showResults ? weaponResultList.previewResults : undefined
+          }
           previewSectionLabel="Results"
-          results={weaponResults}
-          renderResult={renderWeaponResult}
+          results={weaponResultList.results}
+          renderResult={weaponResultList.renderResult}
           onSelectResult={(id) => {
             paletteChrome.recordCurrentSearch();
             const weapon = byHash.get(Number(id));
@@ -553,21 +357,7 @@ export function WeaponSearchPalette({
               </div>
             ) : undefined
           }
-          resultsFooter={
-            weaponResultCount > weaponShownCount ? (
-              <button
-                type="button"
-                data-palette-ignore-close
-                className="w-full cursor-pointer transition-colors hover:text-foreground"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  setShowAllResults(true);
-                }}
-              >
-                Showing {weaponShownCount} of {weaponResultCount}
-              </button>
-            ) : undefined
-          }
+          resultsFooter={weaponResultList.resultsFooter}
         />
         {showPinnedWeapons ? (
           <PinnedWeaponsRail
