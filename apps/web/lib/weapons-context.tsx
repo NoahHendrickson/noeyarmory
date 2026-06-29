@@ -24,7 +24,15 @@ import {
   type WeaponIndexLookups,
   type WeaponSummary,
 } from "@repo/destiny";
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 
 import { fetchGeneratedDataFile } from "./generated-data-client";
 import { scheduleIdle } from "./schedule-idle";
@@ -38,6 +46,7 @@ export interface WeaponsState {
   byHash: Map<number, WeaponSummary>;
   perkMap: WeaponIndexLookups["perkMap"];
   weaponsByPerkName: WeaponIndexLookups["weaponsByPerkName"];
+  weaponsByPerkHash: WeaponIndexLookups["weaponsByPerkHash"];
   nameIndex: WeaponIndexLookups["nameIndex"];
   weaponSearcher: WeaponIndexLookups["weaponSearcher"];
   loading: boolean;
@@ -64,6 +73,7 @@ const defaultState: WeaponsState = {
   byHash: new Map(),
   perkMap: new Map(),
   weaponsByPerkName: new Map(),
+  weaponsByPerkHash: new Map(),
   nameIndex: emptyLookups.nameIndex,
   weaponSearcher: createWeaponSearcher([]),
   loading: true,
@@ -165,6 +175,7 @@ function lookupsToState(
     byHash: lookups.byHash,
     perkMap: lookups.perkMap,
     weaponsByPerkName: lookups.weaponsByPerkName,
+    weaponsByPerkHash: lookups.weaponsByPerkHash,
     nameIndex: lookups.nameIndex,
     weaponSearcher: lookups.weaponSearcher,
     loading: false,
@@ -283,26 +294,32 @@ export function useWeaponDetail(
   const { getWeaponDoc, version } = useWeapons();
   const [weapon, setWeapon] = useState<WeaponDoc | undefined>(initial);
   const [loading, setLoading] = useState(initial == null && hash != null);
+  const skippedInitialFetchHashRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (hash == null) {
+      skippedInitialFetchHashRef.current = null;
       setWeapon(undefined);
       setLoading(false);
       return;
     }
 
-    if (initial && initial.hash === hash) {
+    const hasMatchingInitial = initial?.hash === hash;
+    if (hasMatchingInitial && skippedInitialFetchHashRef.current !== hash) {
+      skippedInitialFetchHashRef.current = hash;
       setWeapon(initial);
+      setLoading(false);
+      return;
     }
 
     let active = true;
-    if (!initial || initial.hash !== hash) {
+    if (!hasMatchingInitial) {
       setLoading(true);
     }
 
     void getWeaponDoc(hash).then((doc) => {
       if (!active) return;
-      setWeapon(doc ?? (initial?.hash === hash ? initial : undefined));
+      setWeapon(doc ?? (hasMatchingInitial ? initial : undefined));
       setLoading(false);
     });
 

@@ -21,6 +21,8 @@ export interface WeaponIndexLookups {
   perkMap: Map<number, PerkRef>;
   /** Lowercase perk name → weapons that can roll it. */
   weaponsByPerkName: Map<string, WeaponSummary[]>;
+  /** Perk hash → weapons that can roll it. */
+  weaponsByPerkHash: Map<number, WeaponSummary[]>;
   weaponsByPerkNameRecord: Record<string, number[]>;
   /** Prebuilt name lookup for keystroke-rate autocomplete (built once). */
   nameIndex: WeaponNameIndex;
@@ -28,6 +30,18 @@ export interface WeaponIndexLookups {
   weaponSearcher: WeaponSearcher;
   version?: string;
   generatedAt?: string;
+}
+
+function buildWeaponsByPerkHash(weapons: WeaponSummary[]): Map<number, WeaponSummary[]> {
+  const weaponsByPerkHash = new Map<number, WeaponSummary[]>();
+  for (const weapon of weapons) {
+    for (const hash of weapon.perkHashes) {
+      const matches = weaponsByPerkHash.get(hash);
+      if (matches) matches.push(weapon);
+      else weaponsByPerkHash.set(hash, [weapon]);
+    }
+  }
+  return weaponsByPerkHash;
 }
 
 /** Build hash/perk maps from a parsed weapon index. */
@@ -53,6 +67,7 @@ export function buildWeaponIndexLookups(raw: WeaponIndex): WeaponIndexLookups {
     byHash,
     perkMap: buildPerkMapFromCatalog(index.perks),
     weaponsByPerkName,
+    weaponsByPerkHash: buildWeaponsByPerkHash(index.weapons),
     weaponsByPerkNameRecord: index.weaponsByPerkName,
     nameIndex: buildWeaponNameIndex(index.weapons),
     weaponSearcher: createWeaponSearcher(index.weapons),
@@ -84,6 +99,7 @@ export function refreshWeaponSummaries(
     weapons,
     byHash,
     weaponsByPerkName,
+    weaponsByPerkHash: buildWeaponsByPerkHash(weapons),
     nameIndex: buildWeaponNameIndex(weapons),
     // Enrichment only touches ammoGeneration (not name/type/perks), so the
     // previous searcher's haystacks are reused — rebound, not rebuilt.

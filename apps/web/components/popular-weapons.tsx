@@ -5,16 +5,13 @@ import { useEffect, useState } from "react";
 import { primaryCatalogWeaponForHash, type WeaponSummary } from "@repo/destiny";
 
 import { bungieIcon } from "../lib/bungie";
+import { loadPopularWeapons } from "../lib/use-search-popularity";
 import { useWeaponIconMaps } from "../lib/use-weapon-icon-maps";
 import { useWeapons } from "../lib/weapons-context";
 import { AmmoIcon } from "./ammo-icon";
 import { CraftableBadge } from "./craftable-badge";
 import { ElementIcon } from "./element-icon";
 import { weaponTypeLabel } from "./weapon-result-row";
-
-interface PopularWeaponResponse {
-  weapons: { hash: number; views: number }[];
-}
 
 function PopularWeaponCard({
   weapon,
@@ -85,14 +82,10 @@ export function PopularWeapons({ onSelectWeapon }: { onSelectWeapon: (hash: numb
   useEffect(() => {
     let cancelled = false;
 
-    void fetch("/api/popular-weapons")
-      .then((response) => {
-        if (!response.ok) throw new Error("popular-weapons unavailable");
-        return response.json() as Promise<PopularWeaponResponse>;
-      })
-      .then((data) => {
+    void loadPopularWeapons()
+      .then((entries) => {
         if (cancelled) return;
-        if (data.weapons.length === 0) {
+        if (entries.length === 0) {
           setWeapons([]);
           return;
         }
@@ -100,7 +93,7 @@ export function PopularWeapons({ onSelectWeapon }: { onSelectWeapon: (hash: numb
         const resolved: WeaponSummary[] = [];
         const seen = new Set<number>();
         let missing = false;
-        for (const entry of data.weapons) {
+        for (const entry of entries) {
           const weapon = primaryCatalogWeaponForHash(entry.hash, byHash, nameIndex.byName);
           if (!weapon) {
             missing = true;

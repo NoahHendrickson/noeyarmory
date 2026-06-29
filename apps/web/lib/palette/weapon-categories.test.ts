@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import type { PerkOption } from "@repo/destiny";
+import { buildWeaponNameIndex, type PerkOption, type WeaponSummary } from "@repo/destiny";
 
 import { DAMAGE_PERKS_LABEL, DAMAGE_PERKS_VALUE_ID, PERK_COMBO_CATEGORY_ID } from "./constants";
 import {
@@ -9,6 +9,25 @@ import {
   perkCategory,
   WEAPON_PERK_FILTER_CATEGORY_IDS,
 } from "./weapon-categories";
+
+function weapon(hash: number, name: string): WeaponSummary {
+  return {
+    hash,
+    name,
+    type: "Hand Cannon",
+    element: "Kinetic",
+    ammo: "Primary",
+    rarity: "Legendary",
+    slot: "Kinetic",
+    craftable: false,
+    adept: false,
+    releaseIndex: hash,
+    columns: [],
+    perks: [],
+    perksLower: [],
+    perkHashes: [],
+  };
+}
 
 describe("isWeaponPerkFilterCategory", () => {
   test("is true for the trait and origin perk columns", () => {
@@ -103,6 +122,36 @@ describe("buildWeaponCategories", () => {
         hint: "0",
       }),
     );
+  });
+
+  test("uses the prebuilt weapon-name index for exact weapon suggestions", () => {
+    const weapons = [
+      weapon(1, "Fatebringer"),
+      weapon(2, "Fatebringer"),
+      weapon(3, "Stormchaser"),
+    ];
+    const nameIndex = buildWeaponNameIndex(weapons);
+    const categories = buildWeaponCategories(
+      weapons,
+      {
+        trait1: [],
+        trait2: [],
+        originTrait: [],
+      },
+      [],
+      undefined,
+      undefined,
+      undefined,
+      nameIndex,
+    );
+
+    const exactWeapon = categories.find((category) => category.id === "name");
+    expect(exactWeapon?.getValues("fate")).toContainEqual({
+      id: "fatebringer",
+      label: "Fatebringer",
+      hint: "2",
+      searchRank: 1,
+    });
   });
 });
 

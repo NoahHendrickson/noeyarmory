@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { useWeapons } from "./weapons-context";
 
-interface PopularWeaponEntry {
+export interface PopularWeaponEntry {
   hash: number;
   views: number;
 }
@@ -14,7 +14,7 @@ interface PopularWeaponEntry {
 let cache: PopularWeaponEntry[] | null = null;
 let inflight: Promise<PopularWeaponEntry[]> | null = null;
 
-function loadPopularWeapons(): Promise<PopularWeaponEntry[]> {
+export function loadPopularWeapons(): Promise<PopularWeaponEntry[]> {
   if (cache) return Promise.resolve(cache);
   if (!inflight) {
     inflight = fetch("/api/popular-weapons")

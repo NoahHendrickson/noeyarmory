@@ -537,6 +537,29 @@ describe("weapon version grouping", () => {
     expect(collapseWeaponVersions([oldOrigin], byName).map((w) => w.hash)).toEqual([1]);
   });
 
+  it("keeps filtered same-name pools while grouping ranked results once", () => {
+    const oldOrigin = weapon(1, "Uncivil Discourse", {
+      seasonNumber: 24,
+      releaseIndex: 100,
+      columns: [{ kind: "Origin Trait", perks: [perk("Accelerated Assault")] }],
+    });
+    const latestOrigin = weapon(2, "Uncivil Discourse", {
+      seasonNumber: 25,
+      releaseIndex: 200,
+      columns: [{ kind: "Origin Trait", perks: [perk("Air-Cooled Core")] }],
+    });
+    const other = weapon(3, "Ros Arago IV", {
+      releaseIndex: 150,
+      columns: [{ kind: "Origin Trait", perks: [perk("Nadir Focus")] }],
+    });
+    const byName = new Map([
+      ["Uncivil Discourse", [oldOrigin, latestOrigin]],
+      ["Ros Arago IV", [other]],
+    ]);
+
+    expect(collapseWeaponVersions([oldOrigin, other], byName).map((w) => w.hash)).toEqual([1, 3]);
+  });
+
   it("returns each current Zaouli's Bane perk pool and labels the source-less representative", () => {
     const kingsFall = weapon(431721920, "Zaouli's Bane", {
       craftable: true,

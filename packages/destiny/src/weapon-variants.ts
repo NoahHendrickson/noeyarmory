@@ -259,19 +259,30 @@ export function collapseWeaponVersions<T extends WeaponPerkPoolVersionCandidate>
 ): T[] {
   const seenNames = new Set<string>();
   const collapsed: T[] = [];
+  const candidatesByName = new Map<string, T[]>();
+  const catalogCandidatesByName = new Map<string, T[]>();
+
+  for (const weapon of weapons) {
+    const candidates = candidatesByName.get(weapon.name);
+    if (candidates) candidates.push(weapon);
+    else candidatesByName.set(weapon.name, [weapon]);
+
+    if (isCatalogWeapon(weapon)) {
+      const catalogCandidates = catalogCandidatesByName.get(weapon.name);
+      if (catalogCandidates) catalogCandidates.push(weapon);
+      else catalogCandidatesByName.set(weapon.name, [weapon]);
+    }
+  }
 
   for (const weapon of weapons) {
     if (!isCatalogWeapon(weapon) || seenNames.has(weapon.name)) continue;
     seenNames.add(weapon.name);
 
-    const allVersions =
-      byName?.get(weapon.name) ?? weapons.filter((candidate) => candidate.name === weapon.name);
+    const allVersions = byName?.get(weapon.name) ?? candidatesByName.get(weapon.name) ?? [];
     const primary = primaryWeaponVersion(allVersions);
     if (!primary) continue;
 
-    const filteredSameName = weapons.filter(
-      (candidate) => candidate.name === weapon.name && isCatalogWeapon(candidate),
-    );
+    const filteredSameName = catalogCandidatesByName.get(weapon.name) ?? [];
     const pools = currentWeaponPerkPoolVersions(allVersions);
     const filteredPoolReps = new Set<number>();
     for (const match of filteredSameName) {

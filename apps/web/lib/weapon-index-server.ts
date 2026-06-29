@@ -90,7 +90,8 @@ export function getWeaponsForPerkHash(hash: number): {
   perkName: string | undefined;
   matches: WeaponSummary[];
 } {
-  const { perkMap, weaponsByPerkName, weapons, weaponsByPerkNameRecord, byHash } = getWeaponIndex();
+  const { perkMap, weaponsByPerkName, weaponsByPerkHash, weaponsByPerkNameRecord, byHash } =
+    getWeaponIndex();
   const perk = perkMap.get(hash);
   if (perk) {
     const key = perk.name.toLowerCase();
@@ -104,6 +105,6 @@ export function getWeaponsForPerkHash(hash: number): {
   }
   return {
     perkName: undefined,
-    matches: weapons.filter((w) => w.perkHashes.includes(hash)),
+    matches: weaponsByPerkHash.get(hash) ?? [],
   };
 }

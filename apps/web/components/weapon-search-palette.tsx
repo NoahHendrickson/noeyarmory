@@ -116,8 +116,9 @@ export function WeaponSearchPalette({
         facets,
         perkFuse,
         damagePerkNames,
+        nameIndex,
       ),
-    [weapons, weaponColumnPerks, customFilters, facets, perkFuse, damagePerkNames],
+    [weapons, weaponColumnPerks, customFilters, facets, perkFuse, damagePerkNames, nameIndex],
   );
 
   const {
