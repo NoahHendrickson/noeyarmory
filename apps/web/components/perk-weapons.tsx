@@ -16,7 +16,7 @@ export function PerkWeapons({
   initialPerkName?: string;
   initialMatches?: WeaponSummary[];
 }) {
-  const { perkMap, weaponsByPerkName, weapons, nameIndex, loading } = useWeapons();
+  const { perkMap, weaponsByPerkName, weaponsByPerkHash, nameIndex, loading } = useWeapons();
 
   const hasSeed = initialMatches !== undefined;
   if (!hasSeed && loading) {
@@ -29,7 +29,7 @@ export function PerkWeapons({
     initialMatches ??
     (perkName
       ? (weaponsByPerkName.get(perkName.toLowerCase()) ?? [])
-      : weapons.filter((w) => w.perkHashes.includes(hash)));
+      : (weaponsByPerkHash.get(hash) ?? []));
   const matches = collapseWeaponVersions(rawMatches, nameIndex.byName);
 
   return (

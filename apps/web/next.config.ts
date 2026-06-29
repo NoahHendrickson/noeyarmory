@@ -52,6 +52,13 @@ const nextConfig: NextConfig = {
         source: "/data/:name.manifest.json",
         headers: [...headers, { key: "Cache-Control", value: "no-cache" }],
       },
+      {
+        source: "/weapon-dps.json",
+        headers: [
+          ...headers,
+          { key: "Cache-Control", value: "public, max-age=3600, stale-while-revalidate=86400" },
+        ],
+      },
       { source: "/:path*", headers },
     ];
   },

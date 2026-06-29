@@ -38,6 +38,7 @@ export interface WeaponsState {
   byHash: Map<number, WeaponSummary>;
   perkMap: WeaponIndexLookups["perkMap"];
   weaponsByPerkName: WeaponIndexLookups["weaponsByPerkName"];
+  weaponsByPerkHash: WeaponIndexLookups["weaponsByPerkHash"];
   nameIndex: WeaponIndexLookups["nameIndex"];
   weaponSearcher: WeaponIndexLookups["weaponSearcher"];
   loading: boolean;
@@ -64,6 +65,7 @@ const defaultState: WeaponsState = {
   byHash: new Map(),
   perkMap: new Map(),
   weaponsByPerkName: new Map(),
+  weaponsByPerkHash: new Map(),
   nameIndex: emptyLookups.nameIndex,
   weaponSearcher: createWeaponSearcher([]),
   loading: true,
@@ -165,6 +167,7 @@ function lookupsToState(
     byHash: lookups.byHash,
     perkMap: lookups.perkMap,
     weaponsByPerkName: lookups.weaponsByPerkName,
+    weaponsByPerkHash: lookups.weaponsByPerkHash,
     nameIndex: lookups.nameIndex,
     weaponSearcher: lookups.weaponSearcher,
     loading: false,
@@ -293,12 +296,12 @@ export function useWeaponDetail(
 
     if (initial && initial.hash === hash) {
       setWeapon(initial);
+      setLoading(false);
+      return;
     }
 
     let active = true;
-    if (!initial || initial.hash !== hash) {
-      setLoading(true);
-    }
+    setLoading(true);
 
     void getWeaponDoc(hash).then((doc) => {
       if (!active) return;

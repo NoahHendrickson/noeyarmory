@@ -10,6 +10,7 @@ import {
   type FacetOption,
   type ModOption,
   type PerkOption,
+  type WeaponNameIndex,
   type WeaponSummary,
 } from "@repo/destiny";
 
@@ -76,7 +77,10 @@ export function activitySourceCategory(options: FacetOption[]): PaletteCategory 
   };
 }
 
-export function weaponNameCategory(weapons: WeaponSummary[]): PaletteCategory {
+export function weaponNameCategory(
+  weapons: WeaponSummary[],
+  nameIndex?: WeaponNameIndex,
+): PaletteCategory {
   const examples = formatExamples(weapons.slice(0, 3).map((weapon) => weapon.name));
   return {
     id: "name",
@@ -85,7 +89,7 @@ export function weaponNameCategory(weapons: WeaponSummary[]): PaletteCategory {
     inlineSuggestions: false,
     examples,
     getValues: (q) =>
-      filterWeaponNames(weapons, q).map((o) => ({
+      filterWeaponNames(weapons, q, nameIndex).map((o) => ({
         id: o.value.toLowerCase(),
         label: o.value,
         hint: String(o.count),
@@ -256,6 +260,7 @@ export function buildWeaponCategories(
     allPerkNames(weaponColumnPerks),
   ),
   damagePerkNames?: ReadonlySet<string>,
+  nameIndex?: WeaponNameIndex,
 ): PaletteCategory[] {
   const [trait1Id, trait2Id, , , originTraitId] = WEAPON_PERK_FILTER_CATEGORY_IDS;
   return [
@@ -280,7 +285,7 @@ export function buildWeaponCategories(
     facetCategory("craftable", "Craftable", facets.craftable ?? []),
     facetCategory("rarity", "Rarity", facets.rarity ?? []),
     perkCategory(originTraitId, "Origin Trait", weaponColumnPerks.originTrait, perkFuse),
-    weaponNameCategory(weapons),
+    weaponNameCategory(weapons, nameIndex),
   ];
 }
 
