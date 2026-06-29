@@ -52,6 +52,14 @@ assert_node_major_ge() {
   fi
 }
 
+enable_corepack_pnpm() {
+  if ! command -v corepack >/dev/null 2>&1; then
+    echo "error: corepack not found alongside Node $(node -v)" >&2
+    return 1
+  fi
+  corepack enable
+}
+
 normalize_origin_owner_casing() {
   local root="$1"
   local current owner repo auth_prefix git_suffix fixed
