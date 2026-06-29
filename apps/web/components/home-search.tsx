@@ -1,12 +1,10 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import {
   useCallback,
   useEffect,
   useMemo,
   useState,
-  useTransition,
   type CSSProperties,
   type ReactNode,
 } from "react";
@@ -14,6 +12,7 @@ import { Badge, CommandPalette, PillSelect, type PillSelectOption } from "@repo/
 
 import { useArmorActions } from "../hooks/use-armor-actions";
 import { useArmorSearchPaletteState } from "../hooks/use-home-search-palette-state";
+import { useWeaponRouteNavigation } from "../hooks/use-weapon-route-navigation";
 import { usePaletteResultList } from "../hooks/use-palette-result-list";
 import {
   usePaletteSearchChrome,
@@ -24,9 +23,9 @@ import { ARMOR_LOGIN_URL } from "../lib/palette/constants";
 import { buildArmorCategories } from "../lib/palette/armor-categories";
 import type { PaletteResultsMode } from "../lib/palette/results-mode";
 import { useOwnedArmor } from "../lib/use-owned-armor";
-import { trackWeaponView } from "../lib/track-weapon-view";
 import { ArmorResultRow } from "./armor-result-row";
 import { WeaponModeIcon } from "./icons/weapon-mode-icon";
+import { WeaponNavigationStatus } from "./weapon-navigation-status";
 import { WeaponSearchPalette, type WeaponSearchSelectionSource } from "./weapon-search-palette";
 
 type Mode = "weapon" | "armor";
@@ -218,18 +217,14 @@ export function HomeSearch({
   signedIn?: boolean;
   initialMode?: Mode;
 }) {
-  const router = useRouter();
   const [mode, setMode] = useState<Mode>(initialMode);
-  const [isNavigatingToWeapon, startWeaponNavigation] = useTransition();
+  const { isNavigating, navigateToWeapon } = useWeaponRouteNavigation();
 
   const handleSelectWeapon = useCallback(
     (hash: number, source: WeaponSearchSelectionSource) => {
-      trackWeaponView(hash, source);
-      startWeaponNavigation(() => {
-        router.push(`/weapon/${hash}`);
-      });
+      navigateToWeapon(hash, source);
     },
-    [router, startWeaponNavigation],
+    [navigateToWeapon],
   );
 
   const modeControl = <ModeControl mode={mode} onModeChange={setMode} />;
@@ -250,11 +245,7 @@ export function HomeSearch({
         ) : (
           <ArmorSearchHome signedIn={signedIn} modeControl={modeControl} />
         )}
-        {isNavigatingToWeapon ? (
-          <p role="status" className="mt-3 text-center text-xs text-muted-foreground">
-            Opening weapon...
-          </p>
-        ) : null}
+        {isNavigating ? <WeaponNavigationStatus className="mt-3 text-center" /> : null}
       </main>
     </div>
   );

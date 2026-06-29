@@ -27,6 +27,7 @@ import {
 } from "@repo/destiny";
 
 import { useWeaponSearchPaletteState } from "../hooks/use-home-search-palette-state";
+import { useHydratedWeaponSearchSession } from "../hooks/use-hydrated-weapon-search-session";
 import { usePaletteResultList } from "../hooks/use-palette-result-list";
 import {
   usePaletteSearchChrome,
@@ -40,13 +41,6 @@ import { useCustomWeaponFilters } from "../lib/use-custom-weapon-filters";
 import { useIsFirefox } from "../lib/use-is-firefox";
 import { useWeaponDps } from "../lib/use-weapon-dps";
 import { useWeaponIconMaps } from "../lib/use-weapon-icon-maps";
-import {
-  chipsToSnapshotChips,
-  hasActiveWeaponSearch,
-  readWeaponSearchSession,
-  snapshotChipsToPaletteChips,
-  writeWeaponSearchSession,
-} from "../lib/weapon-search-session";
 import { useWeapons } from "../lib/weapons-context";
 import { PinnedFilterPills } from "./pinned-filter-pills";
 import { PinnedWeaponsRail } from "./pinned-weapons-rail";
@@ -104,7 +98,6 @@ export function WeaponSearchPalette({
   const [sort, setSort] = useState<WeaponSort>("season-desc");
   const [showAllResults, setShowAllResults] = useState(false);
   const [resultsMode, setResultsMode] = useState<PaletteResultsMode | null>(null);
-  const [sessionRestoreAttempted, setSessionRestoreAttempted] = useState(() => !restoreSession);
   const prefetchedWeaponRoutesRef = useRef<Set<string>>(new Set());
   const weaponColumnPerks = useMemo(() => collectColumnPerks(weapons, perks), [weapons, perks]);
   const facets = useMemo(() => collectFacets(weapons), [weapons]);
@@ -232,35 +225,19 @@ export function WeaponSearchPalette({
     setShowAllResults,
   });
 
-  useEffect(() => {
-    if (!restoreSession) return;
-    const snapshot = readWeaponSearchSession();
-    if (snapshot) {
-      setSort(snapshot.sort);
-      setResultsMode(snapshot.resultsMode);
-      setQuery(snapshot.query);
-      setChips(snapshotChipsToPaletteChips(snapshot.chips));
-      setPaletteOpen(autoOpenRestoredSession && hasActiveWeaponSearch(snapshot));
-    }
-    setSessionRestoreAttempted(true);
-  }, [
-    restoreSession,
+  useHydratedWeaponSearchSession({
+    enabled: restoreSession,
     autoOpenRestoredSession,
-    setChips,
-    setPaletteOpen,
+    query,
+    chips,
+    sort,
+    resultsMode,
     setQuery,
+    setChips,
+    setSort,
     setResultsMode,
-  ]);
-
-  useEffect(() => {
-    if (!restoreSession || !sessionRestoreAttempted) return;
-    writeWeaponSearchSession({
-      query,
-      chips: chipsToSnapshotChips(chips),
-      sort,
-      resultsMode,
-    });
-  }, [restoreSession, sessionRestoreAttempted, query, chips, sort, resultsMode]);
+    setPaletteOpen,
+  });
 
   const prefetchWeaponResult = useCallback(
     (id: string) => {
