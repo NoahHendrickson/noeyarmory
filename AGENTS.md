@@ -8,7 +8,7 @@ Guidance for cloud agents working in this repository.
 
 Cloud agents load `.cursor/environment.json`, which runs `scripts/ensure-cloud-env.sh`, then `pnpm install`, then Playwright Chromium for `@repo/ui` Storybook browser tests. The bootstrap script:
 
-- Activates **Node 24** from `.nvmrc` (the VM default at `/exec-daemon/node` is Node 22)
+- Activates **Node 24** from `.nvmrc` (the VM default at `/exec-daemon/node` is Node 22), then runs **`corepack enable`** so `pnpm` is on PATH before `pnpm install`
 - Normalizes `origin` owner casing to `NoahHendrickson` when the remote already points at this repo (preserves HTTPS auth tokens and SSH URLs)
 - Appends a `~/.bashrc` hook so interactive shells under `/workspace` also use Node 24
 
