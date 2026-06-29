@@ -2,7 +2,14 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { cn, PillSelect, type PillSelectOption } from "@repo/ui";
 import {
   computeWeaponStats,
@@ -20,6 +27,7 @@ import {
 import { useWeaponBuild } from "../lib/use-weapon-build";
 import { useWeaponDps } from "../lib/use-weapon-dps";
 import { useHasHover } from "../hooks/use-has-hover";
+import { useWeaponRouteNavigation } from "../hooks/use-weapon-route-navigation";
 import { useStatGroups, useWeaponDetail, useWeapons } from "../lib/weapons-context";
 import { trackPerkCommit } from "../lib/track-perk-commit";
 import { trackWeaponView } from "../lib/track-weapon-view";
@@ -34,6 +42,7 @@ import { WeaponMasterworkSelector } from "./weapon-masterwork-selector";
 import { WeaponShareButton } from "./weapon-share-button";
 import { WeaponDpsMetricTooltip } from "./weapon-dps-label";
 import { WeaponDetailPageShell } from "./weapon-detail-page-shell";
+import { WeaponNavigationStatus } from "./weapon-navigation-status";
 import type { WeaponSearchSelectionSource } from "./weapon-search-palette";
 
 const EMPTY_SELECTED_PERK_HASHES: number[] = [];
@@ -432,6 +441,7 @@ export function WeaponDetailWithVersions({
 export function WeaponDetail({ hash, initialWeapon }: { hash: number; initialWeapon?: WeaponDoc }) {
   const router = useRouter();
   const [activeHash, setActiveHash] = useState(hash);
+  const { isNavigating, navigateToWeapon } = useWeaponRouteNavigation();
   const { weapon, loading } = useWeaponDetail(
     activeHash,
     activeHash === hash ? initialWeapon : undefined,
@@ -453,18 +463,18 @@ export function WeaponDetail({ hash, initialWeapon }: { hash: number; initialWea
 
   const handleSearchSelectWeapon = useCallback(
     (nextHash: number, source: WeaponSearchSelectionSource) => {
-      trackWeaponView(nextHash, source);
       setActiveHash(nextHash);
-      // Search navigation: push so back returns to previous weapon.
-      router.push(`/weapon/${nextHash}`, { scroll: false });
+      navigateToWeapon(nextHash, source);
     },
-    [router],
+    [navigateToWeapon],
   );
 
   if (!weapon && loading) {
     return (
       <WeaponDetailPageShell onSelectWeapon={handleSearchSelectWeapon}>
-        <div className="p-6 text-muted-foreground">Loading…</div>
+        <main className="mx-auto max-w-5xl p-4 md:p-6">
+          <WeaponNavigationStatus />
+        </main>
       </WeaponDetailPageShell>
     );
   }
@@ -482,6 +492,7 @@ export function WeaponDetail({ hash, initialWeapon }: { hash: number; initialWea
   return (
     <WeaponDetailPageShell onSelectWeapon={handleSearchSelectWeapon}>
       <main className="mx-auto max-w-5xl space-y-6 p-4 md:p-6">
+        {isNavigating || loading ? <WeaponNavigationStatus /> : null}
         <WeaponDetailWithVersions
           weapon={weapon}
           linkPerks={false}

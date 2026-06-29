@@ -116,6 +116,8 @@ export interface CommandPaletteProps {
   ghostSuffix?: string;
   /** Weapon (or other) hits rendered inside the palette list. */
   results?: PaletteResultItem[];
+  /** Fired when a result row becomes the active hover/keyboard target. */
+  onIntentResult?: (id: string) => void;
   onSelectResult?: (id: string) => void;
   /** Render a result row from its id — preferred over embedding JSX in `results`. */
   renderResult?: (id: string) => ReactNode;

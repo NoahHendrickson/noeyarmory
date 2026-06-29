@@ -1,8 +1,11 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import {
+  useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type CSSProperties,
   type ReactNode,
@@ -24,6 +27,7 @@ import {
 } from "@repo/destiny";
 
 import { useWeaponSearchPaletteState } from "../hooks/use-home-search-palette-state";
+import { useHydratedWeaponSearchSession } from "../hooks/use-hydrated-weapon-search-session";
 import { usePaletteResultList } from "../hooks/use-palette-result-list";
 import {
   usePaletteSearchChrome,
@@ -37,13 +41,6 @@ import { useCustomWeaponFilters } from "../lib/use-custom-weapon-filters";
 import { useIsFirefox } from "../lib/use-is-firefox";
 import { useWeaponDps } from "../lib/use-weapon-dps";
 import { useWeaponIconMaps } from "../lib/use-weapon-icon-maps";
-import {
-  chipsToSnapshotChips,
-  hasActiveWeaponSearch,
-  readWeaponSearchSession,
-  snapshotChipsToPaletteChips,
-  writeWeaponSearchSession,
-} from "../lib/weapon-search-session";
 import { useWeapons } from "../lib/weapons-context";
 import { PinnedFilterPills } from "./pinned-filter-pills";
 import { PinnedWeaponsRail } from "./pinned-weapons-rail";
@@ -91,18 +88,17 @@ export function WeaponSearchPalette({
   restoreSession?: boolean;
   autoOpenRestoredSession?: boolean;
 }) {
-  const [restoredSession] = useState(() => (restoreSession ? readWeaponSearchSession() : null));
+  const router = useRouter();
   const { weapons, perks, isSample, byHash, nameIndex } = useWeapons();
   const { elementIconMap, typeIconMap, ammoIconMap } = useWeaponIconMaps();
   const { dpsByName } = useWeaponDps();
   const { filters: customFilters, createFilter } = useCustomWeaponFilters();
   const paletteRecents = usePaletteSearchRecents("weapon");
   const firefoxPalettePerf = useIsFirefox();
-  const [sort, setSort] = useState<WeaponSort>(() => restoredSession?.sort ?? "season-desc");
+  const [sort, setSort] = useState<WeaponSort>("season-desc");
   const [showAllResults, setShowAllResults] = useState(false);
-  const [resultsMode, setResultsMode] = useState<PaletteResultsMode | null>(
-    () => restoredSession?.resultsMode ?? null,
-  );
+  const [resultsMode, setResultsMode] = useState<PaletteResultsMode | null>(null);
+  const prefetchedWeaponRoutesRef = useRef<Set<string>>(new Set());
   const weaponColumnPerks = useMemo(() => collectColumnPerks(weapons, perks), [weapons, perks]);
   const facets = useMemo(() => collectFacets(weapons), [weapons]);
   const perkFuse = useMemo(
@@ -170,13 +166,6 @@ export function WeaponSearchPalette({
     recentValues: paletteRecents.recentValues,
     recordSearch: paletteRecents.recordSearch,
     setResultsMode,
-    initialState: restoredSession
-      ? {
-          query: restoredSession.query,
-          chips: snapshotChipsToPaletteChips(restoredSession.chips),
-          paletteOpen: autoOpenRestoredSession && hasActiveWeaponSearch(restoredSession),
-        }
-      : undefined,
   });
 
   const paletteChrome = usePaletteSearchChrome({
@@ -236,15 +225,35 @@ export function WeaponSearchPalette({
     setShowAllResults,
   });
 
-  useEffect(() => {
-    if (!restoreSession) return;
-    writeWeaponSearchSession({
-      query,
-      chips: chipsToSnapshotChips(chips),
-      sort,
-      resultsMode,
-    });
-  }, [restoreSession, query, chips, sort, resultsMode]);
+  useHydratedWeaponSearchSession({
+    enabled: restoreSession,
+    autoOpenRestoredSession,
+    query,
+    chips,
+    sort,
+    resultsMode,
+    setQuery,
+    setChips,
+    setSort,
+    setResultsMode,
+    setPaletteOpen,
+  });
+
+  const prefetchWeaponResult = useCallback(
+    (id: string) => {
+      const hash = Number(id);
+      if (!Number.isFinite(hash)) return;
+
+      const weapon = byHash.get(hash);
+      if (!weapon) return;
+
+      const href = `/weapon/${weapon.hash}`;
+      if (prefetchedWeaponRoutesRef.current.has(href)) return;
+      prefetchedWeaponRoutesRef.current.add(href);
+      router.prefetch(href);
+    },
+    [byHash, router],
+  );
 
   useEffect(() => {
     if (!firefoxPalettePerf) return;
@@ -332,6 +341,7 @@ export function WeaponSearchPalette({
           previewSectionLabel="Results"
           results={weaponResultList.results}
           renderResult={weaponResultList.renderResult}
+          onIntentResult={prefetchWeaponResult}
           onSelectResult={(id) => {
             paletteChrome.recordCurrentSearch();
             const weapon = byHash.get(Number(id));
