@@ -613,6 +613,46 @@ export const ShowsResultsAfterChip: Story = {
   },
 };
 
+const resultIntentSpy = fn();
+
+export const ReportsActiveResultIntent: Story = {
+  render: () => (
+    <CommandPalette
+      placeholder="Press F to search"
+      categories={CATEGORIES}
+      chips={[]}
+      query=""
+      onQueryChange={() => {}}
+      showResults
+      results={[
+        {
+          id: "1",
+          content: (
+            <ResultRow render={<div />} title="Fatebringer" subtitle="Solar · Hand Cannon" />
+          ),
+        },
+        {
+          id: "2",
+          content: <ResultRow render={<div />} title="Palindrome" subtitle="Void · Hand Cannon" />,
+        },
+      ]}
+      onIntentResult={resultIntentSpy}
+      onSelectResult={fn()}
+      onAddChip={() => {}}
+      onRemoveChip={() => {}}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    resultIntentSpy.mockClear();
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole("combobox"));
+    await waitFor(() => expect(resultIntentSpy).toHaveBeenCalledWith("1"));
+
+    await userEvent.keyboard("{ArrowDown}");
+    await waitFor(() => expect(resultIntentSpy).toHaveBeenCalledWith("2"));
+  },
+};
+
 function PreviewWhileTypingDemo() {
   const [query, setQuery] = useState("");
   const [chips, setChips] = useState<PaletteChip[]>([]);

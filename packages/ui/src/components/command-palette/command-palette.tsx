@@ -84,6 +84,7 @@ export function CommandPalette({
   ghostCompletion,
   ghostSuffix,
   results = [],
+  onIntentResult,
   onSelectResult,
   resultsHeader,
   panelHeader,
@@ -334,6 +335,22 @@ export function CommandPalette({
     state.activeIndex < 0 ? -1 : Math.min(state.activeIndex, Math.max(0, items.length - 1));
   const displayIndex = hoverIndex >= 0 ? hoverIndex : activeIndex;
   const keyboardFocus = hoverIndex < 0 && activeIndex >= 0;
+  const intentResultId =
+    open && displayIndex >= 0 && items[displayIndex]?.kind === "result"
+      ? items[displayIndex].result.id
+      : undefined;
+  const lastIntentResultRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!onIntentResult) return;
+    if (!intentResultId) {
+      lastIntentResultRef.current = null;
+      return;
+    }
+    if (lastIntentResultRef.current === intentResultId) return;
+    lastIntentResultRef.current = intentResultId;
+    onIntentResult(intentResultId);
+  }, [intentResultId, onIntentResult]);
 
   useEffect(() => {
     onPanelStateChange?.({

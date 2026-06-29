@@ -6,6 +6,7 @@ import {
   useEffect,
   useMemo,
   useState,
+  useTransition,
   type CSSProperties,
   type ReactNode,
 } from "react";
@@ -219,13 +220,16 @@ export function HomeSearch({
 }) {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>(initialMode);
+  const [isNavigatingToWeapon, startWeaponNavigation] = useTransition();
 
   const handleSelectWeapon = useCallback(
     (hash: number, source: WeaponSearchSelectionSource) => {
       trackWeaponView(hash, source);
-      router.push(`/weapon/${hash}`);
+      startWeaponNavigation(() => {
+        router.push(`/weapon/${hash}`);
+      });
     },
-    [router],
+    [router, startWeaponNavigation],
   );
 
   const modeControl = <ModeControl mode={mode} onModeChange={setMode} />;
@@ -246,6 +250,11 @@ export function HomeSearch({
         ) : (
           <ArmorSearchHome signedIn={signedIn} modeControl={modeControl} />
         )}
+        {isNavigatingToWeapon ? (
+          <p role="status" className="mt-3 text-center text-xs text-muted-foreground">
+            Opening weapon...
+          </p>
+        ) : null}
       </main>
     </div>
   );

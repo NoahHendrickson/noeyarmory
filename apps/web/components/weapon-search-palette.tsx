@@ -1,8 +1,11 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import {
+  useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type CSSProperties,
   type ReactNode,
@@ -91,18 +94,18 @@ export function WeaponSearchPalette({
   restoreSession?: boolean;
   autoOpenRestoredSession?: boolean;
 }) {
-  const [restoredSession] = useState(() => (restoreSession ? readWeaponSearchSession() : null));
+  const router = useRouter();
   const { weapons, perks, isSample, byHash, nameIndex } = useWeapons();
   const { elementIconMap, typeIconMap, ammoIconMap } = useWeaponIconMaps();
   const { dpsByName } = useWeaponDps();
   const { filters: customFilters, createFilter } = useCustomWeaponFilters();
   const paletteRecents = usePaletteSearchRecents("weapon");
   const firefoxPalettePerf = useIsFirefox();
-  const [sort, setSort] = useState<WeaponSort>(() => restoredSession?.sort ?? "season-desc");
+  const [sort, setSort] = useState<WeaponSort>("season-desc");
   const [showAllResults, setShowAllResults] = useState(false);
-  const [resultsMode, setResultsMode] = useState<PaletteResultsMode | null>(
-    () => restoredSession?.resultsMode ?? null,
-  );
+  const [resultsMode, setResultsMode] = useState<PaletteResultsMode | null>(null);
+  const [sessionRestoreAttempted, setSessionRestoreAttempted] = useState(() => !restoreSession);
+  const prefetchedWeaponRoutesRef = useRef<Set<string>>(new Set());
   const weaponColumnPerks = useMemo(() => collectColumnPerks(weapons, perks), [weapons, perks]);
   const facets = useMemo(() => collectFacets(weapons), [weapons]);
   const perkFuse = useMemo(
@@ -170,13 +173,6 @@ export function WeaponSearchPalette({
     recentValues: paletteRecents.recentValues,
     recordSearch: paletteRecents.recordSearch,
     setResultsMode,
-    initialState: restoredSession
-      ? {
-          query: restoredSession.query,
-          chips: snapshotChipsToPaletteChips(restoredSession.chips),
-          paletteOpen: autoOpenRestoredSession && hasActiveWeaponSearch(restoredSession),
-        }
-      : undefined,
   });
 
   const paletteChrome = usePaletteSearchChrome({
@@ -238,13 +234,49 @@ export function WeaponSearchPalette({
 
   useEffect(() => {
     if (!restoreSession) return;
+    const snapshot = readWeaponSearchSession();
+    if (snapshot) {
+      setSort(snapshot.sort);
+      setResultsMode(snapshot.resultsMode);
+      setQuery(snapshot.query);
+      setChips(snapshotChipsToPaletteChips(snapshot.chips));
+      setPaletteOpen(autoOpenRestoredSession && hasActiveWeaponSearch(snapshot));
+    }
+    setSessionRestoreAttempted(true);
+  }, [
+    restoreSession,
+    autoOpenRestoredSession,
+    setChips,
+    setPaletteOpen,
+    setQuery,
+    setResultsMode,
+  ]);
+
+  useEffect(() => {
+    if (!restoreSession || !sessionRestoreAttempted) return;
     writeWeaponSearchSession({
       query,
       chips: chipsToSnapshotChips(chips),
       sort,
       resultsMode,
     });
-  }, [restoreSession, query, chips, sort, resultsMode]);
+  }, [restoreSession, sessionRestoreAttempted, query, chips, sort, resultsMode]);
+
+  const prefetchWeaponResult = useCallback(
+    (id: string) => {
+      const hash = Number(id);
+      if (!Number.isFinite(hash)) return;
+
+      const weapon = byHash.get(hash);
+      if (!weapon) return;
+
+      const href = `/weapon/${weapon.hash}`;
+      if (prefetchedWeaponRoutesRef.current.has(href)) return;
+      prefetchedWeaponRoutesRef.current.add(href);
+      router.prefetch(href);
+    },
+    [byHash, router],
+  );
 
   useEffect(() => {
     if (!firefoxPalettePerf) return;
@@ -332,6 +364,7 @@ export function WeaponSearchPalette({
           previewSectionLabel="Results"
           results={weaponResultList.results}
           renderResult={weaponResultList.renderResult}
+          onIntentResult={prefetchWeaponResult}
           onSelectResult={(id) => {
             paletteChrome.recordCurrentSearch();
             const weapon = byHash.get(Number(id));

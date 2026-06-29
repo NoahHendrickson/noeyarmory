@@ -2,7 +2,15 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+  type ReactNode,
+} from "react";
 import { cn, PillSelect, type PillSelectOption } from "@repo/ui";
 import {
   computeWeaponStats,
@@ -432,6 +440,7 @@ export function WeaponDetailWithVersions({
 export function WeaponDetail({ hash, initialWeapon }: { hash: number; initialWeapon?: WeaponDoc }) {
   const router = useRouter();
   const [activeHash, setActiveHash] = useState(hash);
+  const [isNavigatingToWeapon, startWeaponNavigation] = useTransition();
   const { weapon, loading } = useWeaponDetail(
     activeHash,
     activeHash === hash ? initialWeapon : undefined,
@@ -456,9 +465,11 @@ export function WeaponDetail({ hash, initialWeapon }: { hash: number; initialWea
       trackWeaponView(nextHash, source);
       setActiveHash(nextHash);
       // Search navigation: push so back returns to previous weapon.
-      router.push(`/weapon/${nextHash}`, { scroll: false });
+      startWeaponNavigation(() => {
+        router.push(`/weapon/${nextHash}`, { scroll: false });
+      });
     },
-    [router],
+    [router, startWeaponNavigation],
   );
 
   if (!weapon && loading) {
@@ -482,6 +493,11 @@ export function WeaponDetail({ hash, initialWeapon }: { hash: number; initialWea
   return (
     <WeaponDetailPageShell onSelectWeapon={handleSearchSelectWeapon}>
       <main className="mx-auto max-w-5xl space-y-6 p-4 md:p-6">
+        {isNavigatingToWeapon || loading ? (
+          <p role="status" className="text-xs text-muted-foreground">
+            Opening weapon...
+          </p>
+        ) : null}
         <WeaponDetailWithVersions
           weapon={weapon}
           linkPerks={false}
