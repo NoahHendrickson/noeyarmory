@@ -24,7 +24,15 @@ import {
   type WeaponIndexLookups,
   type WeaponSummary,
 } from "@repo/destiny";
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 
 import { fetchGeneratedDataFile } from "./generated-data-client";
 import { scheduleIdle } from "./schedule-idle";
@@ -286,26 +294,32 @@ export function useWeaponDetail(
   const { getWeaponDoc, version } = useWeapons();
   const [weapon, setWeapon] = useState<WeaponDoc | undefined>(initial);
   const [loading, setLoading] = useState(initial == null && hash != null);
+  const skippedInitialFetchHashRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (hash == null) {
+      skippedInitialFetchHashRef.current = null;
       setWeapon(undefined);
       setLoading(false);
       return;
     }
 
-    if (initial && initial.hash === hash) {
+    const hasMatchingInitial = initial?.hash === hash;
+    if (hasMatchingInitial && skippedInitialFetchHashRef.current !== hash) {
+      skippedInitialFetchHashRef.current = hash;
       setWeapon(initial);
       setLoading(false);
       return;
     }
 
     let active = true;
-    setLoading(true);
+    if (!hasMatchingInitial) {
+      setLoading(true);
+    }
 
     void getWeaponDoc(hash).then((doc) => {
       if (!active) return;
-      setWeapon(doc ?? (initial?.hash === hash ? initial : undefined));
+      setWeapon(doc ?? (hasMatchingInitial ? initial : undefined));
       setLoading(false);
     });
 
