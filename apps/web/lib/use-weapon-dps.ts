@@ -33,6 +33,11 @@ async function fetchWeaponDps(): Promise<WeaponDpsLookup> {
   return loadPromise;
 }
 
+/** Warm the DPS lookup so the detail view's DPS summary is present on first paint (no pop-in). */
+export function prefetchWeaponDps(): void {
+  void fetchWeaponDps();
+}
+
 export function useWeaponDps(): { dpsByName: WeaponDpsLookup; loading: boolean } {
   const [dpsByName, setDpsByName] = useState<WeaponDpsLookup>(
     () => moduleCache ?? new Map(),

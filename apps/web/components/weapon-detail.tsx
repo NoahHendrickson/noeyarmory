@@ -1,7 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import { useRouter } from "next/navigation";
 import {
   useCallback,
   useEffect,
@@ -27,7 +26,7 @@ import {
 import { useWeaponBuild } from "../lib/use-weapon-build";
 import { useWeaponDps } from "../lib/use-weapon-dps";
 import { useHasHover } from "../hooks/use-has-hover";
-import { useWeaponRouteNavigation } from "../hooks/use-weapon-route-navigation";
+import { useInstantWeaponNavigation } from "../hooks/use-instant-weapon-navigation";
 import { useStatGroups, useWeaponDetail, useWeapons } from "../lib/weapons-context";
 import { trackPerkCommit } from "../lib/track-perk-commit";
 import { trackWeaponView } from "../lib/track-weapon-view";
@@ -86,7 +85,7 @@ function WeaponThumbnail({ weapon }: { weapon: WeaponDoc }) {
       )}
     >
       {icon ? (
-        <Image src={icon} alt="" width={56} height={56} className="size-full" unoptimized />
+        <Image src={icon} alt="" width={56} height={56} className="size-full" priority unoptimized />
       ) : (
         <div className="size-full bg-muted/30" />
       )}
@@ -97,6 +96,7 @@ function WeaponThumbnail({ weapon }: { weapon: WeaponDoc }) {
           width={56}
           height={56}
           className="absolute inset-0 size-full"
+          priority
           unoptimized
         />
       )}
@@ -234,9 +234,15 @@ export function WeaponDetailView({
     [weapon, selectedPerkHashes, statGroups, masterworkStatMods],
   );
 
-  const { stats: statsWithoutMasterwork } = useMemo(
-    () => computeWeaponStats(weapon, selectedPerkHashes, statGroups),
-    [weapon, selectedPerkHashes, statGroups],
+  // Base stats without the masterwork — only needed to render masterwork deltas. With no
+  // masterwork applied it is identical to currentStats, so skip the second compute on the
+  // common (no-masterwork) path. `masterworkChangesStats` already gates display on length > 0.
+  const statsWithoutMasterwork = useMemo(
+    () =>
+      masterworkStatMods.length > 0
+        ? computeWeaponStats(weapon, selectedPerkHashes, statGroups).stats
+        : currentStats,
+    [masterworkStatMods, weapon, selectedPerkHashes, statGroups, currentStats],
   );
 
   const previewPerkHashes = useMemo(() => {
@@ -246,9 +252,14 @@ export function WeaponDetailView({
     return [...next.values()];
   }, [hoverPreview, build.selectedByColumn, selectedPerkHashes]);
 
-  const { stats: previewStats } = useMemo(
-    () => computeWeaponStats(weapon, previewPerkHashes, statGroups, masterworkStatMods),
-    [weapon, previewPerkHashes, statGroups, masterworkStatMods],
+  // Hover-preview stats — only needed while hovering a stat-changing perk. Without a hover,
+  // previewPerkHashes === selectedPerkHashes, so this is exactly currentStats; skip the compute.
+  const previewStats = useMemo(
+    () =>
+      hoverPreview
+        ? computeWeaponStats(weapon, previewPerkHashes, statGroups, masterworkStatMods).stats
+        : currentStats,
+    [hoverPreview, weapon, previewPerkHashes, statGroups, masterworkStatMods, currentStats],
   );
 
   const hoverChangesStats = hoverPreview != null && statsDiffer(previewStats, currentStats);
@@ -259,6 +270,10 @@ export function WeaponDetailView({
   const displayStats = hoverChangesStats ? previewStats : currentStats;
   const showDeltas = hoverChangesStats || masterworkChangesStats;
   const deltaBaseStats = hoverChangesStats ? currentStats : statsWithoutMasterwork;
+
+  // Eager-load the first visible perk column's icons (it's the highest-value above-the-fold
+  // content); later columns keep next/image's default lazy loading.
+  const firstPerkColumnIndex = weapon.columns.findIndex((column) => column.kind !== "Intrinsic");
 
   return (
     <div className="mx-auto w-fit max-w-full">
@@ -335,6 +350,7 @@ export function WeaponDetailView({
                       linkPerks={canSelect ? false : linkPerks}
                       highlightedPerks={highlightedPerks}
                       hasHover={hasHover}
+                      eager={columnIndex === firstPerkColumnIndex}
                       selectedPerkHash={
                         canSelect ? build.selectedByColumn.get(columnIndex) : undefined
                       }
@@ -437,41 +453,30 @@ export function WeaponDetailWithVersions({
   );
 }
 
-/** Standalone `/weapon/[hash]` route view: uses SSR seed when available, else shared index. */
-export function WeaponDetail({ hash, initialWeapon }: { hash: number; initialWeapon?: WeaponDoc }) {
-  const router = useRouter();
-  const [activeHash, setActiveHash] = useState(hash);
-  const { isNavigating, navigateToWeapon } = useWeaponRouteNavigation();
-  const { weapon, loading } = useWeaponDetail(
-    activeHash,
-    activeHash === hash ? initialWeapon : undefined,
-  );
+/**
+ * The weapon-detail page surface: app chrome + loading/not-found states + the detail itself.
+ * Single owner of the detail tree — both the SSR `/weapon/[hash]` route and the instant in-app
+ * view render through this with one loading contract. Navigation is injected via callbacks, so
+ * the surface is agnostic to whether it was reached by a server render or a History API update.
+ */
+export function WeaponDetailSurface({
+  hash,
+  initialWeapon,
+  onSelectWeapon,
+  onSelectVersion,
+}: {
+  hash: number;
+  /** SSR seed for the route's own hash; omitted for the client-only (instant) view. */
+  initialWeapon?: WeaponDoc;
+  onSelectWeapon: (hash: number, source: WeaponSearchSelectionSource) => void;
+  onSelectVersion: (hash: number) => void;
+}) {
+  const { weapon, loading } = useWeaponDetail(hash, initialWeapon);
   const { dpsByName } = useWeaponDps();
-
-  useEffect(() => {
-    setActiveHash(hash);
-  }, [hash]);
-
-  const handleSelectVersion = useCallback(
-    (nextHash: number) => {
-      setActiveHash(nextHash);
-      // Version swap: replace URL so back button skips intermediate versions.
-      router.replace(`/weapon/${nextHash}`, { scroll: false });
-    },
-    [router],
-  );
-
-  const handleSearchSelectWeapon = useCallback(
-    (nextHash: number, source: WeaponSearchSelectionSource) => {
-      setActiveHash(nextHash);
-      navigateToWeapon(nextHash, source);
-    },
-    [navigateToWeapon],
-  );
 
   if (!weapon && loading) {
     return (
-      <WeaponDetailPageShell onSelectWeapon={handleSearchSelectWeapon}>
+      <WeaponDetailPageShell onSelectWeapon={onSelectWeapon}>
         <main className="mx-auto max-w-5xl p-4 md:p-6">
           <WeaponNavigationStatus />
         </main>
@@ -481,7 +486,7 @@ export function WeaponDetail({ hash, initialWeapon }: { hash: number; initialWea
 
   if (!weapon) {
     return (
-      <WeaponDetailPageShell onSelectWeapon={handleSearchSelectWeapon}>
+      <WeaponDetailPageShell onSelectWeapon={onSelectWeapon}>
         <div className="space-y-2 p-6">
           <p>Weapon not found.</p>
         </div>
@@ -490,18 +495,35 @@ export function WeaponDetail({ hash, initialWeapon }: { hash: number; initialWea
   }
 
   return (
-    <WeaponDetailPageShell onSelectWeapon={handleSearchSelectWeapon}>
+    <WeaponDetailPageShell onSelectWeapon={onSelectWeapon}>
       <main className="mx-auto max-w-5xl space-y-6 p-4 md:p-6">
-        {isNavigating || loading ? <WeaponNavigationStatus /> : null}
+        {loading ? <WeaponNavigationStatus /> : null}
         <WeaponDetailWithVersions
           weapon={weapon}
           linkPerks={false}
           dps={dpsByName.get(weapon.name)}
           highlightedBuildPerks={dpsByName.get(weapon.name)?.buildPerks}
           viewSource="direct"
-          onSelectVersion={handleSelectVersion}
+          onSelectVersion={onSelectVersion}
         />
       </main>
     </WeaponDetailPageShell>
+  );
+}
+
+/** Standalone `/weapon/[hash]` route view: SSR-seeds the surface, then navigates client-side. */
+export function WeaponDetail({ hash, initialWeapon }: { hash: number; initialWeapon?: WeaponDoc }) {
+  // Seed the instant-nav hook with the route's hash so the SSR'd weapon shows immediately;
+  // in-detail search and version swaps then navigate client-side (History API, no round-trip).
+  const { activeHash, openWeapon, replaceWeapon } = useInstantWeaponNavigation(hash);
+  const effectiveHash = activeHash ?? hash;
+
+  return (
+    <WeaponDetailSurface
+      hash={effectiveHash}
+      initialWeapon={effectiveHash === hash ? initialWeapon : undefined}
+      onSelectWeapon={openWeapon}
+      onSelectVersion={replaceWeapon}
+    />
   );
 }

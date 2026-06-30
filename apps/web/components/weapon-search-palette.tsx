@@ -39,9 +39,9 @@ import { allPerkNames, buildWeaponCategories } from "../lib/palette/weapon-categ
 import type { PaletteResultsMode } from "../lib/palette/results-mode";
 import { useCustomWeaponFilters } from "../lib/use-custom-weapon-filters";
 import { useIsFirefox } from "../lib/use-is-firefox";
-import { useWeaponDps } from "../lib/use-weapon-dps";
+import { prefetchWeaponDps, useWeaponDps } from "../lib/use-weapon-dps";
 import { useWeaponIconMaps } from "../lib/use-weapon-icon-maps";
-import { useWeapons } from "../lib/weapons-context";
+import { useWeapons, warmWeaponDetailCache } from "../lib/weapons-context";
 import { PinnedFilterPills } from "./pinned-filter-pills";
 import { PinnedWeaponsRail } from "./pinned-weapons-rail";
 import { PopularWeapons } from "./popular-weapons";
@@ -248,6 +248,11 @@ export function WeaponSearchPalette({
       const weapon = byHash.get(hash);
       if (!weapon) return;
 
+      // Intent (hover / keyboard focus): warm the shared detail + DPS caches so opening any
+      // weapon renders from memory, and prefetch the SSR route as a fallback for new tabs.
+      void warmWeaponDetailCache();
+      prefetchWeaponDps();
+
       const href = `/weapon/${weapon.hash}`;
       if (prefetchedWeaponRoutesRef.current.has(href)) return;
       prefetchedWeaponRoutesRef.current.add(href);
@@ -255,6 +260,17 @@ export function WeaponSearchPalette({
     },
     [byHash, router],
   );
+
+  // Broad safety net: the first time the palette opens, warm the detail + DPS caches for
+  // users who type-then-Enter without ever hovering a result.
+  const warmedDetailRef = useRef(false);
+  useEffect(() => {
+    if (paletteOpen && !warmedDetailRef.current) {
+      warmedDetailRef.current = true;
+      void warmWeaponDetailCache();
+      prefetchWeaponDps();
+    }
+  }, [paletteOpen]);
 
   useEffect(() => {
     if (!firefoxPalettePerf) return;

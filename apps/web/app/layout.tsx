@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
+import { preconnect, prefetchDNS } from "react-dom";
 
 import "@fontsource-variable/geist";
 import "@fontsource/silkscreen/400.css";
@@ -24,6 +25,13 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // Every weapon/perk icon loads from Bungie's CDN. Warm the connection up front so the
+  // first icon on any page (especially weapon detail) skips the DNS + TLS handshake. No
+  // crossOrigin: next/image renders plain credentialed <img> requests, which only reuse a
+  // non-CORS preconnect.
+  preconnect("https://www.bungie.net");
+  prefetchDNS("https://www.bungie.net");
+
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
       <body className="bg-background text-foreground min-h-screen">

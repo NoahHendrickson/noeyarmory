@@ -1,18 +1,11 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-  type CSSProperties,
-  type ReactNode,
-} from "react";
+import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { Badge, CommandPalette, PillSelect, type PillSelectOption } from "@repo/ui";
 
 import { useArmorActions } from "../hooks/use-armor-actions";
 import { useArmorSearchPaletteState } from "../hooks/use-home-search-palette-state";
-import { useWeaponRouteNavigation } from "../hooks/use-weapon-route-navigation";
+import { useInstantWeaponNavigation } from "../hooks/use-instant-weapon-navigation";
 import { usePaletteResultList } from "../hooks/use-palette-result-list";
 import {
   usePaletteSearchChrome,
@@ -25,8 +18,8 @@ import type { PaletteResultsMode } from "../lib/palette/results-mode";
 import { useOwnedArmor } from "../lib/use-owned-armor";
 import { ArmorResultRow } from "./armor-result-row";
 import { WeaponModeIcon } from "./icons/weapon-mode-icon";
-import { WeaponNavigationStatus } from "./weapon-navigation-status";
-import { WeaponSearchPalette, type WeaponSearchSelectionSource } from "./weapon-search-palette";
+import { WeaponDetailSurface } from "./weapon-detail";
+import { WeaponSearchPalette } from "./weapon-search-palette";
 
 type Mode = "weapon" | "armor";
 
@@ -218,14 +211,20 @@ export function HomeSearch({
   initialMode?: Mode;
 }) {
   const [mode, setMode] = useState<Mode>(initialMode);
-  const { isNavigating, navigateToWeapon } = useWeaponRouteNavigation();
+  const { activeHash, openWeapon, replaceWeapon } = useInstantWeaponNavigation();
 
-  const handleSelectWeapon = useCallback(
-    (hash: number, source: WeaponSearchSelectionSource) => {
-      navigateToWeapon(hash, source);
-    },
-    [navigateToWeapon],
-  );
+  // Instant client-rendered detail: opening a weapon flips local state and updates the URL via
+  // the History API — no server round-trip. Renders through the same WeaponDetailSurface as the
+  // SSR /weapon/[hash] route, which still serves direct loads, refresh, and shared links.
+  if (activeHash != null) {
+    return (
+      <WeaponDetailSurface
+        hash={activeHash}
+        onSelectWeapon={openWeapon}
+        onSelectVersion={replaceWeapon}
+      />
+    );
+  }
 
   const modeControl = <ModeControl mode={mode} onModeChange={setMode} />;
 
@@ -234,7 +233,7 @@ export function HomeSearch({
       <main className="mx-auto flex w-full flex-1 flex-col px-4 pt-4 sm:pt-[12vh]">
         {mode === "weapon" ? (
           <WeaponSearchPalette
-            onSelectWeapon={handleSelectWeapon}
+            onSelectWeapon={openWeapon}
             toolbarTrailing={modeControl}
             showPinnedFilters
             showPinnedWeapons
@@ -245,7 +244,6 @@ export function HomeSearch({
         ) : (
           <ArmorSearchHome signedIn={signedIn} modeControl={modeControl} />
         )}
-        {isNavigating ? <WeaponNavigationStatus className="mt-3 text-center" /> : null}
       </main>
     </div>
   );
