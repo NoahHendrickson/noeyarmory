@@ -453,26 +453,30 @@ export function WeaponDetailWithVersions({
   );
 }
 
-/** Standalone `/weapon/[hash]` route view: uses SSR seed when available, else shared index. */
-export function WeaponDetail({ hash, initialWeapon }: { hash: number; initialWeapon?: WeaponDoc }) {
-  // Seed the instant-nav hook with the route's hash so the SSR'd weapon shows immediately;
-  // in-detail search and version swaps then navigate client-side (History API, no round-trip).
-  const { activeHash, openWeapon, replaceWeapon } = useInstantWeaponNavigation(hash);
-  const effectiveHash = activeHash ?? hash;
-  const { weapon, loading } = useWeaponDetail(
-    effectiveHash,
-    effectiveHash === hash ? initialWeapon : undefined,
-  );
+/**
+ * The weapon-detail page surface: app chrome + loading/not-found states + the detail itself.
+ * Single owner of the detail tree — both the SSR `/weapon/[hash]` route and the instant in-app
+ * view render through this with one loading contract. Navigation is injected via callbacks, so
+ * the surface is agnostic to whether it was reached by a server render or a History API update.
+ */
+export function WeaponDetailSurface({
+  hash,
+  initialWeapon,
+  onSelectWeapon,
+  onSelectVersion,
+}: {
+  hash: number;
+  /** SSR seed for the route's own hash; omitted for the client-only (instant) view. */
+  initialWeapon?: WeaponDoc;
+  onSelectWeapon: (hash: number, source: WeaponSearchSelectionSource) => void;
+  onSelectVersion: (hash: number) => void;
+}) {
+  const { weapon, loading } = useWeaponDetail(hash, initialWeapon);
   const { dpsByName } = useWeaponDps();
-
-  const handleSearchSelectWeapon = useCallback(
-    (nextHash: number, source: WeaponSearchSelectionSource) => openWeapon(nextHash, source),
-    [openWeapon],
-  );
 
   if (!weapon && loading) {
     return (
-      <WeaponDetailPageShell onSelectWeapon={handleSearchSelectWeapon}>
+      <WeaponDetailPageShell onSelectWeapon={onSelectWeapon}>
         <main className="mx-auto max-w-5xl p-4 md:p-6">
           <WeaponNavigationStatus />
         </main>
@@ -482,7 +486,7 @@ export function WeaponDetail({ hash, initialWeapon }: { hash: number; initialWea
 
   if (!weapon) {
     return (
-      <WeaponDetailPageShell onSelectWeapon={handleSearchSelectWeapon}>
+      <WeaponDetailPageShell onSelectWeapon={onSelectWeapon}>
         <div className="space-y-2 p-6">
           <p>Weapon not found.</p>
         </div>
@@ -491,7 +495,7 @@ export function WeaponDetail({ hash, initialWeapon }: { hash: number; initialWea
   }
 
   return (
-    <WeaponDetailPageShell onSelectWeapon={handleSearchSelectWeapon}>
+    <WeaponDetailPageShell onSelectWeapon={onSelectWeapon}>
       <main className="mx-auto max-w-5xl space-y-6 p-4 md:p-6">
         {loading ? <WeaponNavigationStatus /> : null}
         <WeaponDetailWithVersions
@@ -500,9 +504,26 @@ export function WeaponDetail({ hash, initialWeapon }: { hash: number; initialWea
           dps={dpsByName.get(weapon.name)}
           highlightedBuildPerks={dpsByName.get(weapon.name)?.buildPerks}
           viewSource="direct"
-          onSelectVersion={replaceWeapon}
+          onSelectVersion={onSelectVersion}
         />
       </main>
     </WeaponDetailPageShell>
+  );
+}
+
+/** Standalone `/weapon/[hash]` route view: SSR-seeds the surface, then navigates client-side. */
+export function WeaponDetail({ hash, initialWeapon }: { hash: number; initialWeapon?: WeaponDoc }) {
+  // Seed the instant-nav hook with the route's hash so the SSR'd weapon shows immediately;
+  // in-detail search and version swaps then navigate client-side (History API, no round-trip).
+  const { activeHash, openWeapon, replaceWeapon } = useInstantWeaponNavigation(hash);
+  const effectiveHash = activeHash ?? hash;
+
+  return (
+    <WeaponDetailSurface
+      hash={effectiveHash}
+      initialWeapon={effectiveHash === hash ? initialWeapon : undefined}
+      onSelectWeapon={openWeapon}
+      onSelectVersion={replaceWeapon}
+    />
   );
 }

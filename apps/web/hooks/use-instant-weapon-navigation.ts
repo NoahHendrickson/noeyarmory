@@ -21,8 +21,6 @@ export interface InstantWeaponNavigation {
   openWeapon: (hash: number, source: WeaponSearchSelectionSource) => void;
   /** Swap to a sibling version: replaces the URL entry (no new history step, no view event). */
   replaceWeapon: (hash: number) => void;
-  /** Return to the search view (used for an explicit back affordance). */
-  closeWeapon: () => void;
 }
 
 /**
@@ -39,8 +37,10 @@ export function useInstantWeaponNavigation(initialHash: number | null = null): I
 
   const navigate = useCallback((hash: number, replace: boolean) => {
     const href = `/weapon/${hash}`;
-    // Next.js patches history.pushState/replaceState to keep its router state in sync, so this
-    // updates the URL (and usePathname) without triggering a navigation or server render.
+    // App Router officially supports driving the URL via the native History API: it keeps
+    // usePathname/useSearchParams in sync without an RSC fetch or navigation. This is a
+    // documented public API, not internal patching.
+    // https://nextjs.org/docs/app/api-reference/functions/use-router#using-the-native-history-api
     if (replace) {
       window.history.replaceState(null, "", href);
     } else {
@@ -59,10 +59,6 @@ export function useInstantWeaponNavigation(initialHash: number | null = null): I
 
   const replaceWeapon = useCallback((hash: number) => navigate(hash, true), [navigate]);
 
-  const closeWeapon = useCallback(() => {
-    setActiveHash(null);
-  }, []);
-
   useEffect(() => {
     // Back/forward changes the URL without a React navigation; read the path and toggle the
     // detail accordingly (reading window.location is correct regardless of listener order).
@@ -71,5 +67,5 @@ export function useInstantWeaponNavigation(initialHash: number | null = null): I
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
 
-  return { activeHash, openWeapon, replaceWeapon, closeWeapon };
+  return { activeHash, openWeapon, replaceWeapon };
 }

@@ -379,9 +379,13 @@ export function useWeaponDetail(
     };
   }, [hash, initial, getWeaponDoc, version]);
 
-  // Fast-path: when the async state hasn't caught up to `hash` yet, expand synchronously from
-  // the warm caches so in-place navigation paints the target weapon immediately. Falls through
-  // to the (possibly loading) async state only when the caches can't satisfy it yet.
+  // Two resolution paths, by necessity:
+  //  - async state (the effect above) loads detail when the cache is cold and re-renders when
+  //    it arrives — the only path that can wait on a network fetch.
+  //  - the sync fast-path below expands from the warm caches *during render* so in-place
+  //    navigation paints the target on the same frame. This can't fold into getWeaponDoc: a
+  //    promise can't supply a value to the first render, which is exactly when it's needed to
+  //    avoid a skeleton flash. readWeaponDocSync is module-cached, so the object is stable.
   if (hash != null && weapon?.hash !== hash) {
     if (initial?.hash === hash) return { weapon: initial, loading: false };
     const sync = readWeaponDocSync(hash);
