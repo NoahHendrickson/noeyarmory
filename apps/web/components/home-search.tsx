@@ -12,7 +12,7 @@ import { Badge, CommandPalette, PillSelect, type PillSelectOption } from "@repo/
 
 import { useArmorActions } from "../hooks/use-armor-actions";
 import { useArmorSearchPaletteState } from "../hooks/use-home-search-palette-state";
-import { useWeaponRouteNavigation } from "../hooks/use-weapon-route-navigation";
+import { useInstantWeaponNavigation } from "../hooks/use-instant-weapon-navigation";
 import { usePaletteResultList } from "../hooks/use-palette-result-list";
 import {
   usePaletteSearchChrome,
@@ -23,8 +23,12 @@ import { ARMOR_LOGIN_URL } from "../lib/palette/constants";
 import { buildArmorCategories } from "../lib/palette/armor-categories";
 import type { PaletteResultsMode } from "../lib/palette/results-mode";
 import { useOwnedArmor } from "../lib/use-owned-armor";
+import { useWeaponDps } from "../lib/use-weapon-dps";
+import { useWeaponDetail } from "../lib/weapons-context";
 import { ArmorResultRow } from "./armor-result-row";
 import { WeaponModeIcon } from "./icons/weapon-mode-icon";
+import { WeaponDetailWithVersions } from "./weapon-detail";
+import { WeaponDetailPageShell } from "./weapon-detail-page-shell";
 import { WeaponNavigationStatus } from "./weapon-navigation-status";
 import { WeaponSearchPalette, type WeaponSearchSelectionSource } from "./weapon-search-palette";
 
@@ -218,14 +222,38 @@ export function HomeSearch({
   initialMode?: Mode;
 }) {
   const [mode, setMode] = useState<Mode>(initialMode);
-  const { isNavigating, navigateToWeapon } = useWeaponRouteNavigation();
+  const { activeHash, openWeapon, replaceWeapon } = useInstantWeaponNavigation();
+  const { weapon } = useWeaponDetail(activeHash);
+  const { dpsByName } = useWeaponDps();
 
   const handleSelectWeapon = useCallback(
-    (hash: number, source: WeaponSearchSelectionSource) => {
-      navigateToWeapon(hash, source);
-    },
-    [navigateToWeapon],
+    (hash: number, source: WeaponSearchSelectionSource) => openWeapon(hash, source),
+    [openWeapon],
   );
+
+  // Instant client-rendered detail: opening a weapon flips local state and updates the URL via
+  // the History API — no server round-trip. The SSR /weapon/[hash] route still serves direct
+  // loads, refresh, and shared links.
+  if (activeHash != null) {
+    return (
+      <WeaponDetailPageShell onSelectWeapon={handleSelectWeapon}>
+        <main className="mx-auto max-w-5xl space-y-6 p-4 md:p-6">
+          {weapon ? (
+            <WeaponDetailWithVersions
+              weapon={weapon}
+              linkPerks={false}
+              dps={dpsByName.get(weapon.name)}
+              highlightedBuildPerks={dpsByName.get(weapon.name)?.buildPerks}
+              viewSource="direct"
+              onSelectVersion={replaceWeapon}
+            />
+          ) : (
+            <WeaponNavigationStatus />
+          )}
+        </main>
+      </WeaponDetailPageShell>
+    );
+  }
 
   const modeControl = <ModeControl mode={mode} onModeChange={setMode} />;
 
@@ -245,7 +273,6 @@ export function HomeSearch({
         ) : (
           <ArmorSearchHome signedIn={signedIn} modeControl={modeControl} />
         )}
-        {isNavigating ? <WeaponNavigationStatus className="mt-3 text-center" /> : null}
       </main>
     </div>
   );

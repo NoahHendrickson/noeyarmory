@@ -101,7 +101,10 @@ function invalidateDetailCache(): void {
   statGroupsCache = undefined;
 }
 
-const DETAIL_PRELOAD_DELAY_MS = 1500;
+// Idle fallback for the detail preload. Intent signals (palette hover / open) usually warm
+// the cache earlier; this just guarantees it loads soon after the index for users who never
+// hover. Kept short since requestIdleCallback already defers it past the critical path.
+const DETAIL_PRELOAD_DELAY_MS = 400;
 
 function seedDetails(index: WeaponDetailIndex): void {
   detailCache = new Map(
@@ -159,6 +162,47 @@ async function ensureDetailCache(): Promise<void> {
   }
 
   await loadWeaponDetails();
+}
+
+/**
+ * Eagerly load the detail cache (stats / masterwork / flavor) so the first weapon detail
+ * opens from memory with zero network. Idempotent and coalesced via `detailLoadPromise`,
+ * so it's safe to call from intent signals (palette hover / open) as often as needed.
+ */
+export async function warmWeaponDetailCache(): Promise<void> {
+  if (detailCache) return;
+  if (!moduleCache) await fetchWeaponIndex();
+  await ensureDetailCache();
+}
+
+// Stable per-hash expansion cache so repeated renders get the same WeaponDoc object (keeps
+// the detail view's useMemos / computeWeaponStats from busting every render). Rebuilt when the
+// index version or detail-cache presence changes.
+let syncDocCache: Map<number, WeaponDoc> | null = null;
+let syncDocCacheKey: string | undefined;
+
+/**
+ * Synchronously expand a weapon from the in-memory caches, or undefined if the index isn't
+ * loaded yet. Perk columns come from the always-present summary, so this returns a usable doc
+ * even before the detail cache is warm (stats fill in once it is). Used to render in-place
+ * navigation on the same frame, with no network and no skeleton flash.
+ */
+export function readWeaponDocSync(hash: number): WeaponDoc | undefined {
+  if (!moduleCache) return undefined;
+  const summary = moduleCache.byHash.get(hash);
+  if (!summary) return undefined;
+
+  const key = `${moduleCacheKey ?? ""}:${detailCache ? "1" : "0"}`;
+  if (syncDocCacheKey !== key) {
+    syncDocCache = new Map();
+    syncDocCacheKey = key;
+  }
+  let doc = syncDocCache!.get(hash);
+  if (!doc) {
+    doc = expandWeapon(summary, detailCache?.get(hash), moduleCache.perks);
+    syncDocCache!.set(hash, doc);
+  }
+  return doc;
 }
 
 function lookupsToState(
@@ -260,7 +304,14 @@ export function WeaponsProvider({ children }: { children: ReactNode }) {
   }, [getWeaponDoc]);
 
   useEffect(() => {
-    if (state.loading || detailCache) return;
+    if (state.loading) return;
+
+    // Detail may already be warm via an intent signal (palette hover / open). Reflect the
+    // enriched summaries (ammo generation) without scheduling a redundant idle fetch.
+    if (detailCache) {
+      if (moduleCache) setState(lookupsToState(moduleCache, isSampleCache, getWeaponDoc));
+      return;
+    }
 
     let detailPreloadTimer: number | undefined;
     const cancelIdle = scheduleIdle(() => {
@@ -327,6 +378,15 @@ export function useWeaponDetail(
       active = false;
     };
   }, [hash, initial, getWeaponDoc, version]);
+
+  // Fast-path: when the async state hasn't caught up to `hash` yet, expand synchronously from
+  // the warm caches so in-place navigation paints the target weapon immediately. Falls through
+  // to the (possibly loading) async state only when the caches can't satisfy it yet.
+  if (hash != null && weapon?.hash !== hash) {
+    if (initial?.hash === hash) return { weapon: initial, loading: false };
+    const sync = readWeaponDocSync(hash);
+    if (sync) return { weapon: sync, loading: false };
+  }
 
   return { weapon, loading };
 }

@@ -136,6 +136,7 @@ const PerkTile = memo(function PerkTile({
   highlighted = false,
   selected = false,
   hasHover,
+  eager = false,
   onSelect,
   onHover,
   onHoverEnd,
@@ -147,6 +148,8 @@ const PerkTile = memo(function PerkTile({
   highlighted?: boolean;
   selected?: boolean;
   hasHover: boolean;
+  /** Eager-load this tile's icon instead of next/image's default lazy loading. */
+  eager?: boolean;
   onSelect?: (perk: PerkRef) => void;
   onHover?: (perk: PerkRef) => void;
   onHoverEnd?: () => void;
@@ -232,6 +235,7 @@ const PerkTile = memo(function PerkTile({
           width={imgPx}
           height={imgPx}
           className={cn("object-contain", iconDim)}
+          loading={eager ? "eager" : "lazy"}
           unoptimized
         />
       ) : (
@@ -301,6 +305,7 @@ export function PerkColumnView({
   highlightedPerks,
   selectedPerkHash,
   hasHover,
+  eager = false,
   onSelectPerk,
   onHoverPerk,
   onHoverEnd,
@@ -315,6 +320,8 @@ export function PerkColumnView({
   selectedPerkHash?: number;
   /** Whether the primary pointer supports hover (passed from the weapon detail view). */
   hasHover: boolean;
+  /** Eager-load this column's icons (set for the first visible column). */
+  eager?: boolean;
   onSelectPerk?: (columnIndex: number, perk: PerkRef) => void;
   onHoverPerk?: (columnIndex: number, perk: PerkRef) => void;
   onHoverEnd?: () => void;
@@ -344,6 +351,7 @@ export function PerkColumnView({
           highlighted={highlightedPerks?.has(perk.name.toLowerCase())}
           selected={selectedPerkHash === perk.hash}
           hasHover={hasHover}
+          eager={eager}
           onSelect={onSelectPerk ? handleSelect : undefined}
           onHover={onHoverPerk ? handleHover : undefined}
           onHoverEnd={onHoverEnd}
