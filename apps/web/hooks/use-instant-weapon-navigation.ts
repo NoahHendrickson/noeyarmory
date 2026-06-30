@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 import { trackWeaponView } from "../lib/track-weapon-view";
@@ -33,6 +34,7 @@ export interface InstantWeaponNavigation {
  *   shows immediately; the home view passes null so it starts on search).
  */
 export function useInstantWeaponNavigation(initialHash: number | null = null): InstantWeaponNavigation {
+  const pathname = usePathname();
   const [activeHash, setActiveHash] = useState<number | null>(initialHash);
 
   const navigate = useCallback((hash: number, replace: boolean) => {
@@ -58,6 +60,12 @@ export function useInstantWeaponNavigation(initialHash: number | null = null): I
   );
 
   const replaceWeapon = useCallback((hash: number) => navigate(hash, true), [navigate]);
+
+  useEffect(() => {
+    // App Router navigations (e.g. the logo Link back to `/`) update pathname but do not fire
+    // popstate and do not go through openWeapon — keep local detail state aligned with the URL.
+    setActiveHash(weaponHashFromPath(pathname));
+  }, [pathname]);
 
   useEffect(() => {
     // Back/forward changes the URL without a React navigation; read the path and toggle the
